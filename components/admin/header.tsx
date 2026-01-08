@@ -22,7 +22,7 @@ export function AdminHeader() {
           .single()
         
         if (data) {
-          setAdminName(data.full_name)
+          setAdminName((data as { full_name: string }).full_name)
         }
       }
     }

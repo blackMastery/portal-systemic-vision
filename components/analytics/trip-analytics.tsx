@@ -14,6 +14,22 @@ interface TripAnalyticsProps {
 
 const COLORS = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444']
 
+type TripData = {
+  requested_at: string
+  status: string
+  trip_type: string
+  is_night_trip: boolean
+  actual_fare: number | null
+  estimated_fare: number | null
+  actual_distance_km: number | null
+  estimated_distance_km: number | null
+  actual_duration_minutes: number | null
+}
+
+type TripTypeData = { trip_type: string }
+type NightDayData = { is_night_trip: boolean }
+type StatusData = { status: string }
+
 async function fetchTripAnalytics(dateRange: { start: Date; end: Date }) {
   const supabase = createClient()
   const startDate = dateRange.start.toISOString()
@@ -50,10 +66,10 @@ async function fetchTripAnalytics(dateRange: { start: Date; end: Date }) {
     .lte('requested_at', endDate)
 
   return {
-    trips: trips || [],
-    tripTypes: tripTypes || [],
-    nightDay: nightDay || [],
-    statusBreakdown: statusBreakdown || [],
+    trips: (trips as TripData[] | null) || [],
+    tripTypes: (tripTypes as TripTypeData[] | null) || [],
+    nightDay: (nightDay as NightDayData[] | null) || [],
+    statusBreakdown: (statusBreakdown as StatusData[] | null) || [],
   }
 }
 
@@ -114,15 +130,17 @@ export function TripAnalytics({ dateRange }: TripAnalyticsProps) {
   const totalTrips = data?.trips.length || 0
   const completedTrips = data?.trips.filter(t => t.status === 'completed').length || 0
   const completionRate = totalTrips > 0 ? ((completedTrips / totalTrips) * 100).toFixed(1) : '0'
-  const avgFare = data?.trips
-    .filter(t => t.status === 'completed' && t.actual_fare)
-    .reduce((sum, t) => sum + (t.actual_fare || 0), 0) / completedTrips || 0
+  const completedTripsWithFare = data?.trips?.filter(t => t.status === 'completed' && t.actual_fare) || []
+  const avgFare = completedTripsWithFare.length > 0
+    ? completedTripsWithFare.reduce((sum, t) => sum + (t.actual_fare || 0), 0) / completedTripsWithFare.length
+    : 0
   const totalRevenue = data?.trips
-    .filter(t => t.status === 'completed' && t.actual_fare)
-    .reduce((sum, t) => sum + (t.actual_fare || 0), 0) || 0
-  const avgDistance = data?.trips
-    .filter(t => t.status === 'completed' && t.actual_distance_km)
-    .reduce((sum, t) => sum + (t.actual_distance_km || 0), 0) / completedTrips || 0
+    ?.filter(t => t.status === 'completed' && t.actual_fare)
+    ?.reduce((sum, t) => sum + (t.actual_fare || 0), 0) || 0
+  const completedTripsWithDistance = data?.trips?.filter(t => t.status === 'completed' && t.actual_distance_km) || []
+  const avgDistance = completedTripsWithDistance.length > 0
+    ? completedTripsWithDistance.reduce((sum, t) => sum + (t.actual_distance_km || 0), 0) / completedTripsWithDistance.length
+    : 0
 
   return (
     <div className="space-y-6">

@@ -14,6 +14,24 @@ interface FinancialAnalyticsProps {
 
 const COLORS = ['#10B981', '#3B82F6']
 
+type SubscriptionData = {
+  created_at: string
+  amount: number
+  status: string
+}
+
+type TripRevenueData = {
+  completed_at: string
+  actual_fare: number | null
+}
+
+type TransactionData = {
+  status: string
+  payment_method: string
+  amount: number
+  created_at: string
+}
+
 async function fetchFinancialAnalytics(dateRange: { start: Date; end: Date }) {
   const supabase = createClient()
   const startDate = dateRange.start.toISOString()
@@ -44,9 +62,9 @@ async function fetchFinancialAnalytics(dateRange: { start: Date; end: Date }) {
     .lte('created_at', endDate)
 
   return {
-    subscriptions: subscriptions || [],
-    trips: trips || [],
-    transactions: transactions || [],
+    subscriptions: (subscriptions as SubscriptionData[] | null) || [],
+    trips: (trips as TripRevenueData[] | null) || [],
+    transactions: (transactions as TransactionData[] | null) || [],
   }
 }
 

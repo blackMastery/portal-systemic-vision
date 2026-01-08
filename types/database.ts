@@ -197,7 +197,7 @@ export type UserWithProfile = Database['public']['Tables']['users']['Row'] & {
 
 export type DriverWithDetails = Database['public']['Tables']['driver_profiles']['Row'] & {
   user: Database['public']['Tables']['users']['Row']
-  vehicle?: Database['public']['Tables']['vehicles']['Row']
+  vehicle?: Database['public']['Tables']['vehicles']['Row'][]
 }
 
 export type RiderWithDetails = Database['public']['Tables']['rider_profiles']['Row'] & {

@@ -4,13 +4,21 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { MapPin, Navigation } from 'lucide-react'
 
+type ActiveDriverData = {
+  id: string
+  is_available: boolean
+  user: { full_name: string; phone_number: string } | null
+  vehicle: Array<{ make: string; model: string; license_plate: string }> | null
+}
+
 async function fetchActiveDrivers() {
   const supabase = createClient()
   
   const { data, error } = await supabase
     .from('driver_profiles')
     .select(`
-      *,
+      id,
+      is_available,
       user:users!driver_profiles_user_id_fkey(full_name, phone_number),
       vehicle:vehicles!driver_profiles_id_fkey(make, model, license_plate)
     `)
@@ -18,7 +26,7 @@ async function fetchActiveDrivers() {
     .limit(20)
 
   if (error) throw error
-  return data
+  return (data as ActiveDriverData[] | null) || []
 }
 
 export function ActiveDriversMap() {

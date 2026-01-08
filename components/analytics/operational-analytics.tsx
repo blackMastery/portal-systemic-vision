@@ -12,6 +12,21 @@ interface OperationalAnalyticsProps {
   dateRange: { start: Date; end: Date }
 }
 
+type TripTimingData = {
+  requested_at: string
+  accepted_at: string | null
+  completed_at: string | null
+  actual_duration_minutes: number | null
+  estimated_duration_minutes: number | null
+  status: string
+}
+
+type TripRequestData = {
+  created_at: string
+  expires_at: string | null
+  status: string
+}
+
 async function fetchOperationalAnalytics(dateRange: { start: Date; end: Date }) {
   const supabase = createClient()
   const startDate = dateRange.start.toISOString()
@@ -32,8 +47,8 @@ async function fetchOperationalAnalytics(dateRange: { start: Date; end: Date }) 
     .lte('created_at', endDate)
 
   return {
-    trips: trips || [],
-    requests: requests || [],
+    trips: (trips as TripTimingData[] | null) || [],
+    requests: (requests as TripRequestData[] | null) || [],
   }
 }
 

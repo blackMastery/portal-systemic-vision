@@ -45,7 +45,7 @@ async function fetchDashboardMetrics() {
     .gte('requested_at', today.toISOString())
     .eq('status', 'completed')
 
-  const todayRevenue = todayTrips?.reduce((sum, trip) => sum + (trip.actual_fare || 0), 0) || 0
+  const todayRevenue = (todayTrips as Array<{ actual_fare: number | null }> | null)?.reduce((sum, trip) => sum + (trip.actual_fare || 0), 0) || 0
 
   return {
     activeDrivers: activeDrivers || 0,

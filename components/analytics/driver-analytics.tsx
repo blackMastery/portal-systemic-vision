@@ -11,6 +11,21 @@ interface DriverAnalyticsProps {
   dateRange: { start: Date; end: Date }
 }
 
+type DriverData = {
+  verification_status: string
+  is_online: boolean
+  is_available: boolean
+  rating_average: number
+  total_trips: number
+  acceptance_rate: number
+  user: { full_name: string } | null
+}
+
+type DriverTripData = {
+  driver_id: string
+  actual_fare: number | null
+}
+
 async function fetchDriverAnalytics(dateRange: { start: Date; end: Date }) {
   const supabase = createClient()
 
@@ -35,8 +50,8 @@ async function fetchDriverAnalytics(dateRange: { start: Date; end: Date }) {
     .not('driver_id', 'is', null)
 
   return {
-    drivers: drivers || [],
-    trips: trips || [],
+    drivers: (drivers as DriverData[] | null) || [],
+    trips: (trips as DriverTripData[] | null) || [],
   }
 }
 
@@ -58,11 +73,15 @@ export function DriverAnalytics({ dateRange }: DriverAnalyticsProps) {
   }))
 
   // Calculate metrics
-  const totalDrivers = data?.drivers.length || 0
-  const verifiedDrivers = data?.drivers.filter(d => d.verification_status === 'approved').length || 0
-  const onlineDrivers = data?.drivers.filter(d => d.is_online).length || 0
-  const avgRating = data?.drivers.reduce((sum, d) => sum + (d.rating_average || 0), 0) / totalDrivers || 0
-  const avgAcceptanceRate = data?.drivers.reduce((sum, d) => sum + (d.acceptance_rate || 0), 0) / totalDrivers || 0
+  const totalDrivers = data?.drivers?.length || 0
+  const verifiedDrivers = data?.drivers?.filter(d => d.verification_status === 'approved').length || 0
+  const onlineDrivers = data?.drivers?.filter(d => d.is_online).length || 0
+  const avgRating = totalDrivers > 0 && data?.drivers
+    ? data.drivers.reduce((sum, d) => sum + (d.rating_average || 0), 0) / totalDrivers
+    : 0
+  const avgAcceptanceRate = totalDrivers > 0 && data?.drivers
+    ? data.drivers.reduce((sum, d) => sum + (d.acceptance_rate || 0), 0) / totalDrivers
+    : 0
 
   return (
     <div className="space-y-6">

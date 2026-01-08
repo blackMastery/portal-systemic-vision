@@ -27,7 +27,7 @@ export async function middleware(req: NextRequest) {
       .eq('auth_id', session.user.id)
       .single()
 
-    if (user?.role !== 'admin') {
+    if (!user || (user as { role: string }).role !== 'admin') {
       return NextResponse.redirect(new URL('/unauthorized', req.url))
     }
   }
@@ -40,7 +40,7 @@ export async function middleware(req: NextRequest) {
       .eq('auth_id', session.user.id)
       .single()
 
-    if (user?.role === 'admin') {
+    if (user && (user as { role: string }).role === 'admin') {
       return NextResponse.redirect(new URL('/admin/dashboard', req.url))
     }
   }

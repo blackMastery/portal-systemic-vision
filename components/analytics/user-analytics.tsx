@@ -14,6 +14,17 @@ interface UserAnalyticsProps {
 
 const COLORS = ['#10B981', '#3B82F6', '#8B5CF6']
 
+type UserData = {
+  created_at: string
+  role: string
+}
+
+type ActiveUserData = {
+  rider_id: string | null
+  driver_id: string | null
+  requested_at: string
+}
+
 async function fetchUserAnalytics(dateRange: { start: Date; end: Date }) {
   const supabase = createClient()
   const startDate = dateRange.start.toISOString()
@@ -34,8 +45,8 @@ async function fetchUserAnalytics(dateRange: { start: Date; end: Date }) {
     .lte('requested_at', endDate)
 
   return {
-    users: users || [],
-    activeUsers: activeUsers || [],
+    users: (users as UserData[] | null) || [],
+    activeUsers: (activeUsers as ActiveUserData[] | null) || [],
   }
 }
 

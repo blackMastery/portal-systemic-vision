@@ -12,6 +12,14 @@ interface SubscriptionAnalyticsProps {
   dateRange: { start: Date; end: Date }
 }
 
+type SubscriptionAnalyticsData = {
+  created_at: string
+  status: string
+  plan_type: string
+  amount: number
+  end_date: string
+}
+
 async function fetchSubscriptionAnalytics(dateRange: { start: Date; end: Date }) {
   const supabase = createClient()
   const startDate = dateRange.start.toISOString()
@@ -25,7 +33,7 @@ async function fetchSubscriptionAnalytics(dateRange: { start: Date; end: Date })
     .lte('created_at', endDate)
 
   return {
-    subscriptions: subscriptions || [],
+    subscriptions: (subscriptions as SubscriptionAnalyticsData[] | null) || [],
   }
 }
 

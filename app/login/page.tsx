@@ -34,7 +34,7 @@ export default function LoginPage() {
         .eq('auth_id', authData.user.id)
         .single()
 
-      if (userError || userData.role !== 'admin') {
+      if (userError || !userData || (userData as { role: string }).role !== 'admin') {
         await supabase.auth.signOut()
         throw new Error('Unauthorized: Admin access required')
       }

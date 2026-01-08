@@ -13,6 +13,17 @@ interface RiderAnalyticsProps {
 
 const COLORS = ['#10B981', '#3B82F6', '#EF4444', '#6B7280']
 
+type RiderData = {
+  subscription_status: string
+  rating_average: number
+}
+
+type SubscriptionData = {
+  plan_type: string
+  amount: number
+  status: string
+}
+
 async function fetchRiderAnalytics(dateRange: { start: Date; end: Date }) {
   const supabase = createClient()
 
@@ -29,8 +40,8 @@ async function fetchRiderAnalytics(dateRange: { start: Date; end: Date }) {
     .eq('status', 'active')
 
   return {
-    riders: riders || [],
-    subscriptions: subscriptions || [],
+    riders: (riders as RiderData[] | null) || [],
+    subscriptions: (subscriptions as SubscriptionData[] | null) || [],
   }
 }
 
@@ -67,7 +78,9 @@ export function RiderAnalytics({ dateRange }: RiderAnalyticsProps) {
   const activeSubscribers = data?.riders.filter(r => r.subscription_status === 'active').length || 0
   const trialRiders = data?.riders.filter(r => r.subscription_status === 'trial').length || 0
   const conversionRate = trialRiders > 0 ? ((activeSubscribers / (trialRiders + activeSubscribers)) * 100).toFixed(1) : '0'
-  const avgRating = data?.riders.reduce((sum, r) => sum + (r.rating_average || 0), 0) / totalRiders || 0
+  const avgRating = totalRiders > 0 && data?.riders
+    ? data.riders.reduce((sum, r) => sum + (r.rating_average || 0), 0) / totalRiders
+    : 0
 
   return (
     <div className="space-y-6">
