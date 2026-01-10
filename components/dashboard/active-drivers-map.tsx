@@ -151,8 +151,8 @@ export function ActiveDriversMap() {
                 <p className="font-semibold mb-2">To fix this:</p>
                 <ol className="list-decimal list-inside space-y-1">
                   <li>Go to <a href="https://console.cloud.google.com/apis/library" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Google Cloud Console</a></li>
-                  <li>Search for "Maps JavaScript API"</li>
-                  <li>Click "Enable" to activate it</li>
+                  <li>Search for &quot;Maps JavaScript API&quot;</li>
+                  <li>Click &quot;Enable&quot; to activate it</li>
                   <li>Ensure billing is enabled for your project</li>
                 </ol>
               </div>

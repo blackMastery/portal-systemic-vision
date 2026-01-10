@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import Image from 'next/image'
 import { 
   ArrowLeft, 
   User, 
@@ -68,6 +69,11 @@ async function fetchDriverDetail(driverId: string): Promise<DriverDetailData> {
   if (driverError) throw driverError
   if (!driverData) throw new Error('Driver not found')
 
+  // Type assertion for driverData to access user_id
+  const driver = driverData as Database['public']['Tables']['driver_profiles']['Row'] & {
+    user: Database['public']['Tables']['users']['Row'] | null
+  }
+
   // Fetch vehicles separately
   const { data: vehiclesData, error: vehiclesError } = await supabase
     .from('vehicles')
@@ -96,7 +102,7 @@ async function fetchDriverDetail(driverId: string): Promise<DriverDetailData> {
   const { data: subscriptionsData, error: subscriptionsError } = await supabase
     .from('subscriptions')
     .select('*')
-    .eq('user_id', driverData.user_id)
+    .eq('user_id', driver.user_id!)
     .order('created_at', { ascending: false })
 
   if (subscriptionsError) throw subscriptionsError
@@ -105,7 +111,7 @@ async function fetchDriverDetail(driverId: string): Promise<DriverDetailData> {
   const { data: paymentsData, error: paymentsError } = await supabase
     .from('payment_transactions')
     .select('*')
-    .eq('user_id', driverData.user_id)
+    .eq('user_id', driver.user_id!)
     .order('created_at', { ascending: false })
     .limit(20)
 
@@ -125,7 +131,7 @@ async function fetchDriverDetail(driverId: string): Promise<DriverDetailData> {
 
   return {
     driver: {
-      ...driverData,
+      ...driver,
       vehicles: (vehiclesData || []) as Database['public']['Tables']['vehicles']['Row'][]
     } as DriverDetailData['driver'],
     trips: (tripsData || []) as DriverDetailData['trips'],
@@ -187,7 +193,7 @@ export default function DriverDetailPage() {
         <div className="text-center">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <p className="text-gray-900 font-medium mb-2">Driver not found</p>
-          <p className="text-gray-600 mb-4">The driver you're looking for doesn't exist.</p>
+          <p className="text-gray-600 mb-4">The driver you&apos;re looking for doesn&apos;t exist.</p>
           <Link
             href="/admin/drivers"
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -420,7 +426,7 @@ export default function DriverDetailPage() {
                   className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
                   <FileText className="h-4 w-4 mr-2" />
-                  View Driver's License
+                  View Driver&apos;s License
                 </a>
               )}
             </div>
@@ -683,11 +689,13 @@ function VehicleCard({ vehicle }: { vehicle: Database['public']['Tables']['vehic
               <p className="text-sm font-medium text-gray-700 mb-2">Vehicle Photo</p>
               <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
                 {!vehicleImageError ? (
-                  <img
+                  <Image
                     src={vehicle.vehicle_photo_url}
                     alt={`${vehicle.make} ${vehicle.model}`}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
                     onError={() => setVehicleImageError(true)}
+                    unoptimized
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full text-gray-400">
@@ -711,11 +719,13 @@ function VehicleCard({ vehicle }: { vehicle: Database['public']['Tables']['vehic
               <p className="text-sm font-medium text-gray-700 mb-2">Registration Document</p>
               <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
                 {!registrationImageError ? (
-                  <img
+                  <Image
                     src={vehicle.registration_url}
                     alt="Registration Document"
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
                     onError={() => setRegistrationImageError(true)}
+                    unoptimized
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full text-gray-400">
@@ -911,8 +921,11 @@ function VerificationUpdateModal({
         throw new Error('Admin user not found')
       }
 
+      const driverId = driver.id
+      const userId = driver.user_id
+
       // Update driver verification status
-      const updateData: any = {
+      const updateData: Database['public']['Tables']['driver_profiles']['Update'] = {
         verification_status: status,
       }
 
@@ -920,49 +933,54 @@ function VerificationUpdateModal({
         updateData.verified_at = new Date().toISOString()
       }
 
-      const { error: updateError } = await supabase
-        .from('driver_profiles')
+      const { error: updateError } = await (supabase
+        .from('driver_profiles') as any)
         .update(updateData)
-        .eq('id', driver.id)
+        .eq('id', driverId)
 
       if (updateError) throw updateError
 
       // Create verification log entry
-      const { error: logError } = await supabase
-        .from('verification_logs')
-        .insert({
-          driver_id: driver.id,
-          admin_id: adminUser.id,
-          previous_status: driver.verification_status,
-          new_status: status,
-          admin_notes: adminNotes || null,
-          rejection_reason: status === 'rejected' ? rejectionReason || null : null,
-        })
+      const logData = {
+        driver_id: driverId,
+        admin_id: (adminUser as { id: string }).id,
+        previous_status: driver.verification_status,
+        new_status: status,
+        admin_notes: adminNotes || null,
+        rejection_reason: status === 'rejected' ? rejectionReason || null : null,
+      }
+
+      const { error: logError } = await (supabase
+        .from('verification_logs') as any)
+        .insert(logData)
 
       if (logError) throw logError
 
       // Optionally create notification for driver
-      if (driver.user_id) {
-        await supabase
-          .from('notifications')
-          .insert({
-            user_id: driver.user_id,
-            title: status === 'approved' 
-              ? 'Verification Approved!' 
-              : status === 'rejected'
-              ? 'Verification Rejected'
-              : status === 'suspended'
-              ? 'Account Suspended'
-              : 'Verification Status Updated',
-            body: status === 'approved'
-              ? 'Your driver account is now active. You can start accepting trips.'
-              : status === 'rejected'
-              ? 'Your verification application has been rejected. Please review the reason and resubmit.'
-              : status === 'suspended'
-              ? 'Your driver account has been suspended. Please contact support for more information.'
-              : 'Your verification status has been updated.',
-            notification_type: `verification_${status}`,
-          })
+      if (userId) {
+        const notificationData = {
+          user_id: userId,
+          title: status === 'approved' 
+            ? 'Verification Approved!' 
+            : status === 'rejected'
+            ? 'Verification Rejected'
+            : status === 'suspended'
+            ? 'Account Suspended'
+            : 'Verification Status Updated',
+          body: status === 'approved'
+            ? 'Your driver account is now active. You can start accepting trips.'
+            : status === 'rejected'
+            ? 'Your verification application has been rejected. Please review the reason and resubmit.'
+            : status === 'suspended'
+            ? 'Your driver account has been suspended. Please contact support for more information.'
+            : 'Your verification status has been updated.',
+          notification_type: `verification_${status}`,
+          is_read: false,
+        }
+
+        await (supabase
+          .from('notifications') as any)
+          .insert(notificationData)
       }
 
       onSuccess()
