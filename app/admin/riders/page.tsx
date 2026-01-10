@@ -22,9 +22,9 @@ async function fetchRiders(filters: {
     `)
     .order('created_at', { ascending: false })
 
-  if (filters.subscriptionStatus !== 'all') {
-    query = query.eq('subscription_status', filters.subscriptionStatus)
-  }
+  // if (filters.subscriptionStatus !== 'all') {
+  //   query = query.eq('subscription_status', filters.subscriptionStatus)
+  // }
 
   const { data, error } = await query
 
