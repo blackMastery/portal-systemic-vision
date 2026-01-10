@@ -18,7 +18,7 @@ async function fetchRiders(filters: {
     .from('rider_profiles')
     .select(`
       *,
-      user:users!rider_profiles_user_id_fkey(*)
+      user:user_id (*)
     `)
     .order('created_at', { ascending: false })
 

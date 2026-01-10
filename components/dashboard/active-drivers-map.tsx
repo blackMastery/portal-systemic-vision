@@ -8,7 +8,7 @@ type ActiveDriverData = {
   id: string
   is_available: boolean
   user: { full_name: string; phone_number: string } | null
-  vehicle: Array<{ make: string; model: string; license_plate: string }> | null
+  vehicles: Array<{ make: string; model: string; license_plate: string }> | null
 }
 
 async function fetchActiveDrivers() {
@@ -19,8 +19,8 @@ async function fetchActiveDrivers() {
     .select(`
       id,
       is_available,
-      user:users!driver_profiles_user_id_fkey(full_name, phone_number),
-      vehicle:vehicles!driver_profiles_id_fkey(make, model, license_plate)
+      user:user_id (full_name, phone_number),
+      vehicles:vehicles (make, model, license_plate)
     `)
     .eq('is_online', true)
     .limit(20)
@@ -82,7 +82,7 @@ export function ActiveDriversMap() {
                     {driver.user?.full_name}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {driver.vehicle?.[0]?.make} {driver.vehicle?.[0]?.model} • {driver.vehicle?.[0]?.license_plate}
+                    {driver.vehicles?.[0]?.make} {driver.vehicles?.[0]?.model} • {driver.vehicles?.[0]?.license_plate}
                   </p>
                 </div>
               </div>

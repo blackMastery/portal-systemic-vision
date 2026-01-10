@@ -53,12 +53,13 @@ export interface Database {
       driver_profiles: {
         Row: {
           id: string
-          user_id: string
+          user_id: string | null
           verification_status: VerificationStatus
           verified_at: string | null
           subscription_status: SubscriptionStatus
           subscription_start_date: string | null
           subscription_end_date: string | null
+          monthly_fee_amount: number
           national_id_url: string | null
           drivers_license_url: string | null
           drivers_license_number: string | null
@@ -71,6 +72,7 @@ export interface Database {
           rating_average: number
           rating_count: number
           acceptance_rate: number
+          mmg_account_number: string | null
           created_at: string
           updated_at: string
         }
@@ -80,7 +82,7 @@ export interface Database {
       vehicles: {
         Row: {
           id: string
-          driver_id: string
+          driver_id: string | null
           make: string
           model: string
           year: number | null
@@ -88,8 +90,12 @@ export interface Database {
           license_plate: string
           vehicle_photo_url: string | null
           registration_url: string | null
+          registration_number: string | null
+          registration_expiry: string | null
+          insurance_expiry: string | null
           is_active: boolean
           is_primary: boolean
+          passenger_capacity: number
           created_at: string
           updated_at: string
         }
@@ -183,6 +189,20 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['notifications']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['notifications']['Insert']>
       }
+      verification_logs: {
+        Row: {
+          id: string
+          driver_id: string | null
+          admin_id: string | null
+          previous_status: VerificationStatus | null
+          new_status: VerificationStatus
+          admin_notes: string | null
+          rejection_reason: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['verification_logs']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['verification_logs']['Insert']>
+      }
     }
     Views: {}
     Functions: {}
@@ -196,8 +216,8 @@ export type UserWithProfile = Database['public']['Tables']['users']['Row'] & {
 }
 
 export type DriverWithDetails = Database['public']['Tables']['driver_profiles']['Row'] & {
-  user: Database['public']['Tables']['users']['Row']
-  vehicle?: Database['public']['Tables']['vehicles']['Row'][]
+  user: Database['public']['Tables']['users']['Row'] | null
+  vehicles?: Database['public']['Tables']['vehicles']['Row'][]
 }
 
 export type RiderWithDetails = Database['public']['Tables']['rider_profiles']['Row'] & {

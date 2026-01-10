@@ -14,12 +14,11 @@ async function fetchDrivers(filters: {
 }) {
   const supabase = createClient()
   
+  console.log("🚀 ~ fetchDrivers ~ filters:", filters)
   let query = supabase
     .from('driver_profiles')
     .select(`
-      *,
-      user:users!driver_profiles_user_id_fkey(*),
-      vehicle:vehicles!driver_profiles_id_fkey(*)
+      *
     `)
     .order('created_at', { ascending: false })
 
@@ -32,8 +31,12 @@ async function fetchDrivers(filters: {
   }
 
   const { data, error } = await query
+  console.log("🚀 ~ fetchDrivers ~ data:", data)
 
-  if (error) throw error
+  if (error) {
+    console.log("🚀 ~ fetchDrivers ~ error:", error)
+    throw error
+  }
 
   // Client-side search filtering
   let results = data as DriverWithDetails[]
@@ -194,13 +197,13 @@ export default function DriversPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {driver.vehicle && driver.vehicle[0] ? (
+                      {driver.vehicles && driver.vehicles[0] ? (
                         <div className="text-sm">
                           <div className="text-gray-900">
-                            {driver.vehicle[0].make} {driver.vehicle[0].model}
+                            {driver.vehicles[0].make} {driver.vehicles[0].model}
                           </div>
                           <div className="text-gray-500">
-                            {driver.vehicle[0].license_plate}
+                            {driver.vehicles[0].license_plate}
                           </div>
                         </div>
                       ) : (

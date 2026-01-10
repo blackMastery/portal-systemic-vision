@@ -14,15 +14,15 @@ async function fetchRecentTrips() {
     .from('trips')
     .select(`
       *,
-      rider:rider_profiles!trips_rider_id_fkey(
+      rider:rider_id (
         id,
-        user:users!rider_profiles_user_id_fkey(full_name, phone_number)
+        user:user_id (full_name, phone_number)
       ),
-      driver:driver_profiles!trips_driver_id_fkey(
+      driver:driver_id (
         id,
-        user:users!driver_profiles_user_id_fkey(full_name, phone_number)
+        user:user_id (full_name, phone_number)
       ),
-      vehicle:vehicles!trips_vehicle_id_fkey(make, model, license_plate)
+      vehicle:vehicle_id (make, model, license_plate)
     `)
     .order('requested_at', { ascending: false })
     .limit(10)

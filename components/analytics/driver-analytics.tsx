@@ -39,7 +39,7 @@ async function fetchDriverAnalytics(dateRange: { start: Date; end: Date }) {
       rating_average,
       total_trips,
       acceptance_rate,
-      user:users!driver_profiles_user_id_fkey(full_name)
+      user:user_id (full_name)
     `)
 
   // Driver revenue

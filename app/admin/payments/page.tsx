@@ -30,7 +30,7 @@ async function fetchSubscriptions(filters: {
     .from('subscriptions')
     .select(`
       *,
-      user:users!subscriptions_user_id_fkey(full_name, phone_number, email, role)
+      user:user_id (full_name, phone_number, email, role)
     `)
     .order('created_at', { ascending: false })
 
@@ -76,8 +76,8 @@ async function fetchPaymentTransactions(filters: {
     .from('payment_transactions')
     .select(`
       *,
-      user:users!payment_transactions_user_id_fkey(full_name, phone_number, email, role),
-      subscription:subscriptions!payment_transactions_subscription_id_fkey(id, plan_type, status)
+      user:user_id (full_name, phone_number, email, role),
+      subscription:subscription_id (id, plan_type, status)
     `)
     .order('created_at', { ascending: false })
 
