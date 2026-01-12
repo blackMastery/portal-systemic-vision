@@ -203,6 +203,32 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['verification_logs']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['verification_logs']['Insert']>
       }
+      trip_requests: {
+        Row: {
+          id: string
+          rider_id: string | null
+          pickup_latitude: number
+          pickup_longitude: number
+          pickup_address: string
+          pickup_location: unknown // PostGIS geography type
+          destination_latitude: number | null
+          destination_longitude: number | null
+          destination_address: string | null
+          destination_location: unknown | null // PostGIS geography type
+          trip_type: TripType
+          estimated_distance_km: number | null
+          estimated_duration_minutes: number | null
+          estimated_fare: number | null
+          notes: string | null
+          passenger_count: number
+          status: TripStatus
+          expires_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['trip_requests']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['trip_requests']['Insert']>
+      }
     }
     Views: {}
     Functions: {}

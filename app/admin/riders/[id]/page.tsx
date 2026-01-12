@@ -537,3 +537,6 @@ export default function RiderDetailPage() {
   )
 }
 
+
+
+
