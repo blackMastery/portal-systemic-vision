@@ -44,6 +44,8 @@ export interface Database {
           total_trips: number
           rating_average: number
           rating_count: number
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
           created_at: string
           updated_at: string
         }
@@ -167,7 +169,10 @@ export interface Database {
           payment_method: string
           status: PaymentStatus
           mmg_transaction_id: string | null
+          mmg_reference: string | null
+          mmg_phone_number: string | null
           gateway_response: Json | null
+          error_message: string | null
           initiated_at: string
           completed_at: string | null
           created_at: string

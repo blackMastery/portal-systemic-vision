@@ -73,13 +73,13 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Get user profile from database
-    const { data: userProfile, error: userError } = await supabase
+    const { data: userProfileData, error: userError } = await supabase
       .from('users')
       .select('id, role, full_name, email, phone_number, profile_photo_url')
       .eq('auth_id', authData.user.id)
       .single()
 
-    if (userError || !userProfile) {
+    if (userError || !userProfileData) {
       // Sign out if user profile not found
       await supabase.auth.signOut()
       return NextResponse.json(
@@ -87,6 +87,12 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       )
     }
+
+    // Type assertion for the selected fields
+    const userProfile = userProfileData as Pick<
+      Database['public']['Tables']['users']['Row'],
+      'id' | 'role' | 'full_name' | 'email' | 'phone_number' | 'profile_photo_url'
+    >
 
     // 6. Optional role verification
     if (body.role && userProfile.role !== body.role) {
