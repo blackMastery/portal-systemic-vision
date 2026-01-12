@@ -4,7 +4,7 @@
 
 The Trip Requests API allows authenticated riders to create trip requests in the system. A trip request represents a rider's intent to book a ride, which can then be matched with available drivers.
 
-**Use Case**: Riders use this endpoint to request a trip by providing pickup location (required) and optionally a destination. The request expires after 10 minutes if not accepted by a driver.
+**Use Case**: Riders use this endpoint to request a trip by providing pickup location and destination address (both required). Destination coordinates are optional but can be included for more precise location tracking. The request expires after 10 minutes if not accepted by a driver.
 
 ## Authentication
 
@@ -38,6 +38,7 @@ Content-Type: application/json
 | `pickup_latitude` | number | Latitude of pickup location | `6.8013` |
 | `pickup_longitude` | number | Longitude of pickup location | `-58.1551` |
 | `pickup_address` | string | Human-readable pickup address | `"Georgetown City Mall"` |
+| `destination_address` | string | Human-readable destination address description | `"Sheriff Street, Georgetown"` |
 | `trip_type` | string | Type of trip. Must be one of: `airport`, `short_drop`, `market`, `other` | `"short_drop"` |
 
 ### Optional Fields
@@ -46,7 +47,6 @@ Content-Type: application/json
 |-------|------|-------------|---------|---------|
 | `destination_latitude` | number | Latitude of destination location | - | `6.8100` |
 | `destination_longitude` | number | Longitude of destination location | - | `-58.1600` |
-| `destination_address` | string | Human-readable destination address | - | `"Sheriff Street, Georgetown"` |
 | `estimated_distance_km` | number | Estimated distance in kilometers | - | `2.5` |
 | `estimated_duration_minutes` | integer | Estimated duration in minutes | - | `15` |
 | `estimated_fare` | number | Estimated fare amount | - | `800` |
@@ -55,21 +55,25 @@ Content-Type: application/json
 
 ### Important Notes
 
-1. **Destination Fields**: If any destination field (`destination_latitude`, `destination_longitude`, `destination_address`) is provided, all three must be provided together. If none are provided, the trip request will be created without a destination.
+1. **Destination Address**: `destination_address` is **required** and must be a non-empty string. This provides a human-readable description of the destination, even if precise coordinates are not available.
 
-2. **Trip Types**:
+2. **Destination Coordinates**: `destination_latitude` and `destination_longitude` are **optional**. However, if either coordinate is provided, **both must be provided together** as valid numbers. If coordinates are not provided, the trip request will still be created with just the destination address description.
+
+3. **Trip Types**:
    - `airport`: Trips to/from the airport
    - `short_drop`: Short distance trips within the city
    - `market`: Trips to/from markets
    - `other`: Any other type of trip
 
-3. **Coordinates**: Latitude and longitude should be in decimal degrees (WGS84 format). For Guyana, latitude ranges approximately from 1.0 to 8.5, and longitude ranges approximately from -61.0 to -56.0.
+4. **Coordinates**: Latitude and longitude should be in decimal degrees (WGS84 format). For Guyana, latitude ranges approximately from 1.0 to 8.5, and longitude ranges approximately from -61.0 to -56.0.
 
 ## Response Formats
 
 ### Success Response (201 Created)
 
 Returns the created trip request object.
+
+**With destination coordinates:**
 
 ```json
 {
@@ -87,6 +91,33 @@ Returns the created trip request object.
   "estimated_distance_km": 2.5,
   "estimated_duration_minutes": 15,
   "estimated_fare": 800,
+  "notes": "Please call when you arrive",
+  "passenger_count": 1,
+  "status": "requested",
+  "expires_at": "2024-01-15T10:20:00.000Z",
+  "created_at": "2024-01-15T10:10:00.000Z",
+  "updated_at": "2024-01-15T10:10:00.000Z"
+}
+```
+
+**Without destination coordinates (address only):**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "rider_id": "660e8400-e29b-41d4-a716-446655440000",
+  "pickup_latitude": 6.8013,
+  "pickup_longitude": -58.1551,
+  "pickup_address": "Georgetown City Mall",
+  "pickup_location": "POINT(-58.1551 6.8013)",
+  "destination_latitude": null,
+  "destination_longitude": null,
+  "destination_address": "Sheriff Street, Georgetown",
+  "destination_location": null,
+  "trip_type": "short_drop",
+  "estimated_distance_km": null,
+  "estimated_duration_minutes": null,
+  "estimated_fare": null,
   "notes": "Please call when you arrive",
   "passenger_count": 1,
   "status": "requested",
@@ -116,7 +147,13 @@ Invalid request data or validation errors.
 
 ```json
 {
-  "error": "Destination fields must be provided together: destination_latitude, destination_longitude, and destination_address."
+  "error": "destination_address is required and must be a non-empty string."
+}
+```
+
+```json
+{
+  "error": "destination_latitude and destination_longitude must be provided together as numbers."
 }
 ```
 
@@ -235,12 +272,13 @@ try {
 }
 ```
 
-#### Request Without Destination
+#### Request Without Destination Coordinates
 
 ```typescript
-async function createTripRequestWithoutDestination(
+async function createTripRequestWithoutCoordinates(
   sessionToken: string,
   pickup: { lat: number; lng: number; address: string },
+  destinationAddress: string,
   tripType: 'airport' | 'short_drop' | 'market' | 'other'
 ) {
   const response = await fetch('/api/trip-requests', {
@@ -253,6 +291,7 @@ async function createTripRequestWithoutDestination(
       pickup_latitude: pickup.lat,
       pickup_longitude: pickup.lng,
       pickup_address: pickup.address,
+      destination_address: destinationAddress, // Required - description only
       trip_type: tripType,
       notes: 'Please call when you arrive',
       passenger_count: 2,
@@ -340,7 +379,7 @@ curl -X POST https://your-domain.com/api/trip-requests \
   }'
 ```
 
-#### Request Without Destination
+#### Request Without Destination Coordinates
 
 ```bash
 curl -X POST https://your-domain.com/api/trip-requests \
@@ -350,6 +389,7 @@ curl -X POST https://your-domain.com/api/trip-requests \
     "pickup_latitude": 6.8013,
     "pickup_longitude": -58.1551,
     "pickup_address": "Georgetown City Mall",
+    "destination_address": "Sheriff Street, Georgetown",
     "trip_type": "short_drop",
     "notes": "Please call when you arrive"
   }'
@@ -400,19 +440,20 @@ const tripRequest = await createTripRequest(
 )
 ```
 
-### Scenario 2: Creating a Request Without Destination
+### Scenario 2: Creating a Request Without Destination Coordinates
 
-Use this when a rider wants to be picked up but will provide the destination later, or for "drive around" type trips.
+Use this when a rider knows the destination address but doesn't have precise coordinates, or when coordinates are not available.
 
 ```typescript
-const tripRequest = await createTripRequestWithoutDestination(
+const tripRequest = await createTripRequestWithoutCoordinates(
   sessionToken,
   {
     lat: 6.8013,
     lng: -58.1551,
     address: 'Georgetown City Mall',
   },
-  'other'
+  'Sheriff Street, Georgetown', // Destination address description (required)
+  'short_drop'
 )
 ```
 
@@ -616,14 +657,14 @@ const requestData: any = {
   pickup_latitude: pickup.lat,
   pickup_longitude: pickup.lng,
   pickup_address: pickup.address,
+  destination_address: destinationAddress, // Always required
   trip_type: tripType,
 }
 
-// Only add destination if provided
-if (destination) {
-  requestData.destination_latitude = destination.lat
-  requestData.destination_longitude = destination.lng
-  requestData.destination_address = destination.address
+// Only add destination coordinates if available
+if (destinationLat && destinationLng) {
+  requestData.destination_latitude = destinationLat
+  requestData.destination_longitude = destinationLng
 }
 
 // Only add optional fields if they have values
@@ -655,9 +696,11 @@ async function cancelRequest(requestId: string) {
 
 ## Additional Notes
 
+- **Destination Address**: Always required. Provides a human-readable description of the destination, even when precise coordinates are not available.
+- **Destination Coordinates**: Optional. If provided, both `destination_latitude` and `destination_longitude` must be included. When coordinates are provided, a PostGIS geography point is automatically created.
 - Trip requests automatically expire 10 minutes after creation if not accepted by a driver
 - The `status` field will be set to `'requested'` initially
-- PostGIS geography points are automatically created from the provided coordinates
+- PostGIS geography points are automatically created from the provided coordinates (when available)
 - All timestamps are in ISO 8601 format (UTC)
 - The `passenger_count` defaults to 1 if not provided
 

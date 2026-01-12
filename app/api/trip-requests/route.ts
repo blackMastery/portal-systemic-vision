@@ -8,7 +8,7 @@ interface TripRequestBody {
   pickup_address: string
   destination_latitude?: number
   destination_longitude?: number
-  destination_address?: string
+  destination_address: string // Required - description of destination
   trip_type: TripType
   estimated_distance_km?: number
   estimated_duration_minutes?: number
@@ -171,24 +171,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate destination fields - all or none
+    // Validate destination_address (required)
+    if (!body.destination_address || typeof body.destination_address !== 'string' || body.destination_address.trim().length === 0) {
+      return NextResponse.json(
+        {
+          error: 'destination_address is required and must be a non-empty string.',
+        },
+        { status: 400 }
+      )
+    }
+
+    // Validate destination coordinates (optional, but if one is provided, both must be provided)
     const hasDestinationLat = body.destination_latitude !== undefined
     const hasDestinationLng = body.destination_longitude !== undefined
-    const hasDestinationAddress = body.destination_address !== undefined
 
-    if (hasDestinationLat || hasDestinationLng || hasDestinationAddress) {
+    if (hasDestinationLat || hasDestinationLng) {
       if (
         !hasDestinationLat ||
         !hasDestinationLng ||
-        !hasDestinationAddress ||
         typeof body.destination_latitude !== 'number' ||
-        typeof body.destination_longitude !== 'number' ||
-        typeof body.destination_address !== 'string'
+        typeof body.destination_longitude !== 'number'
       ) {
         return NextResponse.json(
           {
             error:
-              'Destination fields must be provided together: destination_latitude, destination_longitude, and destination_address.',
+              'destination_latitude and destination_longitude must be provided together as numbers.',
           },
           { status: 400 }
         )
@@ -255,15 +262,16 @@ export async function POST(request: NextRequest) {
       passenger_count: body.passenger_count || 1,
     }
 
-    // Add destination fields if provided
+    // Add destination address (always required)
+    insertData.destination_address = body.destination_address.trim()
+
+    // Add destination coordinates and location point if provided
     if (
       body.destination_latitude !== undefined &&
-      body.destination_longitude !== undefined &&
-      body.destination_address
+      body.destination_longitude !== undefined
     ) {
       insertData.destination_latitude = body.destination_latitude
       insertData.destination_longitude = body.destination_longitude
-      insertData.destination_address = body.destination_address.trim()
       insertData.destination_location = `POINT(${body.destination_longitude} ${body.destination_latitude})`
     }
 
