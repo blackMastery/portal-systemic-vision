@@ -7,7 +7,7 @@ import { getMessagingInstance, type FirebaseProjectType } from './admin'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
 import { logger } from '@/lib/logger'
-import type { Message } from 'firebase-admin/messaging'
+import type { MulticastMessage } from 'firebase-admin/messaging'
 
 // FCM supports up to 500 tokens per batch
 const FCM_BATCH_SIZE = 500
@@ -79,7 +79,9 @@ export async function fetchFCMTokensForUsers(
   }
 
   // Filter out any null tokens (shouldn't happen due to query, but TypeScript safety)
-  const tokensWithUsers: FCMTokenWithUser[] = users
+  // Type assertion needed because Supabase select with specific columns returns a narrowed type
+  type UserWithFCMToken = { id: string; fcm_token: string | null }
+  const tokensWithUsers: FCMTokenWithUser[] = (users as UserWithFCMToken[])
     .filter((user) => user.fcm_token !== null)
     .map((user) => ({
       user_id: user.id,
@@ -106,6 +108,7 @@ async function removeInvalidTokens(userIds: string[]): Promise<void> {
 
   const { error } = await supabase
     .from('users')
+    // @ts-expect-error - fcm_token exists in database but TypeScript types may not be fully updated
     .update({ fcm_token: null })
     .in('id', userIds)
 
@@ -129,7 +132,7 @@ async function sendBatch(
 ): Promise<NotificationSendResult> {
   const messaging = await getMessagingInstance(projectType)
 
-  const message: Message = {
+  const message: MulticastMessage = {
     notification: {
       title,
       body,

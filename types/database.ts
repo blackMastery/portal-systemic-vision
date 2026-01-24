@@ -29,6 +29,7 @@ export interface Database {
           created_at: string
           updated_at: string
           last_seen_at: string | null
+          fcm_token: string | null
         }
         Insert: Omit<Database['public']['Tables']['users']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['users']['Insert']>

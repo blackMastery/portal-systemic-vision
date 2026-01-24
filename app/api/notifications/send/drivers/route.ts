@@ -181,7 +181,8 @@ export async function POST(request: NextRequest) {
 
       if (insertError) {
         // Log but don't fail the request - notification was sent successfully
-        logger.warn('Failed to create notification records', insertError, {
+        logger.warn('Failed to create notification records', {
+          error: insertError,
           userIds: validatedBody.user_ids,
         })
       }

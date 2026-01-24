@@ -160,7 +160,7 @@ Occurs when:
 ### Send Notification to Drivers
 
 ```bash
-curl -X POST https://your-domain.com/api/notifications/send/drivers \
+curl -X POST https://portal-systemic-vision.vercel.app//api/notifications/send/drivers \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -181,7 +181,7 @@ curl -X POST https://your-domain.com/api/notifications/send/drivers \
 ### Send Notification to Riders
 
 ```bash
-curl -X POST https://your-domain.com/api/notifications/send/riders \
+curl -X POST https://portal-systemic-vision.vercel.app//api/notifications/send/riders \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{

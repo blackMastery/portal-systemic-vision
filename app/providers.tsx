@@ -3,7 +3,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { useState } from 'react'
-import { logger } from '@/lib/logger'
 
 // Check if we're online
 function isOnline(): boolean {
@@ -55,10 +54,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
               // Exponential backoff: 1s, 2s, 4s
               return Math.min(1000 * 2 ** attemptIndex, 30000)
             },
-            onError: (error) => {
-              // Log query errors
-              logger.error('React Query error', error)
-            },
           },
           mutations: {
             retry: (failureCount, error) => {
@@ -76,10 +71,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
               return failureCount < 1
             },
             retryDelay: 1000,
-            onError: (error) => {
-              // Log mutation errors
-              logger.error('React Query mutation error', error)
-            },
           },
         },
       })

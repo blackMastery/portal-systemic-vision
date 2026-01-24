@@ -16,7 +16,7 @@ export default function UnauthorizedPage() {
         </h1>
         
         <p className="text-gray-600 mb-2">
-          You don't have permission to access this resource.
+          You don&apos;t have permission to access this resource.
         </p>
         
         <p className="text-sm text-gray-500 mb-6">
