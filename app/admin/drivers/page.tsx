@@ -14,7 +14,6 @@ async function fetchDrivers(filters: {
 }) {
   const supabase = createClient()
   
-  console.log("🚀 ~ fetchDrivers ~ filters:", filters)
   let query = supabase
     .from('driver_profiles')
     .select(`
@@ -31,10 +30,8 @@ async function fetchDrivers(filters: {
   }
 
   const { data, error } = await query
-  console.log("🚀 ~ fetchDrivers ~ data:", data)
 
   if (error) {
-    console.log("🚀 ~ fetchDrivers ~ error:", error)
     throw error
   }
 

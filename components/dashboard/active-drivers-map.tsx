@@ -6,7 +6,11 @@ import { MapPin, Navigation } from 'lucide-react'
 import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api'
 import { useMemo, useState } from 'react'
 
-const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'AIzaSyBSx2GTsrurnLqynB4JR4HUuuf0dNWmYys'
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+
+if (!GOOGLE_MAPS_API_KEY) {
+  console.warn('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is not set. Google Maps will not load.')
+}
 
 type ActiveDriverData = {
   id: string
@@ -27,7 +31,8 @@ type DriverProfile = {
 async function fetchActiveDrivers(): Promise<ActiveDriverData[]> {
   const supabase = createClient()
   
-  // First, get active drivers
+  // Get active drivers with their latest location in a single query
+  // Using a more efficient approach: get drivers and their latest locations
   const { data: drivers, error: driversError } = await supabase
     .from('driver_profiles')
     .select(`
@@ -43,29 +48,49 @@ async function fetchActiveDrivers(): Promise<ActiveDriverData[]> {
   if (driversError) throw driversError
   if (!drivers || drivers.length === 0) return []
 
-  // Get latest location from location_history for each driver
-  const driversWithLocations = await Promise.all(
-    (drivers as DriverProfile[]).map(async (driver) => {
-      const { data: locationData } = await supabase
-        .from('location_history')
-        .select('latitude, longitude')
-        .eq('driver_id', driver.id)
-        .order('recorded_at', { ascending: false })
-        .limit(1)
-        .single()
+  // Get all driver IDs
+  const driverIds = (drivers as DriverProfile[]).map(d => d.id)
 
-      const location = locationData as { latitude: number; longitude: number } | null
+  // Fetch latest locations for all drivers in a single query using IN clause
+  // This avoids N+1 query problem
+  const { data: locationsData, error: locationsError } = await supabase
+    .from('location_history')
+    .select('driver_id, latitude, longitude')
+    .in('driver_id', driverIds)
+    .order('recorded_at', { ascending: false })
 
-      return {
-        id: driver.id,
-        is_available: driver.is_available,
-        latitude: location?.latitude ? Number(location.latitude) : null,
-        longitude: location?.longitude ? Number(location.longitude) : null,
-        user: driver.user,
-        vehicles: driver.vehicles,
-      } as ActiveDriverData
+  if (locationsError) {
+    // If location fetch fails, return drivers without locations
+    console.error('Error fetching driver locations:', locationsError)
+  }
+
+  // Create a map of driver_id to latest location
+  const locationMap = new Map<string, { latitude: number; longitude: number }>()
+  if (locationsData) {
+    // Get the latest location for each driver (data is already ordered by recorded_at desc)
+    locationsData.forEach((location: { driver_id: string; latitude: number; longitude: number }) => {
+      if (!locationMap.has(location.driver_id)) {
+        locationMap.set(location.driver_id, {
+          latitude: location.latitude,
+          longitude: location.longitude,
+        })
+      }
     })
-  )
+  }
+
+  // Combine driver data with locations
+  const driversWithLocations = (drivers as DriverProfile[]).map((driver) => {
+    const location = locationMap.get(driver.id)
+
+    return {
+      id: driver.id,
+      is_available: driver.is_available,
+      latitude: location?.latitude ? Number(location.latitude) : null,
+      longitude: location?.longitude ? Number(location.longitude) : null,
+      user: driver.user,
+      vehicles: driver.vehicles,
+    } as ActiveDriverData
+  })
 
   return driversWithLocations
 }
@@ -96,7 +121,8 @@ export function ActiveDriversMap() {
   })
 
   const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY || '',
+    id: 'google-map-script',
   })
 
   // Calculate map center based on driver locations

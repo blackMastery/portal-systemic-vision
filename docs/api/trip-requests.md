@@ -4,17 +4,17 @@
 
 The Trip Requests API allows authenticated riders to create trip requests in the system. A trip request represents a rider's intent to book a ride, which can then be matched with available drivers.
 
-**Use Case**: Riders use this endpoint to request a trip by providing pickup location and destination address (both required). Destination coordinates are optional but can be included for more precise location tracking. The request expires after 10 minutes if not accepted by a driver.
+**Use Case**: Riders use this endpoint to request a trip by providing pickup location and destination address (both required). Destination coordinates are optional but can be included for precise location tracking. The request expires after 10 minutes if not accepted by a driver.
 
 ## Authentication
 
 All requests must include a valid Supabase session token in the Authorization header.
 
 ```
-Authorization: Bearer <supabase_session_token>
+Authorization: Bearer <access_token>
 ```
 
-The session token is obtained after a rider successfully authenticates with Supabase Auth. The token should be included in all API requests.
+The access token is obtained from the `/api/auth/login` endpoint after a rider successfully authenticates. The token should be included in all API requests.
 
 ## Endpoint Details
 
@@ -25,7 +25,7 @@ The session token is obtained after a rider successfully authenticates with Supa
 ### Headers
 
 ```
-Authorization: Bearer <supabase_session_token>
+Authorization: Bearer <access_token>
 Content-Type: application/json
 ```
 
@@ -55,9 +55,9 @@ Content-Type: application/json
 
 ### Important Notes
 
-1. **Destination Address**: `destination_address` is **required** and must be a non-empty string. This provides a human-readable description of the destination, even if precise coordinates are not available.
+1. **Destination Address**: `destination_address` is required and must be a non-empty string. This provides a description of the destination even if precise coordinates are not available.
 
-2. **Destination Coordinates**: `destination_latitude` and `destination_longitude` are **optional**. However, if either coordinate is provided, **both must be provided together** as valid numbers. If coordinates are not provided, the trip request will still be created with just the destination address description.
+2. **Destination Coordinates**: `destination_latitude` and `destination_longitude` are optional. However, if either coordinate is provided, both must be provided together as numbers.
 
 3. **Trip Types**:
    - `airport`: Trips to/from the airport
@@ -72,8 +72,6 @@ Content-Type: application/json
 ### Success Response (201 Created)
 
 Returns the created trip request object.
-
-**With destination coordinates:**
 
 ```json
 {
@@ -100,7 +98,7 @@ Returns the created trip request object.
 }
 ```
 
-**Without destination coordinates (address only):**
+**Note**: If destination coordinates are not provided, `destination_latitude`, `destination_longitude`, and `destination_location` will be `null`:
 
 ```json
 {
@@ -115,10 +113,6 @@ Returns the created trip request object.
   "destination_address": "Sheriff Street, Georgetown",
   "destination_location": null,
   "trip_type": "short_drop",
-  "estimated_distance_km": null,
-  "estimated_duration_minutes": null,
-  "estimated_fare": null,
-  "notes": "Please call when you arrive",
   "passenger_count": 1,
   "status": "requested",
   "expires_at": "2024-01-15T10:20:00.000Z",
@@ -163,7 +157,13 @@ Missing or invalid authentication token.
 
 ```json
 {
-  "error": "Unauthorized. Please log in."
+  "error": "Unauthorized. Missing or invalid Authorization header. Expected: Bearer <token>"
+}
+```
+
+```json
+{
+  "error": "Unauthorized. Invalid or expired token."
 }
 ```
 
@@ -291,7 +291,7 @@ async function createTripRequestWithoutCoordinates(
       pickup_latitude: pickup.lat,
       pickup_longitude: pickup.lng,
       pickup_address: pickup.address,
-      destination_address: destinationAddress, // Required - description only
+      destination_address: destinationAddress, // Required
       trip_type: tripType,
       notes: 'Please call when you arrive',
       passenger_count: 2,
@@ -442,7 +442,7 @@ const tripRequest = await createTripRequest(
 
 ### Scenario 2: Creating a Request Without Destination Coordinates
 
-Use this when a rider knows the destination address but doesn't have precise coordinates, or when coordinates are not available.
+Use this when a rider knows the destination address but doesn't have precise coordinates, or when coordinates are not needed.
 
 ```typescript
 const tripRequest = await createTripRequestWithoutCoordinates(
@@ -452,8 +452,8 @@ const tripRequest = await createTripRequestWithoutCoordinates(
     lng: -58.1551,
     address: 'Georgetown City Mall',
   },
-  'Sheriff Street, Georgetown', // Destination address description (required)
-  'short_drop'
+  'Sheriff Street, Georgetown', // Destination address is required
+  'other'
 )
 ```
 
@@ -661,7 +661,7 @@ const requestData: any = {
   trip_type: tripType,
 }
 
-// Only add destination coordinates if available
+// Add destination coordinates if available
 if (destinationLat && destinationLng) {
   requestData.destination_latitude = destinationLat
   requestData.destination_longitude = destinationLng
@@ -696,11 +696,12 @@ async function cancelRequest(requestId: string) {
 
 ## Additional Notes
 
-- **Destination Address**: Always required. Provides a human-readable description of the destination, even when precise coordinates are not available.
-- **Destination Coordinates**: Optional. If provided, both `destination_latitude` and `destination_longitude` must be included. When coordinates are provided, a PostGIS geography point is automatically created.
 - Trip requests automatically expire 10 minutes after creation if not accepted by a driver
 - The `status` field will be set to `'requested'` initially
-- PostGIS geography points are automatically created from the provided coordinates (when available)
+- `destination_address` is required and provides a description of the destination
+- `destination_latitude` and `destination_longitude` are optional - if provided, both must be provided together
+- PostGIS geography points are automatically created from coordinates when provided
+- If destination coordinates are not provided, only the `destination_address` will be stored
 - All timestamps are in ISO 8601 format (UTC)
 - The `passenger_count` defaults to 1 if not provided
 

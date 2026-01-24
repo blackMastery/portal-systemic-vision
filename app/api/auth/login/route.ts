@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
+import { handleApiError, AuthenticationError, NotFoundError, AuthorizationError } from '@/lib/errors'
+import { validate, loginSchema } from '@/lib/validation'
+import { logger } from '@/lib/logger'
 
 // Create a Supabase client for server-side auth operations
 function createSupabaseAuthClient() {
@@ -19,32 +22,22 @@ function createSupabaseAuthClient() {
   })
 }
 
-interface LoginRequestBody {
-  email: string
-  password: string
-  role?: 'admin' | 'rider' | 'driver' // Optional role verification
-}
-
 export async function POST(request: NextRequest) {
   try {
-    // 1. Parse request body
-    let body: LoginRequestBody
+    // 1. Parse and validate request body
+    let body: unknown
     try {
       body = await request.json()
     } catch (error) {
-      return NextResponse.json(
-        { error: 'Invalid JSON in request body.' },
-        { status: 400 }
+      logger.error('Failed to parse request body', error)
+      const { response, statusCode } = handleApiError(
+        new Error('Invalid JSON in request body')
       )
+      return NextResponse.json(response, { status: statusCode })
     }
 
-    // 2. Validate required fields
-    if (!body.email || !body.password) {
-      return NextResponse.json(
-        { error: 'Email and password are required.' },
-        { status: 400 }
-      )
-    }
+    // 2. Validate request body with Zod schema
+    const validatedBody = validate(loginSchema, body)
 
     // 3. Create Supabase client for authentication
     const supabase = createSupabaseAuthClient()
@@ -54,22 +47,24 @@ export async function POST(request: NextRequest) {
       data: authData,
       error: authError,
     } = await supabase.auth.signInWithPassword({
-      email: body.email,
-      password: body.password,
+      email: validatedBody.email,
+      password: validatedBody.password,
     })
 
     if (authError) {
-      return NextResponse.json(
-        { error: 'Invalid email or password.' },
-        { status: 401 }
+      logger.warn('Authentication failed', { email: validatedBody.email, error: authError })
+      const { response, statusCode } = handleApiError(
+        new AuthenticationError('Invalid email or password')
       )
+      return NextResponse.json(response, { status: statusCode })
     }
 
     if (!authData.session || !authData.user) {
-      return NextResponse.json(
-        { error: 'Authentication failed. No session created.' },
-        { status: 401 }
+      logger.warn('No session created after authentication', { email: validatedBody.email })
+      const { response, statusCode } = handleApiError(
+        new AuthenticationError('Authentication failed. No session created.')
       )
+      return NextResponse.json(response, { status: statusCode })
     }
 
     // 5. Get user profile from database
@@ -82,10 +77,11 @@ export async function POST(request: NextRequest) {
     if (userError || !userProfileData) {
       // Sign out if user profile not found
       await supabase.auth.signOut()
-      return NextResponse.json(
-        { error: 'User profile not found.' },
-        { status: 404 }
+      logger.warn('User profile not found', { authId: authData.user.id, error: userError })
+      const { response, statusCode } = handleApiError(
+        new NotFoundError('User profile not found.')
       )
+      return NextResponse.json(response, { status: statusCode })
     }
 
     // Type assertion for the selected fields
@@ -95,18 +91,21 @@ export async function POST(request: NextRequest) {
     >
 
     // 6. Optional role verification
-    if (body.role && userProfile.role !== body.role) {
+    if (validatedBody.role && userProfile.role !== validatedBody.role) {
       await supabase.auth.signOut()
-      return NextResponse.json(
-        {
-          error: `Access denied. ${body.role} role required.`,
-          user_role: userProfile.role,
-        },
-        { status: 403 }
+      logger.warn('Role mismatch', {
+        required: validatedBody.role,
+        actual: userProfile.role,
+        userId: userProfile.id,
+      })
+      const { response, statusCode } = handleApiError(
+        new AuthorizationError(`Access denied. ${validatedBody.role} role required.`)
       )
+      return NextResponse.json(response, { status: statusCode })
     }
 
     // 7. Return tokens and user information
+    logger.info('Login successful', { userId: userProfile.id, role: userProfile.role })
     return NextResponse.json(
       {
         access_token: authData.session.access_token,
@@ -126,15 +125,10 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     )
-  } catch (error: any) {
-    console.error('Unexpected error during login:', error)
-    return NextResponse.json(
-      {
-        error: 'An unexpected error occurred during login.',
-        details: error.message,
-      },
-      { status: 500 }
-    )
+  } catch (error) {
+    logger.error('Unexpected error during login', error)
+    const { response, statusCode } = handleApiError(error)
+    return NextResponse.json(response, { status: statusCode })
   }
 }
 

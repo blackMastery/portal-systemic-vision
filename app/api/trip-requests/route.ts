@@ -1,21 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import type { TripType } from '@/types/database'
-
-interface TripRequestBody {
-  pickup_latitude: number
-  pickup_longitude: number
-  pickup_address: string
-  destination_latitude?: number
-  destination_longitude?: number
-  destination_address: string // Required - description of destination
-  trip_type: TripType
-  estimated_distance_km?: number
-  estimated_duration_minutes?: number
-  estimated_fare?: number
-  notes?: string
-  passenger_count?: number
-}
+import {
+  handleApiError,
+  AuthenticationError,
+  AuthorizationError,
+  NotFoundError,
+} from '@/lib/errors'
+import { validate, tripRequestSchema } from '@/lib/validation'
+import { logger } from '@/lib/logger'
 
 // Create a Supabase client with Bearer token authentication
 function createSupabaseClientWithToken(accessToken: string) {
@@ -60,29 +52,27 @@ export async function POST(request: NextRequest) {
     const accessToken = extractBearerToken(request)
 
     if (!accessToken) {
-      return NextResponse.json(
-        {
-          error: 'Unauthorized. Missing or invalid Authorization header. Expected: Bearer <token>',
-        },
-        { status: 401 }
+      const { response, statusCode } = handleApiError(
+        new AuthenticationError('Missing or invalid Authorization header. Expected: Bearer <token>')
       )
+      return NextResponse.json(response, { status: statusCode })
     }
 
     // 2. Create Supabase client with token
     const supabase = createSupabaseClientWithToken(accessToken)
 
     // 3. Verify token and get user session
-    // The token is already in the Authorization header, so getUser() will use it
     const {
       data: { user: authUser },
       error: authError,
     } = await supabase.auth.getUser()
 
     if (authError || !authUser) {
-      return NextResponse.json(
-        { error: 'Unauthorized. Invalid or expired token.' },
-        { status: 401 }
+      logger.warn('Invalid or expired token', { error: authError })
+      const { response, statusCode } = handleApiError(
+        new AuthenticationError('Invalid or expired token.')
       )
+      return NextResponse.json(response, { status: statusCode })
     }
 
     // 4. Verify user exists in database and get user profile
@@ -93,17 +83,19 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (userError || !user) {
-      return NextResponse.json(
-        { error: 'User not found.' },
-        { status: 401 }
+      logger.warn('User not found', { authId: authUser.id, error: userError })
+      const { response, statusCode } = handleApiError(
+        new AuthenticationError('User not found.')
       )
+      return NextResponse.json(response, { status: statusCode })
     }
 
     if (user.role !== 'rider') {
-      return NextResponse.json(
-        { error: 'Forbidden. Only riders can create trip requests.' },
-        { status: 403 }
+      logger.warn('Non-rider attempted to create trip request', { userId: user.id, role: user.role })
+      const { response, statusCode } = handleApiError(
+        new AuthorizationError('Only riders can create trip requests.')
       )
+      return NextResponse.json(response, { status: statusCode })
     }
 
     // 5. Get rider profile and validate subscription
@@ -114,10 +106,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (riderError || !riderProfile) {
-      return NextResponse.json(
-        { error: 'Rider profile not found.' },
-        { status: 404 }
+      logger.warn('Rider profile not found', { userId: user.id, error: riderError })
+      const { response, statusCode } = handleApiError(
+        new NotFoundError('Rider profile not found.')
       )
+      return NextResponse.json(response, { status: statusCode })
     }
 
     // 6. Validate subscription status
@@ -125,171 +118,75 @@ export async function POST(request: NextRequest) {
       riderProfile.subscription_status !== 'active' &&
       riderProfile.subscription_status !== 'trial'
     ) {
-      return NextResponse.json(
-        {
-          error: 'Subscription required. Please activate your subscription to create trip requests.',
-          subscription_status: riderProfile.subscription_status,
-        },
-        { status: 403 }
+      logger.warn('Subscription required', {
+        userId: user.id,
+        subscriptionStatus: riderProfile.subscription_status,
+      })
+      const { response, statusCode } = handleApiError(
+        new AuthorizationError('Subscription required. Please activate your subscription to create trip requests.')
       )
+      return NextResponse.json(response, { status: statusCode })
     }
 
     // 7. Parse and validate request body
-    let body: TripRequestBody
+    let body: unknown
     try {
       body = await request.json()
     } catch (error) {
-      return NextResponse.json(
-        { error: 'Invalid JSON in request body.' },
-        { status: 400 }
+      logger.error('Failed to parse request body', error)
+      const { response, statusCode } = handleApiError(
+        new Error('Invalid JSON in request body.')
       )
+      return NextResponse.json(response, { status: statusCode })
     }
 
-    // 8. Validate required fields
-    if (
-      typeof body.pickup_latitude !== 'number' ||
-      typeof body.pickup_longitude !== 'number' ||
-      !body.pickup_address ||
-      typeof body.pickup_address !== 'string'
-    ) {
-      return NextResponse.json(
-        {
-          error: 'Missing required fields: pickup_latitude, pickup_longitude, and pickup_address are required.',
-        },
-        { status: 400 }
-      )
-    }
-
-    // Validate trip_type
-    const validTripTypes: TripType[] = ['airport', 'short_drop', 'market', 'other']
-    if (!body.trip_type || !validTripTypes.includes(body.trip_type)) {
-      return NextResponse.json(
-        {
-          error: `Invalid trip_type. Must be one of: ${validTripTypes.join(', ')}`,
-        },
-        { status: 400 }
-      )
-    }
-
-    // Validate destination_address (required)
-    if (!body.destination_address || typeof body.destination_address !== 'string' || body.destination_address.trim().length === 0) {
-      return NextResponse.json(
-        {
-          error: 'destination_address is required and must be a non-empty string.',
-        },
-        { status: 400 }
-      )
-    }
-
-    // Validate destination coordinates (optional, but if one is provided, both must be provided)
-    const hasDestinationLat = body.destination_latitude !== undefined
-    const hasDestinationLng = body.destination_longitude !== undefined
-
-    if (hasDestinationLat || hasDestinationLng) {
-      if (
-        !hasDestinationLat ||
-        !hasDestinationLng ||
-        typeof body.destination_latitude !== 'number' ||
-        typeof body.destination_longitude !== 'number'
-      ) {
-        return NextResponse.json(
-          {
-            error:
-              'destination_latitude and destination_longitude must be provided together as numbers.',
-          },
-          { status: 400 }
-        )
-      }
-    }
-
-    // Validate optional numeric fields
-    if (
-      body.estimated_distance_km !== undefined &&
-      typeof body.estimated_distance_km !== 'number'
-    ) {
-      return NextResponse.json(
-        { error: 'estimated_distance_km must be a number.' },
-        { status: 400 }
-      )
-    }
-
-    if (
-      body.estimated_duration_minutes !== undefined &&
-      (typeof body.estimated_duration_minutes !== 'number' ||
-        !Number.isInteger(body.estimated_duration_minutes))
-    ) {
-      return NextResponse.json(
-        { error: 'estimated_duration_minutes must be an integer.' },
-        { status: 400 }
-      )
-    }
-
-    if (
-      body.estimated_fare !== undefined &&
-      typeof body.estimated_fare !== 'number'
-    ) {
-      return NextResponse.json(
-        { error: 'estimated_fare must be a number.' },
-        { status: 400 }
-      )
-    }
-
-    if (
-      body.passenger_count !== undefined &&
-      (typeof body.passenger_count !== 'number' ||
-        !Number.isInteger(body.passenger_count) ||
-        body.passenger_count < 1)
-    ) {
-      return NextResponse.json(
-        { error: 'passenger_count must be a positive integer.' },
-        { status: 400 }
-      )
-    }
+    // 8. Validate request body with Zod schema
+    const validatedBody = validate(tripRequestSchema, body)
 
     // 9. Prepare data for insertion
     const expiresAt = new Date()
     expiresAt.setMinutes(expiresAt.getMinutes() + 10) // 10 minutes from now
 
-    const insertData: any = {
+    const insertData: Record<string, unknown> = {
       rider_id: riderProfile.id,
-      pickup_latitude: body.pickup_latitude,
-      pickup_longitude: body.pickup_longitude,
-      pickup_address: body.pickup_address.trim(),
-      pickup_location: `POINT(${body.pickup_longitude} ${body.pickup_latitude})`,
-      trip_type: body.trip_type,
+      pickup_latitude: validatedBody.pickup_latitude,
+      pickup_longitude: validatedBody.pickup_longitude,
+      pickup_address: validatedBody.pickup_address.trim(),
+      pickup_location: `POINT(${validatedBody.pickup_longitude} ${validatedBody.pickup_latitude})`,
+      trip_type: validatedBody.trip_type,
       status: 'requested',
       expires_at: expiresAt.toISOString(),
-      passenger_count: body.passenger_count || 1,
+      passenger_count: validatedBody.passenger_count || 1,
     }
 
     // Add destination address (always required)
-    insertData.destination_address = body.destination_address.trim()
+    insertData.destination_address = validatedBody.destination_address.trim()
 
     // Add destination coordinates and location point if provided
     if (
-      body.destination_latitude !== undefined &&
-      body.destination_longitude !== undefined
+      validatedBody.destination_latitude !== undefined &&
+      validatedBody.destination_longitude !== undefined
     ) {
-      insertData.destination_latitude = body.destination_latitude
-      insertData.destination_longitude = body.destination_longitude
-      insertData.destination_location = `POINT(${body.destination_longitude} ${body.destination_latitude})`
+      insertData.destination_latitude = validatedBody.destination_latitude
+      insertData.destination_longitude = validatedBody.destination_longitude
+      insertData.destination_location = `POINT(${validatedBody.destination_longitude} ${validatedBody.destination_latitude})`
     }
 
     // Add optional fields
-    if (body.estimated_distance_km !== undefined) {
-      insertData.estimated_distance_km = body.estimated_distance_km
+    if (validatedBody.estimated_distance_km !== undefined) {
+      insertData.estimated_distance_km = validatedBody.estimated_distance_km
     }
 
-    if (body.estimated_duration_minutes !== undefined) {
-      insertData.estimated_duration_minutes = body.estimated_duration_minutes
+    if (validatedBody.estimated_duration_minutes !== undefined) {
+      insertData.estimated_duration_minutes = validatedBody.estimated_duration_minutes
     }
 
-    if (body.estimated_fare !== undefined) {
-      insertData.estimated_fare = body.estimated_fare
+    if (validatedBody.estimated_fare !== undefined) {
+      insertData.estimated_fare = validatedBody.estimated_fare
     }
 
-    if (body.notes !== undefined) {
-      insertData.notes = body.notes.trim()
+    if (validatedBody.notes !== undefined) {
+      insertData.notes = validatedBody.notes.trim()
     }
 
     // 10. Insert trip request
@@ -300,27 +197,18 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError) {
-      console.error('Error inserting trip request:', insertError)
-      return NextResponse.json(
-        {
-          error: 'Failed to create trip request.',
-          details: insertError.message,
-        },
-        { status: 500 }
-      )
+      logger.error('Error inserting trip request', insertError, { riderId: riderProfile.id })
+      const { response, statusCode } = handleApiError(insertError)
+      return NextResponse.json(response, { status: statusCode })
     }
 
     // 11. Return success response
+    logger.info('Trip request created successfully', { tripRequestId: tripRequest.id, riderId: riderProfile.id })
     return NextResponse.json(tripRequest, { status: 201 })
-  } catch (error: any) {
-    console.error('Unexpected error creating trip request:', error)
-    return NextResponse.json(
-      {
-        error: 'An unexpected error occurred.',
-        details: error.message,
-      },
-      { status: 500 }
-    )
+  } catch (error) {
+    logger.error('Unexpected error creating trip request', error)
+    const { response, statusCode } = handleApiError(error)
+    return NextResponse.json(response, { status: statusCode })
   }
 }
 
