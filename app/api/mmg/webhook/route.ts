@@ -17,7 +17,7 @@ export async function GET(req: Request) {
 
     // Extract encrypted token from URL query parameters
     const { searchParams } = new URL(req.url);
-    const encryptedToken = searchParams.get('TOKEN');
+    const encryptedToken = searchParams.get('token');
 
     console.log("🚀 ~ POST ~ encryptedToken received:", !!encryptedToken);
 
