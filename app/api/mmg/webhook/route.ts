@@ -88,6 +88,14 @@ export async function GET(req: Request) {
 
     // Handle payment success
     if (resultCode === 0) {
+      // Idempotency: already processed — skip creating subscription, just redirect
+      if (paymentTransaction.status === 'completed') {
+        return NextResponse.redirect(
+          new URL(`/payment-success?transactionId=${decryptedData.transactionId}&paymentId=${paymentTransaction.id}`, req.url),
+          { status: 303 }
+        );
+      }
+
       // Calculate subscription dates (30 days from today)
       const startDate = new Date();
       const endDate = new Date(startDate);
