@@ -1,9 +1,9 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 
-export default function PaymentFailedPage() {
+function PaymentFailedContent() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [errorDetails, setErrorDetails] = useState<{
@@ -57,7 +57,7 @@ export default function PaymentFailedPage() {
           </svg>
         </div>
         <h1 className="text-4xl font-bold text-white text-center mb-3">Payment Failed</h1>
-        <p className="text-red-50 text-center text-lg">We couldn't process your payment</p>
+        <p className="text-red-50 text-center text-lg">We couldn&apos;t process your payment</p>
       </div>
 
       {/* Content */}
@@ -153,5 +153,17 @@ export default function PaymentFailedPage() {
         <p className="text-xs text-gray-500 mt-1">or contact support for assistance</p>
       </div>
     </div>
+  );
+}
+
+export default function PaymentFailedPage() {
+  return (
+    <Suspense fallback={
+      <div className="w-full h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+      </div>
+    }>
+      <PaymentFailedContent />
+    </Suspense>
   );
 }

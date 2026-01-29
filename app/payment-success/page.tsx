@@ -1,9 +1,9 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 
-export default function PaymentSuccessPage() {
+function PaymentSuccessContent() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [paymentDetails, setPaymentDetails] = useState<{
@@ -146,5 +146,17 @@ export default function PaymentSuccessPage() {
         <p className="text-xs text-gray-500 mt-1">You can now close this screen</p>
       </div>
     </div>
+  );
+}
+
+export default function PaymentSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="w-full h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      </div>
+    }>
+      <PaymentSuccessContent />
+    </Suspense>
   );
 }
