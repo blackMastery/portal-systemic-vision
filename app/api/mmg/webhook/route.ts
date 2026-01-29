@@ -1,27 +1,53 @@
 import { NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import { decrypt } from '@/lib/encryption';
 
-interface PaymentResponse {
+interface DecryptedPaymentResponse {
   merchantTransactionId: string;
   transactionId: string;
-  resultCode: number;
-  resultMessage: string | null;
+  ResultCode: string;
+  ResultMessage: string;
   htmlResponse: string;
-  sourceOfFundsList: any | null;
 }
 
 export async function POST(req: Request) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
 
-    // Parse webhook body
+    // Parse the request to get the encrypted token
     const rawBody = await req.text();
-    const body = JSON.parse(rawBody) as PaymentResponse;
-    console.log("🚀 ~ POST ~ body:", body);
+    const bodyParams = new URLSearchParams(rawBody);
+    const encryptedToken = bodyParams.get('TOKEN');
+
+    console.log("🚀 ~ POST ~ encryptedToken received:", !!encryptedToken);
+
+    if (!encryptedToken) {
+      console.error('No encrypted token received from MMG');
+      return NextResponse.json(
+        { error: 'Missing encrypted TOKEN' },
+        { status: 400 }
+      );
+    }
+
+    // Decrypt the token
+    let decryptedData: DecryptedPaymentResponse;
+    try {
+      decryptedData = decrypt(encryptedToken) as DecryptedPaymentResponse;
+      console.log("🚀 ~ POST ~ decryptedData:", decryptedData);
+    } catch (decryptError) {
+      console.error('Error decrypting MMG token:', decryptError);
+      return NextResponse.json(
+        { error: 'Failed to decrypt token' },
+        { status: 400 }
+      );
+    }
+
+    // Convert ResultCode string to number for consistency
+    const resultCode = decryptedData.ResultCode === '0' ? 0 : parseInt(decryptedData.ResultCode, 10);
 
     // Validate required fields
-    if (!body.merchantTransactionId) {
+    if (!decryptedData.merchantTransactionId) {
       return NextResponse.json(
         { error: 'Missing merchantTransactionId' },
         { status: 400 }
@@ -32,12 +58,12 @@ export async function POST(req: Request) {
     const { error: logError } = await supabase
       .from('mmg_webhook_logs')
       .insert({
-        merchant_transaction_id: body.merchantTransactionId,
-        transaction_id: body.transactionId,
-        result_code: body.resultCode,
-        result_message: body.resultMessage,
-        html_response: body.htmlResponse,
-        raw_body: body,
+        merchant_transaction_id: decryptedData.merchantTransactionId,
+        transaction_id: decryptedData.transactionId,
+        result_code: resultCode,
+        result_message: decryptedData.ResultMessage,
+        html_response: decryptedData.htmlResponse,
+        raw_body: decryptedData,
       });
 
     if (logError) {
@@ -48,7 +74,7 @@ export async function POST(req: Request) {
     const { data: paymentTransaction, error: fetchError } = await supabase
       .from('payment_transactions')
       .select('*')
-      .eq('id', body.merchantTransactionId)
+      .eq('id', decryptedData.merchantTransactionId)
       .single();
 
     if (fetchError || !paymentTransaction) {
@@ -62,7 +88,7 @@ export async function POST(req: Request) {
     console.log("🚀 ~ POST ~ paymentTransaction:", paymentTransaction);
 
     // Handle payment success
-    if (body.resultCode === 0) {
+    if (resultCode === 0) {
       // Calculate subscription dates (30 days from today)
       const startDate = new Date();
       const endDate = new Date(startDate);
@@ -95,7 +121,7 @@ export async function POST(req: Request) {
           end_date: endDate.toISOString(),
           status: 'active',
           payment_method: 'mmg',
-          payment_reference: body.transactionId,
+          payment_reference: decryptedData.transactionId,
           payment_date: new Date().toISOString(),
         })
         .select()
@@ -114,10 +140,10 @@ export async function POST(req: Request) {
         .update({
           status: 'completed',
           subscription_id: subscription.id,
-          mmg_transaction_id: body.transactionId,
-          mmg_reference: body.transactionId,
+          mmg_transaction_id: decryptedData.transactionId,
+          mmg_reference: decryptedData.transactionId,
           completed_at: new Date().toISOString(),
-          gateway_response: body,
+          gateway_response: decryptedData,
         })
         .eq('id', paymentTransaction.id);
 
@@ -163,25 +189,20 @@ export async function POST(req: Request) {
         console.log("🚀 ~ POST ~ rider profile updated");
       }
 
-      return NextResponse.json({
-        success: true,
-        message: 'Payment processed successfully',
-        data: {
-          merchantTransactionId: body.merchantTransactionId,
-          transactionId: body.transactionId,
-          status: 'completed',
-          subscriptionId: subscription.id,
-        },
-      });
+      // Redirect to success page
+      return NextResponse.redirect(
+        new URL(`/payment-success?transactionId=${decryptedData.transactionId}&paymentId=${paymentTransaction.id}`, req.url),
+        { status: 303 }
+      );
     } else {
       // Handle payment failure
       const { error: updatePaymentError } = await supabase
         .from('payment_transactions')
         .update({
           status: 'failed',
-          mmg_transaction_id: body.transactionId,
-          gateway_response: body,
-          error_message: body.resultMessage || 'Payment failed',
+          mmg_transaction_id: decryptedData.transactionId,
+          gateway_response: decryptedData,
+          error_message: decryptedData.ResultMessage || 'Payment failed',
         })
         .eq('id', paymentTransaction.id);
 
@@ -192,20 +213,14 @@ export async function POST(req: Request) {
 
       console.log("🚀 ~ POST ~ payment failed, transaction marked as failed");
 
-      return NextResponse.json({
-        success: true,
-        message: 'Payment failed - user can retry',
-        data: {
-          merchantTransactionId: body.merchantTransactionId,
-          transactionId: body.transactionId,
-          status: 'failed',
-          resultCode: body.resultCode,
-          resultMessage: body.resultMessage,
-        },
-      });
+      // Redirect to failure page
+      return NextResponse.redirect(
+        new URL(`/payment-failed?transactionId=${decryptedData.transactionId}&paymentId=${paymentTransaction.id}&reason=${encodeURIComponent(decryptedData.ResultMessage)}`, req.url),
+        { status: 303 }
+      );
     }
   } catch (error) {
-    console.error('MMG webhook error:', error);
+    console.error('Error processing MMG webhook:', error);
     return NextResponse.json(
       {
         success: false,
@@ -215,4 +230,4 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
-} 
+}
