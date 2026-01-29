@@ -165,6 +165,7 @@ export interface Database {
           id: string
           user_id: string | null
           subscription_id: string | null
+          transaction_number: number
           amount: number
           currency: string
           payment_method: string
@@ -178,7 +179,7 @@ export interface Database {
           completed_at: string | null
           created_at: string
         }
-        Insert: Omit<Database['public']['Tables']['payment_transactions']['Row'], 'id' | 'created_at'>
+        Insert: Omit<Database['public']['Tables']['payment_transactions']['Row'], 'id' | 'created_at' | 'transaction_number'>
         Update: Partial<Database['public']['Tables']['payment_transactions']['Insert']>
       }
       notifications: {
