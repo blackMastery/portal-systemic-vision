@@ -11,14 +11,13 @@ interface DecryptedPaymentResponse {
   htmlResponse: string;
 }
 
-export async function POST(req: Request) {
+export async function GET(req: Request) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
 
-    // Parse the request to get the encrypted token
-    const rawBody = await req.text();
-    const bodyParams = new URLSearchParams(rawBody);
-    const encryptedToken = bodyParams.get('TOKEN');
+    // Extract encrypted token from URL query parameters
+    const { searchParams } = new URL(req.url);
+    const encryptedToken = searchParams.get('TOKEN');
 
     console.log("🚀 ~ POST ~ encryptedToken received:", !!encryptedToken);
 
