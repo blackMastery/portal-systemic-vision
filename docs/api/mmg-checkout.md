@@ -6,10 +6,11 @@ This guide explains how to use the MMG payment checkout endpoints to process sub
 
 ## Architecture
 
-The MMG payment flow consists of two main endpoints:
+The MMG payment flow consists of three main endpoints:
 
 1. **Checkout Endpoint** (`POST /api/mmg/checkout`) - Initiates payment session
-2. **Webhook Endpoint** (`POST /api/mmg/webhook`) - Handles payment completion/failure
+2. **Webhook Endpoint** (`GET /api/mmg/webhook`) - Handles payment completion/failure (redirect from MMG)
+3. **Confirm Payment Endpoint** (`POST /api/mmg/confirm-payment`) - Client-initiated confirmation by MMG transaction ID (see [mmg-confirm-payment.md](mmg-confirm-payment.md))
 
 ## Checkout Endpoint
 

@@ -13,16 +13,17 @@ interface DecryptedPaymentResponse {
 
 export async function GET(req: Request) {
   try {
+    console.log("[MMG webhook] GET request received");
     const supabase = createRouteHandlerClient({ cookies });
+    console.log("[MMG webhook] Supabase client created");
 
     // Extract encrypted token from URL query parameters
     const { searchParams } = new URL(req.url);
     const encryptedToken = searchParams.get('token');
-
-    console.log("🚀 ~ POST ~ encryptedToken received:", !!encryptedToken);
+    console.log("[MMG webhook] token in query:", !!encryptedToken);
 
     if (!encryptedToken) {
-      console.error('No encrypted token received from MMG');
+      console.error("[MMG webhook] no encrypted token received from MMG");
       return NextResponse.json(
         { error: 'Missing encrypted TOKEN' },
         { status: 400 }
@@ -32,10 +33,11 @@ export async function GET(req: Request) {
     // Decrypt the token
     let decryptedData: DecryptedPaymentResponse;
     try {
+      console.log("[MMG webhook] decrypting token");
       decryptedData = decrypt(encryptedToken) as DecryptedPaymentResponse;
-      console.log("🚀 ~ POST ~ decryptedData:", decryptedData);
+      console.log("[MMG webhook] decrypted:", { merchantTransactionId: decryptedData.merchantTransactionId, transactionId: decryptedData.transactionId, ResultCode: decryptedData.ResultCode });
     } catch (decryptError) {
-      console.error('Error decrypting MMG token:', decryptError);
+      console.error("[MMG webhook] decrypt failed:", decryptError);
       return NextResponse.json(
         { error: 'Failed to decrypt token' },
         { status: 400 }
@@ -44,9 +46,11 @@ export async function GET(req: Request) {
 
     // Convert ResultCode string to number for consistency
     const resultCode = decryptedData.ResultCode === '0' ? 0 : parseInt(decryptedData.ResultCode, 10);
+    console.log("[MMG webhook] resultCode:", resultCode);
 
     // Validate required fields
     if (!decryptedData.merchantTransactionId) {
+      console.log("[MMG webhook] validation failed: missing merchantTransactionId");
       return NextResponse.json(
         { error: 'Missing merchantTransactionId' },
         { status: 400 }
@@ -54,6 +58,7 @@ export async function GET(req: Request) {
     }
 
     // Log the webhook data to Supabase for audit trail
+    console.log("[MMG webhook] inserting into mmg_webhook_logs");
     const { error: logError } = await supabase
       .from('mmg_webhook_logs')
       .insert({
@@ -66,10 +71,13 @@ export async function GET(req: Request) {
       });
 
     if (logError) {
-      console.error('Error logging webhook data:', logError);
+      console.error("[MMG webhook] error logging to mmg_webhook_logs:", logError);
+    } else {
+      console.log("[MMG webhook] mmg_webhook_logs insert ok");
     }
 
     // Fetch payment_transactions record using merchantTransactionId (which is payment_transactions.id)
+    console.log("[MMG webhook] fetching payment_transactions by id:", decryptedData.merchantTransactionId);
     const { data: paymentTransaction, error: fetchError } = await supabase
       .from('payment_transactions')
       .select('*')
@@ -77,19 +85,20 @@ export async function GET(req: Request) {
       .single();
 
     if (fetchError || !paymentTransaction) {
-      console.error('Payment transaction not found:', fetchError);
+      console.error("[MMG webhook] payment transaction not found:", fetchError);
       return NextResponse.json(
         { error: 'Payment transaction not found' },
         { status: 404 }
       );
     }
-
-    console.log("🚀 ~ POST ~ paymentTransaction:", paymentTransaction);
+    console.log("[MMG webhook] payment_transactions loaded:", { id: paymentTransaction.id, user_id: paymentTransaction.user_id, status: paymentTransaction.status });
 
     // Handle payment success
     if (resultCode === 0) {
+      console.log("[MMG webhook] payment success path (resultCode 0)");
       // Idempotency: already processed — skip creating subscription, just redirect
       if (paymentTransaction.status === 'completed') {
+        console.log("[MMG webhook] idempotent: already completed, redirecting to success");
         return NextResponse.redirect(
           new URL(`/payment-success?transactionId=${decryptedData.transactionId}&paymentId=${paymentTransaction.id}`, req.url),
           { status: 303 }
@@ -100,8 +109,10 @@ export async function GET(req: Request) {
       const startDate = new Date();
       const endDate = new Date(startDate);
       endDate.setDate(endDate.getDate() + 30);
+      console.log("[MMG webhook] subscription window:", { startDate: startDate.toISOString(), endDate: endDate.toISOString() });
 
       // Get user profile to determine role
+      console.log("[MMG webhook] fetching user by id:", paymentTransaction.user_id);
       const { data: user, error: userError } = await supabase
         .from('users')
         .select('id, role')
@@ -109,13 +120,13 @@ export async function GET(req: Request) {
         .single();
 
       if (userError || !user) {
-        console.error('User not found:', userError);
+        console.error("[MMG webhook] user not found:", userError);
         throw new Error('User not found');
       }
-
-      console.log("🚀 ~ POST ~ user:", user);
+      console.log("[MMG webhook] user loaded:", { id: user.id, role: user.role });
 
       // Create subscription record
+      console.log("[MMG webhook] creating subscriptions record");
       const { data: subscription, error: subscriptionError } = await supabase
         .from('subscriptions')
         .insert({
@@ -135,13 +146,13 @@ export async function GET(req: Request) {
         .single();
 
       if (subscriptionError || !subscription) {
-        console.error('Error creating subscription:', subscriptionError);
+        console.error("[MMG webhook] error creating subscription:", subscriptionError);
         throw subscriptionError;
       }
-
-      console.log("🚀 ~ POST ~ subscription:", subscription);
+      console.log("[MMG webhook] subscriptions created:", subscription.id);
 
       // Update payment_transactions record with subscription id
+      console.log("[MMG webhook] updating payment_transactions with subscription_id and completed status");
       const { error: updatePaymentError } = await supabase
         .from('payment_transactions')
         .update({
@@ -155,11 +166,13 @@ export async function GET(req: Request) {
         .eq('id', paymentTransaction.id);
 
       if (updatePaymentError) {
-        console.error('Error updating payment transaction:', updatePaymentError);
+        console.error("[MMG webhook] error updating payment transaction:", updatePaymentError);
         throw updatePaymentError;
       }
+      console.log("[MMG webhook] payment_transactions updated");
 
       // Update user profile based on role
+      console.log("[MMG webhook] updating profile for role:", user.role);
       if (user.role === 'driver') {
         const { error: driverUpdateError } = await supabase
           .from('driver_profiles')
@@ -172,11 +185,10 @@ export async function GET(req: Request) {
           .eq('user_id', paymentTransaction.user_id);
 
         if (driverUpdateError) {
-          console.error('Error updating driver profile:', driverUpdateError);
+          console.error("[MMG webhook] error updating driver profile:", driverUpdateError);
           throw driverUpdateError;
         }
-
-        console.log("🚀 ~ POST ~ driver profile updated");
+        console.log("[MMG webhook] driver_profiles updated");
       } else if (user.role === 'rider') {
         const { error: riderUpdateError } = await supabase
           .from('rider_profiles')
@@ -189,20 +201,21 @@ export async function GET(req: Request) {
           .eq('user_id', paymentTransaction.user_id);
 
         if (riderUpdateError) {
-          console.error('Error updating rider profile:', riderUpdateError);
+          console.error("[MMG webhook] error updating rider profile:", riderUpdateError);
           throw riderUpdateError;
         }
-
-        console.log("🚀 ~ POST ~ rider profile updated");
+        console.log("[MMG webhook] rider_profiles updated");
       }
 
       // Redirect to success page
+      console.log("[MMG webhook] success, redirecting to payment-success");
       return NextResponse.redirect(
         new URL(`/payment-success?transactionId=${decryptedData.transactionId}&paymentId=${paymentTransaction.id}`, req.url),
         { status: 303 }
       );
     } else {
       // Handle payment failure
+      console.log("[MMG webhook] payment failure path (resultCode !== 0), marking transaction as failed");
       const { error: updatePaymentError } = await supabase
         .from('payment_transactions')
         .update({
@@ -214,11 +227,10 @@ export async function GET(req: Request) {
         .eq('id', paymentTransaction.id);
 
       if (updatePaymentError) {
-        console.error('Error updating payment transaction:', updatePaymentError);
+        console.error("[MMG webhook] error updating payment transaction (failed):", updatePaymentError);
         throw updatePaymentError;
       }
-
-      console.log("🚀 ~ POST ~ payment failed, transaction marked as failed");
+      console.log("[MMG webhook] payment_transactions marked as failed, redirecting to payment-failed");
 
       // Redirect to failure page
       return NextResponse.redirect(
@@ -227,7 +239,7 @@ export async function GET(req: Request) {
       );
     }
   } catch (error) {
-    console.error('Error processing MMG webhook:', error);
+    console.error("[MMG webhook] error:", error);
     return NextResponse.json(
       {
         success: false,
