@@ -90,14 +90,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: statusCode })
     }
 
-    if (user.role !== 'rider') {
-      logger.warn('Non-rider attempted to create trip request', { userId: user.id, role: user.role })
-      const { response, statusCode } = handleApiError(
-        new AuthorizationError('Only riders can create trip requests.')
-      )
-      return NextResponse.json(response, { status: statusCode })
-    }
-
     // 5. Get rider profile and validate subscription
     const { data: riderProfile, error: riderError } = await supabase
       .from('rider_profiles')
