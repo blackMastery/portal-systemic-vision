@@ -46,8 +46,13 @@ async function initializeFirebaseAdmin(projectType: FirebaseProjectType): Promis
     let credential
 
     if (serviceAccountKey) {
-      // Check if it's a URL (starts with http:// or https://)
+      // Check if it's a URL (must be HTTPS only for security)
       if (serviceAccountKey.startsWith('http://') || serviceAccountKey.startsWith('https://')) {
+        if (!serviceAccountKey.startsWith('https://')) {
+          throw new Error(
+            `FIREBASE_${projectType.toUpperCase()}_SERVICE_ACCOUNT_KEY URL must use HTTPS, not HTTP`
+          )
+        }
         // Fetch JSON from URL
         try {
           const response = await fetch(serviceAccountKey)

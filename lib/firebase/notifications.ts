@@ -108,7 +108,7 @@ async function removeInvalidTokens(userIds: string[]): Promise<void> {
 
   const { error } = await supabase
     .from('users')
-    // @ts-expect-error - fcm_token exists in database but TypeScript types may not be fully updated
+    // @ts-expect-error - Supabase type inference fails to resolve Update type here despite fcm_token being in the schema
     .update({ fcm_token: null })
     .in('id', userIds)
 

@@ -6,26 +6,23 @@ import crypto from 'crypto';
  * @returns The encrypted data as a buffer
  */
 export function encrypt(checkoutObject: object): Buffer {
-  // Convert object to JSON string with indentation
-  const jsonObject = JSON.stringify(checkoutObject, null, 4);
-  console.log(`Checkout Object:\n ${jsonObject}\n`);
+  const publicKey = process.env.MMG_PUBLIC_KEY;
+  if (!publicKey) {
+    throw new Error('MMG_PUBLIC_KEY environment variable is required');
+  }
 
-  // Convert string to buffer using ISO-8859-1 encoding
+  const jsonObject = JSON.stringify(checkoutObject, null, 4);
   const jsonBytes = Buffer.from(jsonObject, 'latin1');
-  
-  // Encrypt the data using RSA public key with OAEP padding and SHA256
-  console.log("🚀 ~ encrypt ~ process.env.MMG_PUBLIC_KEY :", process.env.MMG_PUBLIC_KEY )
-  const ciphertext = crypto.publicEncrypt(
+
+  return crypto.publicEncrypt(
     {
-      key: process.env.MMG_PUBLIC_KEY || '',
+      key: publicKey,
       padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
       oaepHash: 'sha256',
       mgf1Hash: 'sha256'
     } as crypto.RsaPublicKey,
     jsonBytes
   );
-
-  return ciphertext;
 }
 
 /**
@@ -46,6 +43,11 @@ export function toBase64Url(token: Buffer): string {
  * @returns The decrypted object
  */
 export function decrypt(base64UrlString: string): object {
+  const privateKey = process.env.MMG_PRIVATE_KEY;
+  if (!privateKey) {
+    throw new Error('MMG_PRIVATE_KEY environment variable is required');
+  }
+
   // Add padding if necessary
   let paddedString = base64UrlString;
   const paddingNeeded = 4 - (base64UrlString.length % 4);
@@ -58,13 +60,11 @@ export function decrypt(base64UrlString: string): object {
     .replace(/-/g, '+')
     .replace(/_/g, '/');
 
-  // Convert to buffer
   const ciphertext = Buffer.from(base64String, 'base64');
 
-  // Decrypt using RSA private key with OAEP padding
   const decryptedData = crypto.privateDecrypt(
     {
-      key: process.env.MMG_PRIVATE_KEY || '',
+      key: privateKey,
       padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
       oaepHash: 'sha256',
       mgf1Hash: 'sha256'
@@ -72,24 +72,11 @@ export function decrypt(base64UrlString: string): object {
     ciphertext
   );
 
-  // Convert buffer to string using ISO-8859-1 encoding
   const decryptedString = decryptedData.toString('latin1');
-  console.log(`Decrypted String:\n ${decryptedString}\n`);
 
-  // Parse JSON string to object
-  return JSON.parse(decryptedString);
+  try {
+    return JSON.parse(decryptedString);
+  } catch {
+    throw new Error('Failed to parse decrypted data as JSON');
+  }
 }
-
-/**
- * Example usage:
- * 
- * const checkoutObject = {
- *   amount: 100,
- *   currency: 'USD',
- *   description: 'Test payment'
- * };
- * 
- * const encrypted = encrypt(checkoutObject);
- * const base64Token = toBase64Url(encrypted);
- * const decrypted = decrypt(base64Token);
- */ 
