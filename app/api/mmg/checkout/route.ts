@@ -11,14 +11,10 @@ interface CheckoutRequest {
 
 export async function POST(req: Request) {
   try {
-    console.log("[MMG checkout] POST request received");
     const body = await req.json() as CheckoutRequest;
     const { amount, currency = "GYD", description = "Subscription Payment" } = body;
-    console.log("[MMG checkout] body:", { amount, currency, description });
 
-    // Validate amount
     if (!amount || amount <= 0) {
-      console.log("[MMG checkout] validation failed: invalid amount", amount);
       return NextResponse.json(
         { error: "Invalid amount. Amount must be greater than 0" },
         { status: 400 }
@@ -26,34 +22,25 @@ export async function POST(req: Request) {
     }
 
     const supabase = createRouteHandlerClient({ cookies });
-    console.log("[MMG checkout] Supabase client created");
 
-    // Get the authorization header
     const authHeader = req.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      console.log("[MMG checkout] auth failed: missing or invalid Authorization header");
       return NextResponse.json(
         { error: "Missing or invalid authorization token" },
         { status: 401 }
       );
     }
 
-    // Verify the token with Supabase
     const token = authHeader.split(" ")[1];
-    console.log("[MMG checkout] verifying Supabase token");
     const {
       data: { user: authUser },
       error: authError,
     } = await supabase.auth.getUser(token);
 
     if (authError || !authUser) {
-      console.log("[MMG checkout] auth failed: invalid token", authError?.message);
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
-    console.log("[MMG checkout] token verified, auth_id:", authUser.id);
 
-    // Get user profile from users table
-    console.log("[MMG checkout] fetching user profile");
     const { data: user, error: userError } = await supabase
       .from("users")
       .select("id, role, phone_number, full_name")
@@ -61,59 +48,72 @@ export async function POST(req: Request) {
       .single();
 
     if (userError || !user) {
-      console.error("[MMG checkout] user not found:", userError);
       return NextResponse.json(
         { error: "User profile not found" },
         { status: 404 }
       );
     }
-    console.log("[MMG checkout] user profile loaded:", { id: user.id, role: user.role });
 
-    // Validate user has a role
     if (!user.role) {
-      console.log("[MMG checkout] validation failed: user role not set");
       return NextResponse.json(
         { error: "User profile incomplete. Role not set." },
         { status: 400 }
       );
     }
 
-    // Create payment_transactions record
-    console.log("[MMG checkout] creating payment_transactions record");
-    const { data: paymentTransaction, error: transactionError } = await supabase
+    // Idempotency: reuse a recent pending transaction for the same user/amount
+    // to prevent duplicate records on network retries
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { data: existingTransaction } = await supabase
       .from("payment_transactions")
-      .insert({
-        user_id: user.id,
-        amount,
-        currency,
-        payment_method: "mmg",
-        status: "pending",
-        initiated_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
+      .select("id, amount, currency")
+      .eq("user_id", user.id)
+      .eq("status", "pending")
+      .eq("payment_method", "mmg")
+      .gte("initiated_at", oneHourAgo)
+      .order("initiated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (transactionError || !paymentTransaction) {
-      console.error("[MMG checkout] error creating payment transaction:", transactionError);
-      throw transactionError;
+    const canReuse = existingTransaction &&
+      existingTransaction.amount === amount &&
+      existingTransaction.currency === currency;
+
+    let transactionId: number;
+
+    if (canReuse && existingTransaction) {
+      transactionId = existingTransaction.id;
+    } else {
+      const { data: newTransaction, error: transactionError } = await supabase
+        .from("payment_transactions")
+        .insert({
+          user_id: user.id,
+          amount,
+          currency,
+          payment_method: "mmg",
+          status: "pending",
+          initiated_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+
+      if (transactionError || !newTransaction) {
+        console.error("[MMG checkout] error creating payment transaction:", transactionError);
+        throw transactionError;
+      }
+      transactionId = newTransaction.id;
     }
-    console.log("[MMG checkout] payment_transactions created:", paymentTransaction.id);
 
-    // Create MMG checkout session using payment_transaction.id as merchant transaction ID
-    console.log("[MMG checkout] creating MMG checkout session");
     const checkoutUrl = await mmgService.createCheckoutSession({
       amount,
       currency,
       description,
-      app_transaction_id: paymentTransaction.id,
+      app_transaction_id: transactionId,
     });
-    console.log("[MMG checkout] checkout URL generated, redirectUrl length:", checkoutUrl?.length ?? 0);
 
-    // Return successful response
-    console.log("[MMG checkout] success, returning response");
     return NextResponse.json({
       success: true,
-      paymentTransactionId: paymentTransaction.id,
+      paymentTransactionId: transactionId,
       redirectUrl: checkoutUrl,
       amount,
       currency,
@@ -125,7 +125,6 @@ export async function POST(req: Request) {
       {
         success: false,
         error: "Internal server error",
-        message: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
