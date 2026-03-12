@@ -11,10 +11,11 @@ import { format } from 'date-fns'
 async function fetchRiders(filters: {
   subscriptionStatus: string
   searchQuery: string
+  accountStatus: string
 }) {
   const supabase = createClient()
   
-  let query = supabase
+  const query = supabase
     .from('rider_profiles')
     .select(`
       *,
@@ -22,23 +23,23 @@ async function fetchRiders(filters: {
     `)
     .order('created_at', { ascending: false })
 
-  // if (filters.subscriptionStatus !== 'all') {
-  //   query = query.eq('subscription_status', filters.subscriptionStatus)
-  // }
-
   const { data, error } = await query
 
   if (error) throw error
 
-  // Client-side search filtering
   let results = data as RiderWithDetails[]
   if (filters.searchQuery) {
     const searchLower = filters.searchQuery.toLowerCase()
-    results = results.filter(rider => 
+    results = results.filter(rider =>
       rider.user?.full_name?.toLowerCase().includes(searchLower) ||
       rider.user?.phone_number?.includes(searchLower) ||
       rider.user?.email?.toLowerCase().includes(searchLower)
     )
+  }
+  if (filters.accountStatus === 'active') {
+    results = results.filter(rider => rider.user?.is_active === true)
+  } else if (filters.accountStatus === 'inactive') {
+    results = results.filter(rider => rider.user?.is_active === false)
   }
 
   return results
@@ -54,10 +55,11 @@ const subscriptionBadgeColors = {
 export default function RidersPage() {
   const [subscriptionStatus, setSubscriptionStatus] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [accountStatus, setAccountStatus] = useState('all')
 
   const { data: riders, isLoading } = useQuery({
-    queryKey: ['riders', subscriptionStatus, searchQuery],
-    queryFn: () => fetchRiders({ subscriptionStatus, searchQuery }),
+    queryKey: ['riders', subscriptionStatus, searchQuery, accountStatus],
+    queryFn: () => fetchRiders({ subscriptionStatus, searchQuery, accountStatus }),
   })
 
   const expiredCount = riders?.filter(r => r.subscription_status === 'expired').length || 0
@@ -105,9 +107,9 @@ export default function RidersPage() {
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Search */}
-          <div className="md:col-span-2">
+          <div className="lg:col-span-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
@@ -134,6 +136,19 @@ export default function RidersPage() {
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
+
+          {/* Account Status */}
+          <div>
+            <select
+              value={accountStatus}
+              onChange={(e) => setAccountStatus(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Account Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -150,6 +165,9 @@ export default function RidersPage() {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Rider
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Account Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Subscription
@@ -200,6 +218,13 @@ export default function RidersPage() {
                             )}
                           </div>
                         </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          rider.user?.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {rider.user?.is_active ? 'Active' : 'Inactive'}
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

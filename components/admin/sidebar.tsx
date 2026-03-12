@@ -11,7 +11,8 @@ import {
   BarChart3, 
   Settings,
   Menu,
-  X
+  X,
+  FileText
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -22,6 +23,7 @@ const navigation = [
   { name: 'Trips', href: '/admin/trips', icon: Route },
   { name: 'Payments', href: '/admin/payments', icon: CreditCard },
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
+  { name: 'Audit Log', href: '/admin/audit-log', icon: FileText },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ]
 

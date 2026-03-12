@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { 
   ArrowLeft, 
@@ -17,7 +17,9 @@ import {
   CreditCard,
   Route,
   Shield,
-  Users
+  Users,
+  UserX,
+  UserCheck
 } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -123,6 +125,9 @@ const statusColors = {
 export default function RiderDetailPage() {
   const params = useParams()
   const riderId = params.id as string
+  const queryClient = useQueryClient()
+  const [isTogglingActive, setIsTogglingActive] = useState(false)
+  const [toggleError, setToggleError] = useState<string | null>(null)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['rider-detail', riderId],
@@ -161,6 +166,26 @@ export default function RiderDetailPage() {
   }
 
   const { rider, trips, subscriptions, payments } = data
+
+  async function handleToggleActive(newActive: boolean) {
+    setToggleError(null)
+    setIsTogglingActive(true)
+    try {
+      const supabase = createClient()
+      const { error: updateError } = await (supabase.from('users') as any)
+        .update({ is_active: newActive })
+        .eq('id', rider.user_id)
+
+      if (updateError) throw updateError
+      await queryClient.invalidateQueries({ queryKey: ['rider-detail', riderId] })
+      await queryClient.invalidateQueries({ queryKey: ['riders'] })
+    } catch (err: unknown) {
+      setToggleError(err instanceof Error ? err.message : 'Failed to update account status')
+    } finally {
+      setIsTogglingActive(false)
+    }
+  }
+
   const isTrialExpiringSoon = rider.subscription_status === 'trial' && 
     rider.trial_end_date && 
     new Date(rider.trial_end_date) <= new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) &&
@@ -186,18 +211,54 @@ export default function RiderDetailPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
-            subscriptionBadgeColors[rider.subscription_status]
-          }`}>
-            {rider.subscription_status}
-          </span>
-          {isTrialExpiringSoon && (
-            <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-              <Clock className="h-4 w-4 mr-1" />
-              Trial Expiring Soon
-            </span>
+        <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-3">
+          {rider.user_id && (
+            <div className="flex flex-col items-end gap-1">
+              {rider.user?.is_active ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm('Deactivate this rider? They will not be able to sign in.')) {
+                      handleToggleActive(false)
+                    }
+                  }}
+                  disabled={isTogglingActive}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  <UserX className="h-4 w-4" />
+                  Deactivate
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleToggleActive(true)}
+                  disabled={isTogglingActive}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  <UserCheck className="h-4 w-4" />
+                  Reactivate
+                </button>
+              )}
+              {toggleError && (
+                <p className="text-sm text-red-600" role="alert">
+                  {toggleError}
+                </p>
+              )}
+            </div>
           )}
+          <div className="flex items-center gap-3">
+            <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
+              subscriptionBadgeColors[rider.subscription_status]
+            }`}>
+              {rider.subscription_status}
+            </span>
+            {isTrialExpiringSoon && (
+              <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                <Clock className="h-4 w-4 mr-1" />
+                Trial Expiring Soon
+              </span>
+            )}
+          </div>
         </div>
       </div>
 

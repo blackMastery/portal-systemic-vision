@@ -236,6 +236,20 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['trip_requests']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['trip_requests']['Insert']>
       }
+      audit_logs: {
+        Row: {
+          id: string
+          table_name: string
+          record_id: string
+          action: 'INSERT' | 'UPDATE' | 'DELETE'
+          old_data: Json | null
+          new_data: Json | null
+          changed_at: string
+          actor_id: string | null
+        }
+        Insert: Omit<Database['public']['Tables']['audit_logs']['Row'], 'id'>
+        Update: never
+      }
     }
     Views: {}
     Functions: {}
