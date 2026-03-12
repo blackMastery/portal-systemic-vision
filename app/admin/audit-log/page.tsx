@@ -67,6 +67,8 @@ async function fetchAuditLogs(filters: {
   return { rows: (data ?? []) as AuditLogRow[], total: count ?? 0 }
 }
 
+type UserActor = Pick<Database['public']['Tables']['users']['Row'], 'auth_id' | 'full_name'>
+
 async function fetchActors(actorIds: string[]) {
   if (actorIds.length === 0) return new Map<string, string>()
   const supabase = createClient()
@@ -76,7 +78,8 @@ async function fetchActors(actorIds: string[]) {
     .in('auth_id', actorIds)
   if (error) return new Map<string, string>()
   const map = new Map<string, string>()
-  data?.forEach((u) => {
+  const rows = (data ?? []) as UserActor[]
+  rows.forEach((u) => {
     if (u.auth_id) map.set(u.auth_id, u.full_name ?? 'Unknown')
   })
   return map
