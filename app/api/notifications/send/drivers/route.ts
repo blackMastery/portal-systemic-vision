@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
     const missingUserIds = validatedBody.user_ids.filter(
       (id) => !foundUserIds.includes(id)
     )
-    if (missingUserIds.length > 0) {
+    if (missingUserIds.length === validatedBody.user_ids.length) {
       const { response, statusCode } = handleApiError(
         new ValidationError(
           `The following user_ids were not found: ${missingUserIds.join(', ')}`
