@@ -126,37 +126,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: statusCode })
     }
 
-    // Check if all users are drivers
+    // Filter to only driver users, skip non-drivers silently
+    const driverUsers = users.filter((u) => u.role === 'driver')
     const nonDriverUsers = users.filter((u) => u.role !== 'driver')
     if (nonDriverUsers.length > 0) {
-      logger.warn('Non-driver users found in request', {
+      logger.warn('Non-driver users found in request, skipping them', {
         nonDriverUserIds: nonDriverUsers.map((u) => u.id),
       })
+    }
+
+    if (driverUsers.length === 0) {
       const { response, statusCode } = handleApiError(
-        new ValidationError(
-          `The following user_ids do not belong to drivers: ${nonDriverUsers.map((u) => u.id).join(', ')}`
-        )
+        new ValidationError('No driver users found among the provided user_ids.')
       )
       return NextResponse.json(response, { status: statusCode })
     }
 
-    // Check if all requested user_ids were found
-    const foundUserIds = users.map((u) => u.id)
-    const missingUserIds = validatedBody.user_ids.filter(
-      (id) => !foundUserIds.includes(id)
-    )
-    if (missingUserIds.length === validatedBody.user_ids.length) {
-      const { response, statusCode } = handleApiError(
-        new ValidationError(
-          `The following user_ids were not found: ${missingUserIds.join(', ')}`
-        )
-      )
-      return NextResponse.json(response, { status: statusCode })
-    }
+    const driverUserIds = driverUsers.map((u) => u.id)
 
     // 8. Send notifications via Firebase (using driver app project)
     const notificationResult = await sendNotificationsToUsers(
-      validatedBody.user_ids,
+      driverUserIds,
       validatedBody.title,
       validatedBody.body,
       'driver',
@@ -166,7 +156,7 @@ export async function POST(request: NextRequest) {
     // 9. Optionally create notification records in database
     // This is useful for tracking and showing notifications in the app
     if (notificationResult.successCount > 0) {
-      const notificationRecords = validatedBody.user_ids.map((userId) => ({
+      const notificationRecords = driverUserIds.map((userId) => ({
         user_id: userId,
         title: validatedBody.title,
         body: validatedBody.body,
@@ -190,7 +180,7 @@ export async function POST(request: NextRequest) {
 
     // 10. Return success response
     logger.info('Notifications sent to drivers', {
-      requestedCount: validatedBody.user_ids.length,
+      requestedCount: driverUserIds.length,
       successCount: notificationResult.successCount,
       failureCount: notificationResult.failureCount,
     })
@@ -199,7 +189,7 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         message: 'Notifications sent successfully',
-        requestedCount: validatedBody.user_ids.length,
+        requestedCount: driverUserIds.length,
         successCount: notificationResult.successCount,
         failureCount: notificationResult.failureCount,
         invalidTokensRemoved: notificationResult.invalidTokens.length,
