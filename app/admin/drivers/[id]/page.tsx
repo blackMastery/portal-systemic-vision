@@ -5,14 +5,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import Image from 'next/image'
 import { 
-  ArrowLeft, 
-  User, 
-  Phone, 
-  Mail, 
-  Car, 
-  FileText, 
-  Calendar, 
-  Star, 
+  ArrowLeft,
+  User,
+  Phone,
+  Mail,
+  Car,
+  FileText,
+  Calendar,
+  Star,
   TrendingUp,
   MapPin,
   DollarSign,
@@ -24,7 +24,8 @@ import {
   Edit,
   CreditCard,
   History,
-  Shield
+  Shield,
+  MessageSquare
 } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -169,6 +170,7 @@ export default function DriverDetailPage() {
   const queryClient = useQueryClient()
   const driverId = params.id as string
   const [showVerificationModal, setShowVerificationModal] = useState(false)
+  const [showSmsModal, setShowSmsModal] = useState(false)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['driver-detail', driverId],
@@ -234,6 +236,13 @@ export default function DriverDetailPage() {
           }`}>
             {driver.verification_status}
           </span>
+          <button
+            onClick={() => setShowSmsModal(true)}
+            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Send SMS
+          </button>
           <button
             onClick={() => setShowVerificationModal(true)}
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -671,6 +680,14 @@ export default function DriverDetailPage() {
           }}
         />
       )}
+
+      {/* Send SMS Modal */}
+      {showSmsModal && (
+        <SendSmsModal
+          driver={driver}
+          onClose={() => setShowSmsModal(false)}
+        />
+      )}
     </div>
   )
 }
@@ -878,6 +895,110 @@ function VehicleCard({ vehicle }: { vehicle: Database['public']['Tables']['vehic
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function SendSmsModal({
+  driver,
+  onClose,
+}: {
+  driver: DriverWithDetails
+  onClose: () => void
+}) {
+  const [message, setMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+  const supabase = createClient()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setIsSubmitting(true)
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Not authenticated')
+
+      const phoneNumber = (driver as any).user?.phone_number
+      if (!phoneNumber) throw new Error('Driver has no phone number on record')
+
+      const res = await fetch('/api/sms/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ to: phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`, message }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Failed to send SMS')
+
+      setSuccess(true)
+      setTimeout(onClose, 1500)
+    } catch (err: any) {
+      setError(err.message || 'Failed to send SMS')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-1">Send SMS</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          To: {(driver as any).user?.full_name} &mdash; {(driver as any).user?.phone_number || 'No phone number'}
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Message
+            </label>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={4}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              placeholder="Type your message..."
+              required
+            />
+          </div>
+
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
+
+          {success && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800">SMS sent successfully!</p>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isSubmitting || success}
+            >
+              {isSubmitting ? 'Sending...' : 'Send SMS'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )
