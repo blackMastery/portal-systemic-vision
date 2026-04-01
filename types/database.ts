@@ -177,6 +177,7 @@ export interface Database {
           error_message: string | null
           initiated_at: string
           completed_at: string | null
+          subscription_start_date: string | null
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['payment_transactions']['Row'], 'id' | 'created_at' | 'transaction_number'>

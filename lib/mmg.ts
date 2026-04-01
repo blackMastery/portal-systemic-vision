@@ -9,7 +9,7 @@ interface CreateCheckoutSessionParams {
   amount: number;
   currency: string;
   description?: string;
-  app_transaction_id: number;
+  app_transaction_id: string;
 }
 
 /** MMG e-commerce login response */

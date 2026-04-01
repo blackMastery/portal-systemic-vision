@@ -76,6 +76,7 @@ CREATE TABLE public.payment_transactions (
   error_message text,
   initiated_at timestamp with time zone DEFAULT now(),
   completed_at timestamp with time zone,
+  subscription_start_date timestamp with time zone,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT payment_transactions_pkey PRIMARY KEY (id),
   CONSTRAINT payment_transactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),

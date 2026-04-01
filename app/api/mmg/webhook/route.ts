@@ -84,7 +84,7 @@ export async function GET(req: Request) {
         .update({ status: 'processing' })
         .eq('id', decryptedData.merchantTransactionId)
         .eq('status', 'pending')
-        .select('id, user_id, amount, currency, status')
+        .select('id, user_id, amount, currency, status, subscription_start_date')
         .single();
 
       if (claimError || !claimed) {
@@ -107,8 +107,10 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: 'Payment transaction not found' }, { status: 404 });
       }
 
-      // Calculate subscription dates (30 days from today)
-      const startDate = new Date();
+      // Subscription window: start from checkout (if set) or payment completion time; 30-day term
+      const startDate = claimed.subscription_start_date
+        ? new Date(claimed.subscription_start_date)
+        : new Date();
       const endDate = new Date(startDate);
       endDate.setDate(endDate.getDate() + 30);
 

@@ -7,12 +7,43 @@ interface CheckoutRequest {
   amount: number;
   currency?: string;
   description?: string;
+  subscriptionStartDate?: string;
+}
+
+/** Normalized ISO instant for an explicit client-provided date. Throws if invalid. */
+function parseExplicitSubscriptionStartDate(value: unknown): string {
+  if (typeof value !== "string") {
+    throw new Error("INVALID_SUBSCRIPTION_START_DATE");
+  }
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) {
+    throw new Error("INVALID_SUBSCRIPTION_START_DATE");
+  }
+  return d.toISOString();
+}
+
+function hasExplicitSubscriptionStart(body: CheckoutRequest): boolean {
+  const raw = body.subscriptionStartDate;
+  return raw !== undefined && raw !== null && String(raw).trim() !== "";
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json() as CheckoutRequest;
     const { amount, currency = "GYD", description = "Subscription Payment" } = body;
+
+    const explicitSubscriptionStart = hasExplicitSubscriptionStart(body);
+    let subscriptionStartIso: string;
+    try {
+      subscriptionStartIso = explicitSubscriptionStart
+        ? parseExplicitSubscriptionStartDate(body.subscriptionStartDate)
+        : new Date().toISOString();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid subscriptionStartDate. Use an ISO 8601 date or datetime string." },
+        { status: 400 }
+      );
+    }
 
     if (!amount || amount <= 0) {
       return NextResponse.json(
@@ -66,7 +97,7 @@ export async function POST(req: Request) {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const { data: existingTransaction } = await supabase
       .from("payment_transactions")
-      .select("id, amount, currency")
+      .select("id, amount, currency, subscription_start_date")
       .eq("user_id", user.id)
       .eq("status", "pending")
       .eq("payment_method", "mmg")
@@ -75,11 +106,23 @@ export async function POST(req: Request) {
       .limit(1)
       .maybeSingle();
 
-    const canReuse = existingTransaction &&
-      existingTransaction.amount === amount &&
-      existingTransaction.currency === currency;
+    const existingStart =
+      existingTransaction?.subscription_start_date != null
+        ? existingTransaction.subscription_start_date
+        : null;
+    // Implicit start = "now" differs per request; reuse on amount+currency only.
+    // Explicit start must match the pending row's stored instant.
+    const startDatesMatch =
+      !explicitSubscriptionStart ||
+      subscriptionStartIso === existingStart;
 
-    let transactionId: number;
+    const canReuse =
+      !!existingTransaction &&
+      existingTransaction.amount === amount &&
+      existingTransaction.currency === currency &&
+      startDatesMatch;
+
+    let transactionId: string;
 
     if (canReuse && existingTransaction) {
       transactionId = existingTransaction.id;
@@ -93,6 +136,7 @@ export async function POST(req: Request) {
           payment_method: "mmg",
           status: "pending",
           initiated_at: new Date().toISOString(),
+          subscription_start_date: subscriptionStartIso,
         })
         .select("id")
         .single();
