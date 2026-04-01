@@ -3,7 +3,6 @@ import { createClient } from '@supabase/supabase-js'
 import {
   handleApiError,
   AuthenticationError,
-  AuthorizationError,
   NotFoundError,
 } from '@/lib/errors'
 import { validate, tripRequestSchema } from '@/lib/validation'
@@ -90,7 +89,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: statusCode })
     }
 
-    // 5. Get rider profile and validate subscription
+    // 5. Get rider profile
     const { data: riderProfile, error: riderError } = await supabase
       .from('rider_profiles')
       .select('id, subscription_status')
@@ -101,21 +100,6 @@ export async function POST(request: NextRequest) {
       logger.warn('Rider profile not found', { userId: user.id, error: riderError })
       const { response, statusCode } = handleApiError(
         new NotFoundError('Rider profile not found.')
-      )
-      return NextResponse.json(response, { status: statusCode })
-    }
-
-    // 6. Validate subscription status
-    if (
-      riderProfile.subscription_status !== 'active' &&
-      riderProfile.subscription_status !== 'trial'
-    ) {
-      logger.warn('Subscription required', {
-        userId: user.id,
-        subscriptionStatus: riderProfile.subscription_status,
-      })
-      const { response, statusCode } = handleApiError(
-        new AuthorizationError('Subscription required. Please activate your subscription to create trip requests.')
       )
       return NextResponse.json(response, { status: statusCode })
     }
