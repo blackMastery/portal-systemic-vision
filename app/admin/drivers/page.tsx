@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { Search, Filter, UserCheck, UserX, Clock, Car } from 'lucide-react'
+import { Search, Clock, Car } from 'lucide-react'
 import Link from 'next/link'
 import type { DriverWithDetails } from '@/types/database'
 
@@ -59,9 +60,22 @@ const verificationBadgeColors = {
 }
 
 export default function DriversPage() {
-  const [verificationStatus, setVerificationStatus] = useState('all')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  const verificationStatus = searchParams.get('status') || 'all'
   const [subscriptionStatus, setSubscriptionStatus] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+
+  function setVerificationStatus(status: string) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (status === 'all') {
+      params.delete('status')
+    } else {
+      params.set('status', status)
+    }
+    router.replace(`/admin/drivers?${params.toString()}`)
+  }
 
   const { data: drivers, isLoading } = useQuery({
     queryKey: ['drivers', verificationStatus, subscriptionStatus, searchQuery],

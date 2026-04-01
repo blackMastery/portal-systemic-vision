@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react'
 
 interface MetricCardProps {
@@ -7,6 +8,7 @@ interface MetricCardProps {
   trend?: string
   trendUp?: boolean
   color?: 'blue' | 'green' | 'purple' | 'yellow' | 'indigo' | 'emerald' | 'red'
+  href?: string
 }
 
 const colorClasses = {
@@ -26,9 +28,10 @@ export function MetricCard({
   trend,
   trendUp,
   color = 'blue',
+  href,
 }: MetricCardProps) {
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+  const content = (
+    <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow${href ? ' cursor-pointer' : ''}`}>
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <p className="text-sm font-medium text-gray-600">{title}</p>
@@ -59,4 +62,10 @@ export function MetricCard({
       </div>
     </div>
   )
+
+  if (href) {
+    return <Link href={href}>{content}</Link>
+  }
+
+  return content
 }

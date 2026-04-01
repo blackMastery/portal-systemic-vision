@@ -4,8 +4,9 @@ import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import Image from 'next/image'
-import { 
+import {
   ArrowLeft,
+  ChevronRight,
   User,
   Phone,
   Mail,
@@ -164,6 +165,24 @@ const statusColors = {
   cancelled: 'bg-red-100 text-red-800',
 }
 
+async function fetchNextPendingDriver(currentCreatedAt: string): Promise<string | null> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('driver_profiles')
+    .select('id')
+    .eq('verification_status', 'pending')
+    .lt('created_at', currentCreatedAt)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') return null
+    throw error
+  }
+  return data?.id ?? null
+}
+
 export default function DriverDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -176,6 +195,13 @@ export default function DriverDetailPage() {
     queryKey: ['driver-detail', driverId],
     queryFn: () => fetchDriverDetail(driverId),
     enabled: !!driverId,
+  })
+
+  const nextPendingQuery = useQuery({
+    queryKey: ['next-pending-driver', driverId, data?.driver.created_at],
+    queryFn: () => fetchNextPendingDriver(data!.driver.created_at),
+    enabled: !!data?.driver.created_at,
+    staleTime: 30_000,
   })
 
   if (isLoading) {
@@ -231,6 +257,20 @@ export default function DriverDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {nextPendingQuery.isLoading ? (
+            <button disabled className="inline-flex items-center px-4 py-2 bg-yellow-100 text-yellow-500 rounded-lg opacity-70 cursor-not-allowed">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-500 mr-2" />
+              Loading...
+            </button>
+          ) : nextPendingQuery.data ? (
+            <button
+              onClick={() => router.push(`/admin/drivers/${nextPendingQuery.data}`)}
+              className="inline-flex items-center px-4 py-2 bg-yellow-50 text-yellow-800 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors"
+            >
+              <ChevronRight className="h-4 w-4 mr-1" />
+              Next Pending
+            </button>
+          ) : null}
           <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
             verificationBadgeColors[driver.verification_status]
           }`}>
@@ -676,6 +716,7 @@ export default function DriverDetailPage() {
           onClose={() => setShowVerificationModal(false)}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['driver-detail', driverId] })
+            queryClient.invalidateQueries({ queryKey: ['next-pending-driver'] })
             setShowVerificationModal(false)
           }}
         />

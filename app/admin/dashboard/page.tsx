@@ -15,7 +15,9 @@ async function fetchDashboardMetrics() {
     { count: activeDrivers },
     { count: activeRiders },
     { count: activeTrips },
-    { count: pendingRequests }
+    { count: pendingRequests },
+    { count: pendingDrivers },
+    { count: approvedDrivers },
   ] = await Promise.all([
     supabase
       .from('driver_profiles')
@@ -32,7 +34,15 @@ async function fetchDashboardMetrics() {
     supabase
       .from('trip_requests')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'requested')
+      .eq('status', 'requested'),
+    supabase
+      .from('driver_profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('verification_status', 'pending'),
+    supabase
+      .from('driver_profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('verification_status', 'approved'),
   ])
 
   // Get today's trips
@@ -52,6 +62,8 @@ async function fetchDashboardMetrics() {
     activeRiders: activeRiders || 0,
     activeTrips: activeTrips || 0,
     pendingRequests: pendingRequests || 0,
+    pendingDrivers: pendingDrivers || 0,
+    approvedDrivers: approvedDrivers || 0,
     todayTripsCount: todayTrips?.length || 0,
     todayRevenue
   }
@@ -91,6 +103,21 @@ export default function DashboardPage() {
           trend="+12%"
           trendUp={true}
           color="blue"
+          href="/admin/drivers"
+        />
+        <MetricCard
+          title="Pending Drivers"
+          value={metrics?.pendingDrivers || 0}
+          icon={Clock}
+          color="yellow"
+          href="/admin/drivers?status=pending"
+        />
+        <MetricCard
+          title="Approved Drivers"
+          value={metrics?.approvedDrivers || 0}
+          icon={Car}
+          color="green"
+          href="/admin/drivers?status=approved"
         />
         <MetricCard
           title="Active Riders"
@@ -99,18 +126,21 @@ export default function DashboardPage() {
           trend="+8%"
           trendUp={true}
           color="green"
+          href="/admin/riders"
         />
         <MetricCard
           title="Active Trips"
           value={metrics?.activeTrips || 0}
           icon={Route}
           color="purple"
+          href="/admin/trips"
         />
         <MetricCard
           title="Pending Requests"
           value={metrics?.pendingRequests || 0}
           icon={Clock}
           color="yellow"
+          href="/admin/trips"
         />
         <MetricCard
           title="Today's Trips"
@@ -119,6 +149,7 @@ export default function DashboardPage() {
           trend="+23%"
           trendUp={true}
           color="indigo"
+          href="/admin/trips"
         />
         <MetricCard
           title="Today's Revenue"
@@ -127,6 +158,7 @@ export default function DashboardPage() {
           trend="+15%"
           trendUp={true}
           color="emerald"
+          href="/admin/payments"
         />
       </div>
 
