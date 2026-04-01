@@ -174,12 +174,9 @@ async function fetchNextPendingDriver(currentCreatedAt: string): Promise<string 
     .lt('created_at', currentCreatedAt)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single()
+    .maybeSingle() as { data: { id: string } | null; error: { message: string } | null }
 
-  if (error) {
-    if (error.code === 'PGRST116') return null
-    throw error
-  }
+  if (error) throw error
   return data?.id ?? null
 }
 
