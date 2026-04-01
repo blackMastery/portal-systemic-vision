@@ -106,6 +106,18 @@ export const notificationSchema = z.object({
 export type NotificationRequest = z.infer<typeof notificationSchema>
 
 /**
+ * Update trip status schema
+ */
+export const updateTripStatusSchema = z.object({
+  status: z.enum(['picked_up', 'completed', 'cancelled']),
+  actual_distance_km: z.number().positive().optional(),
+  actual_fare: z.number().nonnegative().optional(),
+  cancellation_reason: z.string().max(500).optional(),
+})
+
+export type UpdateTripStatusRequest = z.infer<typeof updateTripStatusSchema>
+
+/**
  * Validates data against a Zod schema and throws ValidationError if invalid
  */
 export function validate<T>(schema: z.ZodSchema<T>, data: unknown): T {
