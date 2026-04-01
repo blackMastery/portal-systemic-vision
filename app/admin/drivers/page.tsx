@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
@@ -59,7 +59,7 @@ const verificationBadgeColors = {
   suspended: 'bg-gray-100 text-gray-800',
 }
 
-export default function DriversPage() {
+function DriversContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -276,5 +276,13 @@ export default function DriversPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function DriversPage() {
+  return (
+    <Suspense>
+      <DriversContent />
+    </Suspense>
   )
 }
