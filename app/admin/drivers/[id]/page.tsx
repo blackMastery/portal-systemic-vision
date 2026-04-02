@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { sendDriverPushNotification } from './actions'
 import Image from 'next/image'
 import {
   ArrowLeft,
@@ -26,7 +27,8 @@ import {
   CreditCard,
   History,
   Shield,
-  MessageSquare
+  MessageSquare,
+  Bell
 } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -187,6 +189,7 @@ export default function DriverDetailPage() {
   const driverId = params.id as string
   const [showVerificationModal, setShowVerificationModal] = useState(false)
   const [showSmsModal, setShowSmsModal] = useState(false)
+  const [showPushModal, setShowPushModal] = useState(false)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['driver-detail', driverId],
@@ -279,6 +282,13 @@ export default function DriverDetailPage() {
           >
             <MessageSquare className="h-4 w-4 mr-2" />
             Send SMS
+          </button>
+          <button
+            onClick={() => setShowPushModal(true)}
+            className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            <Bell className="h-4 w-4 mr-2" />
+            Send Push
           </button>
           <button
             onClick={() => setShowVerificationModal(true)}
@@ -726,6 +736,14 @@ export default function DriverDetailPage() {
           onClose={() => setShowSmsModal(false)}
         />
       )}
+
+      {/* Send Push Notification Modal */}
+      {showPushModal && (
+        <SendPushNotificationModal
+          driver={driver}
+          onClose={() => setShowPushModal(false)}
+        />
+      )}
     </div>
   )
 }
@@ -1034,6 +1052,113 @@ function SendSmsModal({
               disabled={isSubmitting || success}
             >
               {isSubmitting ? 'Sending...' : 'Send SMS'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function SendPushNotificationModal({
+  driver,
+  onClose,
+}: {
+  driver: DriverWithDetails
+  onClose: () => void
+}) {
+  const [title, setTitle] = useState('')
+  const [body, setBody] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setIsSubmitting(true)
+
+    try {
+      const userId = (driver as any).user_id
+      if (!userId) throw new Error('Driver has no user ID on record')
+
+      const result = await sendDriverPushNotification(userId, title, body)
+
+      if (!result.success) {
+        throw new Error(result.error || 'Driver has no registered device for push notifications')
+      }
+
+      setSuccess(true)
+      setTimeout(onClose, 1500)
+    } catch (err: any) {
+      setError(err.message || 'Failed to send push notification')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-1">Send Push Notification</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          To: {(driver as any).user?.full_name || 'Driver'}
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              placeholder="Notification title..."
+              required
+              maxLength={100}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={4}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              placeholder="Notification message..."
+              required
+              maxLength={500}
+            />
+          </div>
+
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
+
+          {success && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800">Push notification sent successfully!</p>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isSubmitting || success}
+            >
+              {isSubmitting ? 'Sending...' : 'Send Notification'}
             </button>
           </div>
         </form>

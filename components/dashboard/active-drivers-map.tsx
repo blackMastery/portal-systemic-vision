@@ -42,8 +42,8 @@ async function fetchActiveDrivers(): Promise<ActiveDriverData[]> {
       user:user_id (full_name, phone_number),
       vehicles:vehicles (make, model, license_plate)
     `)
-    .eq('is_online', true)
-    .limit(20)
+    .eq('is_available', true)
+    // .limit(20)
 
   if (driversError) throw driversError
   if (!drivers || drivers.length === 0) return []
