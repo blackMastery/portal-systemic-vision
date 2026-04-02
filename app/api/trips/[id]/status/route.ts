@@ -103,12 +103,12 @@ export async function PATCH(
       return NextResponse.json(response, { status: statusCode })
     }
 
-    if (user.role !== 'driver') {
-      const { response, statusCode } = handleApiError(
-        new AuthorizationError('Only drivers can update trip status.')
-      )
-      return NextResponse.json(response, { status: statusCode })
-    }
+    // if (user.role !== 'driver') {
+    //   const { response, statusCode } = handleApiError(
+    //     new AuthorizationError('Only drivers can update trip status.')
+    //   )
+    //   return NextResponse.json(response, { status: statusCode })
+    // }
 
     // 4. Parse and validate request body
     let body: unknown

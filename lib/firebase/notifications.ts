@@ -209,6 +209,7 @@ export async function sendNotificationsToUsers(
 
   // Fetch FCM tokens for users
   const tokensWithUsers = await fetchFCMTokensForUsers(userIds)
+  console.log("🚀 ~ sendNotificationsToUsers ~ tokensWithUsers:", tokensWithUsers)
 
   if (tokensWithUsers.length === 0) {
     logger.warn('No FCM tokens found for users', { userIds })
@@ -253,6 +254,10 @@ export async function sendNotificationsToUsers(
       .map((t) => t.user_id)
 
     await removeInvalidTokens(userIdsToCleanup)
+  }
+
+  if (aggregatedResult.errors.length > 0) {
+    logger.warn('FCM send errors', { errors: aggregatedResult.errors })
   }
 
   logger.info('Notification sending completed', {
