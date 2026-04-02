@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { sendNotificationsToUsers } from '@/lib/firebase/notifications'
 import { logger } from '@/lib/logger'
-import type { Database } from '@/types/database'
+import type { Database, UserRole } from '@/types/database'
 
 // Typed service role client — same pattern used in lib/firebase/notifications.ts
 function createServiceClient() {
@@ -42,11 +42,13 @@ export async function sendDriverPushNotification(
   const db = createServiceClient()
 
   // Verify the target user_id belongs to a driver
-  const { data: targetUser, error: userError } = await db
+  const { data: targetUserRaw, error: userError } = await db
     .from('users')
     .select('id, role')
     .eq('id', driverUserId)
     .single()
+
+  const targetUser = targetUserRaw as { id: string; role: UserRole } | null
 
   if (userError || !targetUser) {
     return { success: false, successCount: 0, failureCount: 0, error: 'Driver not found' }
@@ -66,15 +68,18 @@ export async function sendDriverPushNotification(
 
   // Record the notification in the database if delivery succeeded
   if (result.successCount > 0) {
+    type NotificationInsert = Database['public']['Tables']['notifications']['Insert']
     const { error: insertError } = await db
       .from('notifications')
+      // @ts-expect-error - supabase-js v2.39.7 PostgrestVersion mismatch with generated types
       .insert({
         user_id: driverUserId,
         title,
         body,
         notification_type: 'push',
         is_read: false,
-      })
+        read_at: null,
+      } satisfies NotificationInsert)
 
     if (insertError) {
       logger.warn('Failed to create notification record', { error: insertError, driverUserId })
