@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import {
-  handleApiError,
-  AuthenticationError,
-  ValidationError,
-} from '@/lib/errors'
+import { handleApiError, AuthenticationError } from '@/lib/errors'
 import { validate, notificationSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
-import { sendNotificationsToUsers } from '@/lib/firebase/notifications'
+import { sendPushToFcmTokens } from '@/lib/firebase/notifications'
 
-// Create a Supabase client with Bearer token authentication
 function createSupabaseClientWithToken(accessToken: string) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -31,7 +26,6 @@ function createSupabaseClientWithToken(accessToken: string) {
   })
 }
 
-// Extract Bearer token from Authorization header
 function extractBearerToken(request: NextRequest): string | null {
   const authHeader = request.headers.get('authorization')
   if (!authHeader) {
@@ -48,20 +42,19 @@ function extractBearerToken(request: NextRequest): string | null {
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Extract and validate Bearer token
     const accessToken = extractBearerToken(request)
 
     if (!accessToken) {
       const { response, statusCode } = handleApiError(
-        new AuthenticationError('Missing or invalid Authorization header. Expected: Bearer <token>')
+        new AuthenticationError(
+          'Missing or invalid Authorization header. Expected: Bearer <token>'
+        )
       )
       return NextResponse.json(response, { status: statusCode })
     }
 
-    // 2. Create Supabase client with token
     const supabase = createSupabaseClientWithToken(accessToken)
 
-    // 3. Verify token and get user session
     const {
       data: { user: authUser },
       error: authError,
@@ -75,7 +68,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: statusCode })
     }
 
-    // 4. Verify user exists in database
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id')
@@ -90,7 +82,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: statusCode })
     }
 
-    // 5. Parse and validate request body
     let body: unknown
     try {
       body = await request.json()
@@ -102,88 +93,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: statusCode })
     }
 
-    // 6. Validate request body with Zod schema
     const validatedBody = validate(notificationSchema, body)
-    console.log("🚀 ~ POST ~ validatedBody:", validatedBody)
 
-    // 7. Verify all user_ids belong to drivers
-    const { data: driverUsers, error: usersError } = await supabase
-      .from('users')
-      .select('id, role')
-      .in('id', validatedBody.user_ids)
-      .eq('role', 'driver') // Only select drivers
-      
-      if (usersError) {
-        logger.error('Failed to fetch users', usersError, {
-          userIds: validatedBody.user_ids,
-        })
-        const { response, statusCode } = handleApiError(usersError)
-        return NextResponse.json(response, { status: statusCode })
-      }
-      
-      console.log("🚀 ~ POST ~ driverUsers:", driverUsers)
-    // if (!users || users.length === 0) {
-    //   const { response, statusCode } = handleApiError(
-    //     new ValidationError('No users found with the provided user_ids.')
-    //   )
-    //   return NextResponse.json(response, { status: statusCode })
-    // }
-
-    // Filter to only driver users, skip non-drivers silently
-    // const driverUsers = users.filter((u) => u.role === 'driver')
-    // const nonDriverUsers = users.filter((u) => u.role !== 'driver')
-    // if (nonDriverUsers.length > 0) {
-    //   logger.warn('Non-driver users found in request, skipping them', {
-    //     nonDriverUserIds: nonDriverUsers.map((u) => u.id),
-    //   })
-    // }
-
-    // if (driverUsers.length === 0) {
-    //   const { response, statusCode } = handleApiError(
-    //     new ValidationError('No driver users found among the provided user_ids.')
-    //   )
-    //   return NextResponse.json(response, { status: statusCode })
-    // }
-
-    const driverUserIds = driverUsers.map((u) => u.id)
-
-    // 8. Send notifications via Firebase (using driver app project)
-    const notificationResult = await sendNotificationsToUsers(
-      driverUserIds,
+    const notificationResult = await sendPushToFcmTokens(
+      [validatedBody.fcm_token],
       validatedBody.title,
       validatedBody.body,
       'driver',
       validatedBody.data
     )
 
-    // 9. Optionally create notification records in database
-    // This is useful for tracking and showing notifications in the app
-    if (notificationResult.successCount > 0) {
-      const notificationRecords = driverUserIds.map((userId) => ({
-        user_id: userId,
-        title: validatedBody.title,
-        body: validatedBody.body,
-        notification_type: validatedBody.notification_type || 'push',
-        push_sent: true,
-        push_sent_at: new Date().toISOString(),
-      }))
-
-      const { error: insertError } = await supabase
-        .from('notifications')
-        .insert(notificationRecords)
-
-      if (insertError) {
-        // Log but don't fail the request - notification was sent successfully
-        logger.warn('Failed to create notification records', {
-          error: insertError,
-          userIds: validatedBody.user_ids,
-        })
-      }
-    }
-
-    // 10. Return success response
-    logger.info('Notifications sent to drivers', {
-      requestedCount: driverUserIds.length,
+    logger.info('Notification sent to driver FCM token', {
+      tokenCount: 1,
       successCount: notificationResult.successCount,
       failureCount: notificationResult.failureCount,
     })
@@ -191,8 +112,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        message: 'Notifications sent successfully',
-        requestedCount: driverUserIds.length,
+        message: 'Notification sent successfully',
+        requestedCount: 1,
         successCount: notificationResult.successCount,
         failureCount: notificationResult.failureCount,
         invalidTokensRemoved: notificationResult.invalidTokens.length,
@@ -200,7 +121,7 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     )
   } catch (error) {
-    logger.error('Unexpected error sending notifications to drivers', error)
+    logger.error('Unexpected error sending notification to driver', error)
     const { response, statusCode } = handleApiError(error)
     return NextResponse.json(response, { status: statusCode })
   }

@@ -77,20 +77,10 @@ export const tripRequestSchema = z.object({
 export type TripRequest = z.infer<typeof tripRequestSchema>
 
 /**
- * UUID validation schema
- */
-const uuidSchema = z.string().uuid('Invalid UUID format')
-
-/**
- * Notification request schema
+ * FCM direct-send notification request (device token + payload)
  */
 export const notificationSchema = z.object({
-  user_ids: z
-    .array(uuidSchema, {
-      required_error: 'user_ids is required',
-      invalid_type_error: 'user_ids must be an array',
-    })
-    .min(1, 'At least one user_id is required'),
+  fcm_token: z.string().min(1, 'fcm_token is required'),
   title: z
     .string()
     .min(1, 'Title is required')
@@ -103,7 +93,7 @@ export const notificationSchema = z.object({
   notification_type: z.string().optional(),
 })
 
-export type NotificationRequest = z.infer<typeof notificationSchema>
+export type FcmNotificationRequest = z.infer<typeof notificationSchema>
 
 /**
  * Update trip status schema

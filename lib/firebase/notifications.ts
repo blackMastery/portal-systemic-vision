@@ -12,6 +12,22 @@ import type { MulticastMessage } from 'firebase-admin/messaging'
 // FCM supports up to 500 tokens per batch
 const FCM_BATCH_SIZE = 500
 
+/** Platform overrides so notifications play the default system sound (iOS + Android). */
+const NOTIFICATION_PLATFORM_SOUND = {
+  android: {
+    notification: {
+      defaultSound: true as const,
+    },
+  },
+  apns: {
+    payload: {
+      aps: {
+        sound: 'default',
+      },
+    },
+  },
+} satisfies Pick<MulticastMessage, 'android' | 'apns'>
+
 /**
  * Create a Supabase client with service role key for server-side operations
  */
@@ -137,6 +153,7 @@ async function sendBatch(
       title,
       body,
     },
+    ...NOTIFICATION_PLATFORM_SOUND,
     data: data
       ? Object.entries(data).reduce(
           (acc, [key, value]) => {
@@ -188,6 +205,61 @@ async function sendBatch(
 }
 
 /**
+ * Send push to explicit FCM tokens (no DB lookup or invalid-token cleanup).
+ */
+export async function sendPushToFcmTokens(
+  tokens: string[],
+  title: string,
+  body: string,
+  projectType: FirebaseProjectType,
+  data?: Record<string, string>
+): Promise<NotificationSendResult> {
+  if (tokens.length === 0) {
+    return {
+      successCount: 0,
+      failureCount: 0,
+      invalidTokens: [],
+      errors: [],
+    }
+  }
+
+  const batches: string[][] = []
+  for (let i = 0; i < tokens.length; i += FCM_BATCH_SIZE) {
+    batches.push(tokens.slice(i, i + FCM_BATCH_SIZE))
+  }
+
+  logger.info('Sending direct FCM notifications in batches', {
+    totalTokens: tokens.length,
+    batchCount: batches.length,
+  })
+
+  const batchResults = await Promise.all(
+    batches.map((batch) => sendBatch(batch, title, body, projectType, data))
+  )
+
+  const aggregatedResult: NotificationSendResult = {
+    successCount: batchResults.reduce((sum, r) => sum + r.successCount, 0),
+    failureCount: batchResults.reduce((sum, r) => sum + r.failureCount, 0),
+    invalidTokens: batchResults.flatMap((r) => r.invalidTokens),
+    errors: batchResults.flatMap((r) => r.errors),
+  }
+
+  if (aggregatedResult.errors.length > 0) {
+    logger.warn('FCM send errors (direct tokens)', {
+      errors: aggregatedResult.errors,
+    })
+  }
+
+  logger.info('Direct FCM notification sending completed', {
+    successCount: aggregatedResult.successCount,
+    failureCount: aggregatedResult.failureCount,
+    invalidTokenCount: aggregatedResult.invalidTokens.length,
+  })
+
+  return aggregatedResult
+}
+
+/**
  * Send push notifications to multiple users
  * Handles batching for large token lists
  */
@@ -209,7 +281,6 @@ export async function sendNotificationsToUsers(
 
   // Fetch FCM tokens for users
   const tokensWithUsers = await fetchFCMTokensForUsers(userIds)
-  console.log("🚀 ~ sendNotificationsToUsers ~ tokensWithUsers:", tokensWithUsers)
 
   if (tokensWithUsers.length === 0) {
     logger.warn('No FCM tokens found for users', { userIds })

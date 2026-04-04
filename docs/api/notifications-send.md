@@ -2,11 +2,11 @@
 
 ## Overview
 
-The Push Notifications API allows authenticated users to send Firebase Cloud Messaging (FCM) push notifications to drivers or riders. The API provides two separate endpoints to ensure type safety and proper role validation.
+The Push Notifications API allows authenticated users to send Firebase Cloud Messaging (FCM) push notifications to a **specific device** by providing its FCM registration token and a notification payload. There are two endpoints so messages go through the correct Firebase project (driver app vs rider app).
 
-**Important**: This implementation supports **two separate Firebase projects** - one for the driver app and one for the rider app. Each endpoint automatically uses the correct Firebase project based on the target audience (drivers or riders).
+**Important**: This implementation uses **two separate Firebase projects**—one for the driver app and one for the rider app. Choose `/api/notifications/send/drivers` or `/api/notifications/send/riders` based on which app registered the token; sending through the wrong endpoint will fail or not reach the device.
 
-**Use Case**: Send push notifications to specific drivers or riders for various purposes such as trip updates, promotions, system announcements, etc.
+**Use case**: Send a push to a known device token (for example after your backend resolves the recipient and their current `fcm_token`), for trip updates, promotions, system messages, and so on.
 
 ## Authentication
 
@@ -16,17 +16,17 @@ All requests must include a valid Supabase session token in the Authorization he
 Authorization: Bearer <access_token>
 ```
 
-The access token is obtained from the `/api/auth/login` endpoint after successful authentication. The token should be included in all API requests.
+The access token is obtained from the `/api/auth/login` endpoint after successful authentication. The token should be included in all API requests. The API verifies the session and that the user exists in the `users` table before sending.
 
 ## Endpoints
 
-### Send Notifications to Drivers
+### Send notification (driver Firebase project)
 
 - **URL**: `/api/notifications/send/drivers`
 - **Method**: `POST`
 - **Content-Type**: `application/json`
 
-### Send Notifications to Riders
+### Send notification (rider Firebase project)
 
 - **URL**: `/api/notifications/send/riders`
 - **Method**: `POST`
@@ -39,92 +39,88 @@ Authorization: Bearer <access_token>
 Content-Type: application/json
 ```
 
-## Request Body
+## Request body
 
-Both endpoints use the same request body structure.
+Both endpoints accept the same JSON shape.
 
-### Required Fields
-
-| Field | Type | Description | Example |
-|-------|------|-------------|---------|
-| `user_ids` | array[string] | Array of user UUIDs to send notifications to. Must contain at least one UUID. All UUIDs must belong to users with the correct role (driver or rider). | `["550e8400-e29b-41d4-a716-446655440000"]` |
-| `title` | string | Notification title (max 100 characters) | `"New Trip Request"` |
-| `body` | string | Notification body/message (max 500 characters) | `"You have a new trip request nearby"` |
-
-### Optional Fields
+### Required fields
 
 | Field | Type | Description | Example |
 |-------|------|-------------|---------|
-| `data` | object | Custom data payload (key-value pairs, all values must be strings). This data is sent with the notification and can be used by the app for deep linking or custom handling. | `{"trip_id": "123", "type": "trip_request"}` |
-| `notification_type` | string | Type/category of notification. Used for tracking and filtering in the app. | `"trip_request"` |
+| `fcm_token` | string | Non-empty FCM registration token for the target device (from the client SDK for the matching app). | `"dK3x..."` |
+| `title` | string | Notification title (max 100 characters). | `"New trip request"` |
+| `body` | string | Notification body (max 500 characters). | `"You have a new trip nearby."` |
 
-### Important Notes
+### Optional fields
 
-1. **Role Validation**: 
-   - The `/drivers` endpoint validates that ALL provided `user_ids` belong to users with role `driver`
-   - The `/riders` endpoint validates that ALL provided `user_ids` belong to users with role `rider`
-   - If any user_id doesn't match the expected role, the request will fail with a validation error
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| `data` | object | Custom data payload (keys and values must be strings—Firebase requirement). Used for deep linking or app logic. | `{"trip_id": "123", "type": "trip_request"}` |
+| `notification_type` | string | Category or type label (accepted for compatibility; not required for FCM delivery). | `"trip_request"` |
 
-2. **FCM Tokens**: 
-   - Only users with valid FCM tokens stored in the database will receive notifications
-   - Users without FCM tokens are silently skipped (not counted as failures)
-   - Invalid or expired FCM tokens are automatically removed from the database
+### Important notes
 
-3. **Batching**: 
-   - The API automatically batches notifications for large recipient lists (FCM supports up to 500 tokens per batch)
-   - All batches are processed in parallel for optimal performance
+1. **Endpoint vs token**  
+   Use `/drivers` only for tokens issued by the **driver** Firebase project, and `/riders` only for tokens from the **rider** project. Mismatched project and token typically results in send failures.
 
-4. **Data Payload**: 
-   - All values in the `data` object must be strings (Firebase requirement)
-   - The data payload is sent alongside the notification and can be used for deep linking or custom app logic
+2. **No server-side role check on the token**  
+   The API does not verify that the token belongs to a driver or rider user record. The split between endpoints is which Firebase Admin project sends the message. Callers are responsible for passing the correct token for the intended app.
 
-## Response Formats
+3. **Direct send**  
+   The server does **not** look up `users.fcm_token` by user id. You pass the token in the body.
 
-### Success Response (200 OK)
+4. **Invalid tokens**  
+   FCM may report invalid or unregistered tokens in the response. For this direct-send path, those tokens are **not** automatically cleared from the `users` table (there is no guaranteed mapping from the request body to a user row). Handle cleanup in your own flows if you store tokens per user.
 
-Returns a summary of the notification sending operation.
+5. **Data payload**  
+   All values in `data` must be strings. They are forwarded to FCM as string key-value pairs.
+
+## Response formats
+
+### Success response (200 OK)
 
 ```json
 {
   "success": true,
-  "message": "Notifications sent successfully",
-  "requestedCount": 5,
-  "successCount": 4,
-  "failureCount": 1,
-  "invalidTokensRemoved": 1
+  "message": "Notification sent successfully",
+  "requestedCount": 1,
+  "successCount": 1,
+  "failureCount": 0,
+  "invalidTokensRemoved": 0
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `success` | boolean | Always `true` for successful requests |
-| `message` | string | Success message |
-| `requestedCount` | number | Number of user_ids provided in the request |
-| `successCount` | number | Number of notifications successfully sent |
-| `failureCount` | number | Number of notifications that failed to send |
-| `invalidTokensRemoved` | number | Number of invalid FCM tokens that were removed from the database |
+| `success` | boolean | `true` when the HTTP handler completed without error. |
+| `message` | string | Short status message. |
+| `requestedCount` | number | Always `1` (one token per request). |
+| `successCount` | number | FCM successes for this send (0 or 1 for a single token). |
+| `failureCount` | number | FCM failures for this send. |
+| `invalidTokensRemoved` | number | Count of tokens FCM treated as invalid/unregistered in this response. **Not** the number of rows updated in the database (direct send does not clear `users.fcm_token`). |
 
-### Error Responses
+Partial FCM failure (for example bad token) can still return **200** with `successCount: 0` and `failureCount: 1`; check counts for delivery outcome.
 
-#### 400 Bad Request - Validation Error
+### Error responses
+
+#### 400 Bad Request — validation error
 
 ```json
 {
-  "error": "The following user_ids do not belong to drivers: 550e8400-e29b-41d4-a716-446655440000",
+  "error": "fcm_token is required",
   "code": "VALIDATION_ERROR",
   "statusCode": 400
 }
 ```
 
-Common validation errors:
-- Missing or invalid `user_ids` array
-- Empty `user_ids` array
-- Invalid UUID format in `user_ids`
-- User IDs that don't belong to the expected role (driver/rider)
-- Missing or invalid `title` or `body`
-- `title` or `body` exceeds maximum length
+Common causes:
 
-#### 401 Unauthorized - Authentication Error
+- Missing or empty `fcm_token`
+- Missing or invalid `title` / `body`
+- `title` or `body` over max length
+- `data` values that are not strings
+
+#### 401 Unauthorized — authentication error
 
 ```json
 {
@@ -135,10 +131,10 @@ Common validation errors:
 ```
 
 Occurs when:
-- Missing Authorization header
-- Invalid Bearer token format
+
+- Authorization header is missing or not `Bearer <token>`
 - Expired or invalid access token
-- User not found in database
+- Authenticated user has no matching row in `users`
 
 #### 500 Internal Server Error
 
@@ -151,24 +147,21 @@ Occurs when:
 ```
 
 Occurs when:
-- Firebase service is unavailable
-- Database connection issues
+
+- Firebase Admin / FCM misconfiguration or runtime errors
 - Unexpected server errors
 
-## Example Requests
+## Example requests
 
-### Send Notification to Drivers
+### Driver app token
 
 ```bash
-curl -X POST https://portal-systemic-vision.vercel.app//api/notifications/send/drivers \
+curl -X POST https://portal-systemic-vision.vercel.app/api/notifications/send/drivers \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "user_ids": [
-      "550e8400-e29b-41d4-a716-446655440000",
-      "660e8400-e29b-41d4-a716-446655440001"
-    ],
-    "title": "New Trip Available",
+    "fcm_token": "YOUR_DRIVER_APP_FCM_TOKEN",
+    "title": "New trip available",
     "body": "A new trip request is available near your location",
     "data": {
       "trip_id": "123",
@@ -178,17 +171,15 @@ curl -X POST https://portal-systemic-vision.vercel.app//api/notifications/send/d
   }'
 ```
 
-### Send Notification to Riders
+### Rider app token
 
 ```bash
-curl -X POST https://portal-systemic-vision.vercel.app//api/notifications/send/riders \
+curl -X POST https://portal-systemic-vision.vercel.app/api/notifications/send/riders \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "user_ids": [
-      "770e8400-e29b-41d4-a716-446655440002"
-    ],
-    "title": "Trip Accepted",
+    "fcm_token": "YOUR_RIDER_APP_FCM_TOKEN",
+    "title": "Trip accepted",
     "body": "Your trip request has been accepted by a driver",
     "data": {
       "trip_id": "456",
@@ -198,222 +189,129 @@ curl -X POST https://portal-systemic-vision.vercel.app//api/notifications/send/r
   }'
 ```
 
-## Firebase Setup Guide
+## Firebase setup guide
 
 ### Prerequisites
 
-1. **Two Firebase projects** - one for the driver app and one for the rider app
-2. Cloud Messaging enabled in both projects
-3. Service account credentials with appropriate permissions for both projects
+1. **Two Firebase projects** — one for the driver app and one for the rider app  
+2. Cloud Messaging enabled in both  
+3. Service account credentials with appropriate permissions for both  
 
-### Step 1: Create Firebase Projects
+### Step 1: Create Firebase projects
 
-You need to create two separate Firebase projects:
+1. **Driver app project** — e.g. “YourApp-Driver”  
+2. **Rider app project** — e.g. “YourApp-Rider”  
 
-1. **Driver App Project**:
-   - Go to [Firebase Console](https://console.firebase.google.com/)
-   - Click "Add project" or select an existing project
-   - Name it something like "Links Driver App" or "YourApp-Driver"
-   - Follow the setup wizard
-
-2. **Rider App Project**:
-   - Create a second project in Firebase Console
-   - Name it something like "Links Rider App" or "YourApp-Rider"
-   - Follow the setup wizard
+Use [Firebase Console](https://console.firebase.google.com/) to create or select projects.
 
 ### Step 2: Enable Cloud Messaging API
 
-For **each project** (driver and rider):
+For each project:
 
-1. In Firebase Console, select the project
-2. Go to Project Settings
-3. Navigate to the "Cloud Messaging" tab
-4. Ensure Cloud Messaging API is enabled
-5. Note your project's Sender ID (you'll need this for the respective mobile apps)
+1. Open Project Settings  
+2. Open the **Cloud Messaging** tab  
+3. Ensure the API is enabled  
+4. Note the Sender ID for the matching mobile app  
 
-### Step 3: Generate Service Account Keys
+### Step 3: Generate service account keys
 
-For **each project** (driver and rider):
+For each project:
 
-1. In Firebase Console, select the project
-2. Go to Project Settings
-3. Navigate to the "Service accounts" tab
-4. Click "Generate new private key"
-5. Save the JSON file securely with a descriptive name:
-   - `driver-service-account-key.json` for driver app
-   - `rider-service-account-key.json` for rider app
+1. Project Settings → **Service accounts**  
+2. **Generate new private key**  
+3. Store securely, e.g. `driver-service-account-key.json` and `rider-service-account-key.json`  
 
-**Important**: These files contain sensitive credentials - keep them secure!
+Do not commit these files.
 
-### Step 4: Configure Environment Variables
+### Step 4: Configure environment variables
 
-You have two options for providing service account credentials for each project:
-
-#### Option 1: JSON String (Recommended for Production)
-
-Add both service account JSONs as strings to your `.env.local` file:
+#### Option 1: JSON string (typical for production)
 
 ```env
-# Driver App Firebase Configuration
 FIREBASE_DRIVER_SERVICE_ACCOUNT_KEY='{"type":"service_account","project_id":"driver-project-id",...}'
-
-# Rider App Firebase Configuration
 FIREBASE_RIDER_SERVICE_ACCOUNT_KEY='{"type":"service_account","project_id":"rider-project-id",...}'
 ```
 
-**Note**: In production, use your platform's secure environment variable storage (e.g., Vercel Environment Variables, AWS Secrets Manager, etc.)
-
-#### Option 2: File Path (Alternative)
-
-If you prefer to use file paths:
+#### Option 2: File path
 
 ```env
-# Driver App Firebase Configuration
 FIREBASE_DRIVER_SERVICE_ACCOUNT_PATH=/path/to/driver-service-account-key.json
-
-# Rider App Firebase Configuration
 FIREBASE_RIDER_SERVICE_ACCOUNT_PATH=/path/to/rider-service-account-key.json
 ```
 
-**Security Notes**:
-- Never commit service account keys to version control
-- Always use environment variables or secure secret management
-- Store files outside your project directory if using file paths
-- Use absolute paths for better security
+Use your host’s secret storage in production (e.g. Vercel env vars).
 
-### Step 5: Verify Setup
+### Step 5: Verify setup
 
-After configuring the environment variables:
+1. Restart the Next.js server  
+2. Admin SDK initializes on first use  
+3. `/drivers` and `/riders` each use their own project  
+4. Check logs for initialization errors  
 
-1. Restart your Next.js server
-2. The Firebase Admin SDK will initialize automatically on first use
-3. Each endpoint (`/drivers` and `/riders`) will use its respective Firebase project
-4. Check server logs to confirm both projects initialized successfully
+### Environment variable reference
 
-### Environment Variable Reference
+| Variable | Description |
+|----------|-------------|
+| `FIREBASE_DRIVER_SERVICE_ACCOUNT_KEY` | Driver project service account JSON string |
+| `FIREBASE_DRIVER_SERVICE_ACCOUNT_PATH` | Path to driver service account JSON |
+| `FIREBASE_RIDER_SERVICE_ACCOUNT_KEY` | Rider project service account JSON string |
+| `FIREBASE_RIDER_SERVICE_ACCOUNT_PATH` | Path to rider service account JSON |
 
-| Variable | Description | Required For |
-|----------|-------------|-------------|
-| `FIREBASE_DRIVER_SERVICE_ACCOUNT_KEY` | JSON string of driver app service account | Driver notifications |
-| `FIREBASE_DRIVER_SERVICE_ACCOUNT_PATH` | File path to driver app service account | Driver notifications (alternative) |
-| `FIREBASE_RIDER_SERVICE_ACCOUNT_KEY` | JSON string of rider app service account | Rider notifications |
-| `FIREBASE_RIDER_SERVICE_ACCOUNT_PATH` | File path to rider app service account | Rider notifications (alternative) |
+For each app, set either `_KEY` or `_PATH`, not both.
 
-**Note**: For each project (driver/rider), you only need to set either the `_KEY` or `_PATH` variable, not both.
+## Database integration
 
-## Database Integration
+### FCM token storage
 
-### FCM Token Storage
+Mobile clients often persist the device token in `users.fcm_token` (see your migrations). This API **does not** read that column for sending; you supply `fcm_token` in the request. Keeping `users.fcm_token` updated is still useful so your backend knows which token to pass into this API.
 
-FCM tokens are stored in the `users.fcm_token` column. The migration file `004_add_fcm_token_to_users.sql` adds this column if it doesn't exist.
+### Notification history table
 
-### Notification Records
+Earlier versions inserted rows into `notifications` per `user_id` after a send. The direct token + payload endpoints **do not** insert into `notifications`, because the request does not include a recipient `user_id`. If you need history, record it in your own service using the user id you already resolved when building the request.
 
-When notifications are successfully sent, records are automatically created in the `notifications` table with:
-- `user_id`: The recipient user ID
-- `title`: Notification title
-- `body`: Notification body
-- `notification_type`: Type of notification (if provided)
-- `push_sent`: `true`
-- `push_sent_at`: Timestamp of when notification was sent
+### Invalid token cleanup
 
-These records can be used for:
-- Notification history in the app
-- Tracking notification delivery
-- User notification preferences
+Sends that resolve users by id and load tokens from the database may still clear bad tokens from `users` in other code paths. **These two endpoints** do not clear `users.fcm_token` based on the send result.
 
-### Invalid Token Cleanup
+## Best practices
 
-The API automatically removes invalid or expired FCM tokens from the database when detected. This ensures:
-- Clean database state
-- Better performance (no attempts to send to invalid tokens)
-- Accurate token counts
-
-## Best Practices
-
-### 1. Batch Notifications
-
-When sending to many users, consider batching requests to avoid overwhelming the API. The API handles internal batching for FCM, but you may want to batch your API calls as well.
-
-### 2. Error Handling
-
-Always check the `successCount` and `failureCount` in the response. A partial success (some notifications sent, some failed) is still considered a successful API call (200 status).
-
-### 3. Rate Limiting
-
-Be mindful of rate limits:
-- Firebase Cloud Messaging has quotas based on your plan
-- Consider implementing client-side rate limiting for high-volume scenarios
-- Monitor your Firebase usage in the Firebase Console
-
-### 4. Notification Content
-
-- Keep titles concise and actionable
-- Use clear, descriptive body text
-- Include relevant data in the `data` payload for deep linking
-- Use `notification_type` for categorizing notifications
-
-### 5. Testing
-
-Before sending to production users:
-- Test with a small group first
-- Verify FCM tokens are properly stored
-- Check notification delivery in Firebase Console
-- Monitor error logs for issues
+1. **Resolve user, then token** — Look up the correct `fcm_token` (and ensure it matches driver vs rider app) before calling the API.  
+2. **Check FCM counts** — Use `successCount` / `failureCount` even when status is 200.  
+3. **Quotas** — Respect [FCM quotas](https://firebase.google.com/docs/cloud-messaging) for your Firebase plan.  
+4. **Content** — Short titles, clear bodies, string-only `data` for deep links.  
+5. **Testing** — Test with real tokens from debug builds; confirm project (driver vs rider) matches the endpoint.
 
 ## Troubleshooting
 
 ### "Firebase service account credentials not found for driver/rider app"
 
-**Solution**: 
-- For driver notifications: Ensure `FIREBASE_DRIVER_SERVICE_ACCOUNT_KEY` or `FIREBASE_DRIVER_SERVICE_ACCOUNT_PATH` is set
-- For rider notifications: Ensure `FIREBASE_RIDER_SERVICE_ACCOUNT_KEY` or `FIREBASE_RIDER_SERVICE_ACCOUNT_PATH` is set
-- Verify the environment variable names match exactly (case-sensitive)
-- Restart your server after adding environment variables
+- Set the correct `FIREBASE_DRIVER_*` or `FIREBASE_RIDER_*` variable.  
+- Restart the server after changes.  
 
-### "No users with FCM tokens found"
+### Send returns success but device gets nothing
 
-**Solution**: 
-- Verify users have FCM tokens stored in the `users.fcm_token` column
-- Ensure mobile apps are properly registering FCM tokens
-- Check that tokens are being saved to the database
+- Wrong endpoint for the token (driver token on `/riders` or the reverse).  
+- Token rotated or app reinstalled—refresh stored token.  
+- OS notification permissions disabled.  
 
-### "Invalid or expired token" errors
+### `failureCount: 1` or high `invalidTokensRemoved`
 
-**Solution**:
-- Verify your access token is valid and not expired
-- Check that the token was obtained from `/api/auth/login`
-- Ensure the Authorization header format is correct: `Bearer <token>`
+- Token expired, unregistered, or from a different Firebase project.  
+- Replace token from the client and update your datastore.  
 
-### Notifications not received
+### "Invalid or expired token" (401)
 
-**Possible causes**:
-1. User's FCM token is invalid or expired (check `invalidTokensRemoved` in response)
-2. User has disabled notifications on their device
-3. App is not properly configured to receive FCM notifications
-4. Firebase project configuration issues
+- Supabase **access** token issue, not FCM: refresh login, correct `Authorization: Bearer ...` header.  
 
-**Debugging steps**:
-- Check Firebase Console for delivery statistics
-- Verify FCM token is valid using Firebase Admin SDK
-- Test with Firebase Console's test notification feature
-- Check mobile app logs for FCM errors
+## Security considerations
 
-## Security Considerations
+1. **Authentication** — Valid Supabase session and `users` row required.  
+2. **Token targeting** — An authenticated caller can send to any FCM token they supply; restrict who can call this API and audit usage if needed.  
+3. **Service accounts** — Never commit keys; use secrets management.  
+4. **Rate limiting** — Consider rate limits at the edge or API layer for production.  
 
-1. **Authentication**: All endpoints require valid authentication tokens
-2. **Role Validation**: Each endpoint validates that user_ids belong to the correct role
-3. **Token Security**: Service account keys should never be committed to version control
-4. **Rate Limiting**: Consider implementing rate limiting for production use
-5. **Audit Logging**: All notification attempts are logged for audit purposes
+## Related documentation
 
-## Related Documentation
-
-- [Firebase Cloud Messaging Documentation](https://firebase.google.com/docs/cloud-messaging)
-- [Firebase Admin SDK Documentation](https://firebase.google.com/docs/admin/setup)
-- [Supabase Authentication Documentation](https://supabase.com/docs/guides/auth)
-
-
-
-
-
+- [Firebase Cloud Messaging](https://firebase.google.com/docs/cloud-messaging)  
+- [Firebase Admin SDK setup](https://firebase.google.com/docs/admin/setup)  
+- [Supabase Auth](https://supabase.com/docs/guides/auth)  
