@@ -104,43 +104,46 @@ export async function POST(request: NextRequest) {
 
     // 6. Validate request body with Zod schema
     const validatedBody = validate(notificationSchema, body)
+    console.log("🚀 ~ POST ~ validatedBody:", validatedBody)
 
     // 7. Verify all user_ids belong to drivers
-    const { data: users, error: usersError } = await supabase
+    const { data: driverUsers, error: usersError } = await supabase
       .from('users')
       .select('id, role')
       .in('id', validatedBody.user_ids)
-
-    if (usersError) {
-      logger.error('Failed to fetch users', usersError, {
-        userIds: validatedBody.user_ids,
-      })
-      const { response, statusCode } = handleApiError(usersError)
-      return NextResponse.json(response, { status: statusCode })
-    }
-
-    if (!users || users.length === 0) {
-      const { response, statusCode } = handleApiError(
-        new ValidationError('No users found with the provided user_ids.')
-      )
-      return NextResponse.json(response, { status: statusCode })
-    }
+      .eq('role', 'driver') // Only select drivers
+      
+      if (usersError) {
+        logger.error('Failed to fetch users', usersError, {
+          userIds: validatedBody.user_ids,
+        })
+        const { response, statusCode } = handleApiError(usersError)
+        return NextResponse.json(response, { status: statusCode })
+      }
+      
+      console.log("🚀 ~ POST ~ driverUsers:", driverUsers)
+    // if (!users || users.length === 0) {
+    //   const { response, statusCode } = handleApiError(
+    //     new ValidationError('No users found with the provided user_ids.')
+    //   )
+    //   return NextResponse.json(response, { status: statusCode })
+    // }
 
     // Filter to only driver users, skip non-drivers silently
-    const driverUsers = users.filter((u) => u.role === 'driver')
-    const nonDriverUsers = users.filter((u) => u.role !== 'driver')
-    if (nonDriverUsers.length > 0) {
-      logger.warn('Non-driver users found in request, skipping them', {
-        nonDriverUserIds: nonDriverUsers.map((u) => u.id),
-      })
-    }
+    // const driverUsers = users.filter((u) => u.role === 'driver')
+    // const nonDriverUsers = users.filter((u) => u.role !== 'driver')
+    // if (nonDriverUsers.length > 0) {
+    //   logger.warn('Non-driver users found in request, skipping them', {
+    //     nonDriverUserIds: nonDriverUsers.map((u) => u.id),
+    //   })
+    // }
 
-    if (driverUsers.length === 0) {
-      const { response, statusCode } = handleApiError(
-        new ValidationError('No driver users found among the provided user_ids.')
-      )
-      return NextResponse.json(response, { status: statusCode })
-    }
+    // if (driverUsers.length === 0) {
+    //   const { response, statusCode } = handleApiError(
+    //     new ValidationError('No driver users found among the provided user_ids.')
+    //   )
+    //   return NextResponse.json(response, { status: statusCode })
+    // }
 
     const driverUserIds = driverUsers.map((u) => u.id)
 
