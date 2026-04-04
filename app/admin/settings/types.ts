@@ -5,6 +5,7 @@ export type AppVersionConfigRow = {
   platform: AppVersionPlatform
   version_string: string
   build_number: number
+  mandatory_update: boolean
   updated_at: string
 }
 
@@ -21,4 +22,5 @@ export type AppVersionConfigInput = {
   platform: AppVersionPlatform
   version_string: string
   build_number: string
+  mandatory_update: boolean
 }

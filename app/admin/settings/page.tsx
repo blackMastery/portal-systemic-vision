@@ -11,7 +11,13 @@ import type { AppVersionAppType, AppVersionPlatform } from '@/types/database'
 type FormRow = AppVersionConfigInput & { label: string }
 
 function rowsToFormState(
-  loaded: { app_type: AppVersionAppType; platform: AppVersionPlatform; version_string: string; build_number: number }[]
+  loaded: {
+    app_type: AppVersionAppType
+    platform: AppVersionPlatform
+    version_string: string
+    build_number: number
+    mandatory_update?: boolean
+  }[]
 ): FormRow[] {
   return APP_VERSION_UI_ROWS.map((meta) => {
     const match = loaded.find(
@@ -23,6 +29,7 @@ function rowsToFormState(
       label: meta.label,
       version_string: match?.version_string ?? '',
       build_number: match != null ? String(match.build_number) : '',
+      mandatory_update: match?.mandatory_update ?? false,
     }
   })
 }
@@ -47,7 +54,7 @@ export default function AdminSettingsPage() {
     }
     if (res.rows.length !== APP_VERSION_UI_ROWS.length) {
       setLoadError(
-        `Expected ${APP_VERSION_UI_ROWS.length} app version rows in the database; found ${res.rows.length}. Run migration 005_app_version_config.sql.`
+        `Expected ${APP_VERSION_UI_ROWS.length} app version rows in the database; found ${res.rows.length}. Run migrations 005_app_version_config.sql and 006_app_version_config_mandatory_update.sql.`
       )
       setRows(rowsToFormState(res.rows))
       setLoading(false)
@@ -77,20 +84,35 @@ export default function AdminSettingsPage() {
     setSaveOk(false)
   }
 
+  function updateMandatory(
+    app_type: AppVersionAppType,
+    platform: AppVersionPlatform,
+    mandatory_update: boolean
+  ) {
+    setRows((prev) =>
+      prev
+        ? prev.map((r) =>
+            r.app_type === app_type && r.platform === platform ? { ...r, mandatory_update } : r
+          )
+        : prev
+    )
+    setSaveOk(false)
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!rows) return
     setSaveError(null)
     setSaveOk(false)
     setSaving(true)
-    setSaveOk(false)
     try {
       const payload: AppVersionConfigInput[] = rows.map(
-        ({ app_type, platform, version_string, build_number }) => ({
+        ({ app_type, platform, version_string, build_number, mandatory_update }) => ({
           app_type,
           platform,
           version_string,
           build_number,
+          mandatory_update,
         })
       )
       const res = await updateAppVersionConfig(payload)
@@ -118,7 +140,9 @@ export default function AdminSettingsPage() {
         <p className="mt-2 text-gray-600">
           Published mobile app version and build number per app and store platform. Mobile clients
           call <code className="text-sm bg-gray-100 px-1 rounded">GET /api/app/version</code> to
-          compare against these values.
+          compare against these values. Turn on <strong>mandatory update</strong> to return{' '}
+          <code className="text-sm bg-gray-100 px-1 rounded">update_required: true</code> when the
+          client is behind the published version/build.
         </p>
       </div>
 
@@ -189,6 +213,23 @@ export default function AdminSettingsPage() {
                     />
                   </div>
                 </div>
+                <label className="flex items-start gap-2 cursor-pointer pt-1">
+                  <input
+                    type="checkbox"
+                    checked={row.mandatory_update}
+                    onChange={(e) =>
+                      updateMandatory(row.app_type, row.platform, e.target.checked)
+                    }
+                    className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">
+                    <span className="font-medium text-gray-900">Mandatory update</span>
+                    <span className="block text-xs text-gray-500 mt-0.5">
+                      Outdated clients receive <code className="bg-gray-100 px-1 rounded">update_required: true</code>{' '}
+                      from the version API (block or hard gate in the app).
+                    </span>
+                  </span>
+                </label>
               </div>
             ))}
           </div>

@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     const supabase = createSupabaseServiceClient()
     const { data: row, error } = await supabase
       .from('app_version_config')
-      .select('version_string, build_number')
+      .select('version_string, build_number, mandatory_update')
       .eq('app_type', appType)
       .eq('platform', platform)
       .maybeSingle()
@@ -91,10 +91,12 @@ export async function GET(request: NextRequest) {
     }
 
     const latestBuild = String(row.build_number)
-    const versionMatch = clientVersion >= latestVersion
-    const buildMatch = parseInt(clientBuild, 10) >= row.build_number
+    const versionMatch = clientVersion === latestVersion
+    const buildMatch = parseInt(clientBuild, 10) === row.build_number
 
     const upToDate = versionMatch && buildMatch
+    const mandatoryUpdate = Boolean(row.mandatory_update)
+    const updateRequired = !upToDate && mandatoryUpdate
 
     logger.info('App version check', {
       app: appType,
@@ -104,6 +106,8 @@ export async function GET(request: NextRequest) {
       latestVersion,
       latestBuild,
       upToDate,
+      mandatory_update: mandatoryUpdate,
+      update_required: updateRequired,
     })
 
     return NextResponse.json(
@@ -111,6 +115,8 @@ export async function GET(request: NextRequest) {
         up_to_date: upToDate,
         latest_version: latestVersion,
         latest_build_number: latestBuild,
+        mandatory_update: mandatoryUpdate,
+        update_required: updateRequired,
       },
       { status: 200 }
     )

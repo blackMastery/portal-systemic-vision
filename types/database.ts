@@ -270,6 +270,7 @@ export interface Database {
           platform: AppVersionPlatform
           version_string: string
           build_number: number
+          mandatory_update: boolean
           updated_at: string
         }
         Insert: {
@@ -277,11 +278,13 @@ export interface Database {
           platform: AppVersionPlatform
           version_string: string
           build_number: number
+          mandatory_update?: boolean
           updated_at?: string
         }
         Update: {
           version_string?: string
           build_number?: number
+          mandatory_update?: boolean
           updated_at?: string
         }
         Relationships: []

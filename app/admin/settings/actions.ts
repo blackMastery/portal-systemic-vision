@@ -68,7 +68,7 @@ export async function getAppVersionConfig(): Promise<GetAppVersionConfigResult> 
 
   const { data, error } = await gate.db
     .from('app_version_config')
-    .select('app_type, platform, version_string, build_number, updated_at')
+    .select('app_type, platform, version_string, build_number, mandatory_update, updated_at')
     .order('app_type')
     .order('platform')
 
@@ -98,6 +98,7 @@ export async function updateAppVersionConfig(
     platform: AppVersionConfigInput['platform']
     version_string: string
     build_number: number
+    mandatory_update: boolean
   }[] = []
 
   for (const input of inputs) {
@@ -120,6 +121,7 @@ export async function updateAppVersionConfig(
       platform: input.platform,
       version_string: version,
       build_number: build,
+      mandatory_update: Boolean(input.mandatory_update),
     })
   }
 
@@ -141,6 +143,7 @@ export async function updateAppVersionConfig(
       .update({
         version_string: row.version_string,
         build_number: row.build_number,
+        mandatory_update: row.mandatory_update,
         updated_at: now,
       })
       .eq('app_type', row.app_type)
