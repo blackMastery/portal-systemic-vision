@@ -12,6 +12,8 @@ export type SubscriptionStatus = 'active' | 'expired' | 'cancelled' | 'trial'
 export type TripStatus = 'requested' | 'accepted' | 'picked_up' | 'completed' | 'cancelled'
 export type TripType = 'airport' | 'short_drop' | 'market' | 'other'
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded'
+export type AppVersionAppType = 'driver' | 'rider'
+export type AppVersionPlatform = 'ios' | 'android'
 
 export interface Database {
   public: {
@@ -33,6 +35,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['users']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['users']['Insert']>
+        Relationships: []
       }
       rider_profiles: {
         Row: {
@@ -52,6 +55,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['rider_profiles']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['rider_profiles']['Insert']>
+        Relationships: []
       }
       driver_profiles: {
         Row: {
@@ -81,6 +85,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['driver_profiles']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['driver_profiles']['Insert']>
+        Relationships: []
       }
       vehicles: {
         Row: {
@@ -104,6 +109,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['vehicles']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['vehicles']['Insert']>
+        Relationships: []
       }
       trips: {
         Row: {
@@ -139,6 +145,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['trips']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['trips']['Insert']>
+        Relationships: []
       }
       subscriptions: {
         Row: {
@@ -159,6 +166,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['subscriptions']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['subscriptions']['Insert']>
+        Relationships: []
       }
       payment_transactions: {
         Row: {
@@ -182,6 +190,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['payment_transactions']['Row'], 'id' | 'created_at' | 'transaction_number'>
         Update: Partial<Database['public']['Tables']['payment_transactions']['Insert']>
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -196,6 +205,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['notifications']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['notifications']['Insert']>
+        Relationships: []
       }
       verification_logs: {
         Row: {
@@ -210,6 +220,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['verification_logs']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['verification_logs']['Insert']>
+        Relationships: []
       }
       trip_requests: {
         Row: {
@@ -236,6 +247,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['trip_requests']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['trip_requests']['Insert']>
+        Relationships: []
       }
       audit_logs: {
         Row: {
@@ -250,6 +262,29 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['audit_logs']['Row'], 'id'>
         Update: never
+        Relationships: []
+      }
+      app_version_config: {
+        Row: {
+          app_type: AppVersionAppType
+          platform: AppVersionPlatform
+          version_string: string
+          build_number: number
+          updated_at: string
+        }
+        Insert: {
+          app_type: AppVersionAppType
+          platform: AppVersionPlatform
+          version_string: string
+          build_number: number
+          updated_at?: string
+        }
+        Update: {
+          version_string?: string
+          build_number?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {}

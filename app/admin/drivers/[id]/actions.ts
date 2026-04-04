@@ -71,7 +71,6 @@ export async function sendDriverPushNotification(
     type NotificationInsert = Database['public']['Tables']['notifications']['Insert']
     const { error: insertError } = await db
       .from('notifications')
-      // @ts-expect-error - supabase-js v2.39.7 PostgrestVersion mismatch with generated types
       .insert({
         user_id: driverUserId,
         title,

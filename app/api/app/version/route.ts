@@ -1,45 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { handleApiError, ValidationError } from '@/lib/errors'
 import { logger } from '@/lib/logger'
-
-const VERSION_REGEX = /^\d+(\.\d+)*$/
-const BUILD_REGEX = /^\d+$/
-
-const APP_PLATFORM_ENV = {
-  driver: {
-    ios: {
-      version: 'MOBILE_DRIVER_APP_IOS_VERSION',
-      build: 'MOBILE_DRIVER_APP_IOS_BUILD_NUMBER',
-    },
-    android: {
-      version: 'MOBILE_DRIVER_APP_ANDROID_VERSION',
-      build: 'MOBILE_DRIVER_APP_ANDROID_BUILD_NUMBER',
-    },
-  },
-  rider: {
-    ios: {
-      version: 'MOBILE_RIDER_APP_IOS_VERSION',
-      build: 'MOBILE_RIDER_APP_IOS_BUILD_NUMBER',
-    },
-    android: {
-      version: 'MOBILE_RIDER_APP_ANDROID_VERSION',
-      build: 'MOBILE_RIDER_APP_ANDROID_BUILD_NUMBER',
-    },
-  },
-} as const
-
-type AppType = keyof typeof APP_PLATFORM_ENV
-type Platform = 'ios' | 'android'
+import { createSupabaseServiceClient } from '@/lib/firebase/notifications'
+import { isValidAppVersionString, isValidBuildString } from '@/lib/app-version'
+import type { AppVersionAppType, AppVersionPlatform } from '@/types/database'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl
-    const appType = searchParams.get('app') as AppType | null
-    const platform = searchParams.get('platform')?.toLowerCase() as Platform | null
-    const clientVersion = searchParams.get('version')
-    const clientBuild = searchParams.get('build')
+    const appType = searchParams.get('app') as AppVersionAppType | null
+    const platform = searchParams.get('platform')?.toLowerCase() as AppVersionPlatform | null
+    const clientVersionRaw = searchParams.get('version')
+    const clientBuildRaw = searchParams.get('build')
 
-    if (!appType || !APP_PLATFORM_ENV[appType]) {
+    if (!appType || (appType !== 'driver' && appType !== 'rider')) {
       const { response, statusCode } = handleApiError(
         new ValidationError('Missing or invalid query parameter: app. Must be "driver" or "rider"')
       )
@@ -53,65 +27,72 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(response, { status: statusCode })
     }
 
-    if (!clientVersion) {
+    if (!clientVersionRaw) {
       const { response, statusCode } = handleApiError(
         new ValidationError('Missing required query parameter: version')
       )
       return NextResponse.json(response, { status: statusCode })
     }
 
-    if (!VERSION_REGEX.test(clientVersion)) {
+    const clientVersion = clientVersionRaw.trim()
+    if (!isValidAppVersionString(clientVersion)) {
       const { response, statusCode } = handleApiError(
         new ValidationError('Invalid version format. Expected format: x.y.z')
       )
       return NextResponse.json(response, { status: statusCode })
     }
 
-    if (!clientBuild) {
+    if (!clientBuildRaw) {
       const { response, statusCode } = handleApiError(
         new ValidationError('Missing required query parameter: build')
       )
       return NextResponse.json(response, { status: statusCode })
     }
 
-    if (!BUILD_REGEX.test(clientBuild)) {
+    const clientBuild = clientBuildRaw.trim()
+    if (!isValidBuildString(clientBuild)) {
       const { response, statusCode } = handleApiError(
         new ValidationError('Invalid build format. Expected a non-negative integer')
       )
       return NextResponse.json(response, { status: statusCode })
     }
 
-    const envKeys = APP_PLATFORM_ENV[appType][platform]
-    const latestVersion = process.env[envKeys.version]
-    const latestBuildRaw = process.env[envKeys.build]
+    const supabase = createSupabaseServiceClient()
+    const { data: row, error } = await supabase
+      .from('app_version_config')
+      .select('version_string, build_number')
+      .eq('app_type', appType)
+      .eq('platform', platform)
+      .maybeSingle()
 
-    if (!latestVersion || !latestBuildRaw) {
-      logger.error('App version env not fully configured', {
-        versionKey: envKeys.version,
-        buildKey: envKeys.build,
-        hasVersion: Boolean(latestVersion),
-        hasBuild: Boolean(latestBuildRaw),
-      })
+    if (error) {
+      logger.error('App version DB read failed', { error, appType, platform })
       const { response, statusCode } = handleApiError(
         new Error('Version information unavailable')
       )
       return NextResponse.json(response, { status: statusCode })
     }
 
-    if (!VERSION_REGEX.test(latestVersion) || !BUILD_REGEX.test(latestBuildRaw.trim())) {
-      logger.error('Invalid configured version or build in env', {
-        versionKey: envKeys.version,
-        buildKey: envKeys.build,
-      })
+    if (!row) {
+      logger.error('App version row missing', { appType, platform })
       const { response, statusCode } = handleApiError(
         new Error('Version information unavailable')
       )
       return NextResponse.json(response, { status: statusCode })
     }
 
-    const latestBuild = latestBuildRaw.trim()
+    const latestVersion = row.version_string.trim()
+    if (!isValidAppVersionString(latestVersion)) {
+      logger.error('Invalid version_string in app_version_config', { appType, platform })
+      const { response, statusCode } = handleApiError(
+        new Error('Version information unavailable')
+      )
+      return NextResponse.json(response, { status: statusCode })
+    }
+
+    const latestBuild = String(row.build_number)
     const versionMatch = clientVersion === latestVersion
-    const buildMatch = parseInt(clientBuild, 10) === parseInt(latestBuild, 10)
+    const buildMatch = parseInt(clientBuild, 10) === row.build_number
 
     const upToDate = versionMatch && buildMatch
 
