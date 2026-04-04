@@ -2,21 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { handleApiError, ValidationError } from '@/lib/errors'
 import { logger } from '@/lib/logger'
 
-function compareVersions(a: string, b: string): number {
-  const aParts = a.split('.').map(Number)
-  const bParts = b.split('.').map(Number)
-  const len = Math.max(aParts.length, bParts.length)
-
-  for (let i = 0; i < len; i++) {
-    const aPart = aParts[i] ?? 0
-    const bPart = bParts[i] ?? 0
-    if (aPart > bPart) return 1
-    if (aPart < bPart) return -1
-  }
-
-  return 0
-}
-
 const VERSION_REGEX = /^\d+(\.\d+)*$/
 
 const APP_VERSION_ENV: Record<string, string> = {
@@ -61,7 +46,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(response, { status: statusCode })
     }
 
-    const upToDate = compareVersions(clientVersion, latestVersion) >= 0
+    const upToDate = clientVersion === latestVersion
 
     logger.info('App version check', { app: appType, clientVersion, latestVersion, upToDate })
 
