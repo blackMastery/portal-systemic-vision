@@ -91,8 +91,8 @@ export async function GET(request: NextRequest) {
     }
 
     const latestBuild = String(row.build_number)
-    const versionMatch = clientVersion === latestVersion
-    const buildMatch = parseInt(clientBuild, 10) === row.build_number
+    const versionMatch = clientVersion >= latestVersion
+    const buildMatch = parseInt(clientBuild, 10) >= row.build_number
 
     const upToDate = versionMatch && buildMatch
 
