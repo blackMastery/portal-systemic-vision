@@ -2,7 +2,8 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { Users, Car, Route, TrendingUp, Clock, DollarSign } from 'lucide-react'
+import { Users, Car, Route, TrendingUp, Clock, DollarSign, Megaphone } from 'lucide-react'
+import Link from 'next/link'
 import { MetricCard } from '@/components/dashboard/metric-card'
 import { RecentTrips } from '@/components/dashboard/recent-trips'
 import { ActiveDriversMap } from '@/components/dashboard/active-drivers-map'
@@ -92,6 +93,13 @@ export default function DashboardPage() {
         <p className="mt-1 text-sm text-gray-600">
           Overview of your Links transportation system
         </p>
+        <Link
+          href="/admin/notifications"
+          className="mt-3 inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-800 hover:bg-blue-100 transition-colors"
+        >
+          <Megaphone className="h-4 w-4" />
+          Broadcast push to all drivers or riders
+        </Link>
       </div>
 
       {/* Real-time Metrics */}

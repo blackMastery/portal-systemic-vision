@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { handleApiError, AuthenticationError } from '@/lib/errors'
+import {
+  handleApiError,
+  AuthenticationError,
+  AuthorizationError,
+} from '@/lib/errors'
 import { validate, broadcastNotificationSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import {
@@ -73,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id')
+      .select('id, role')
       .eq('auth_id', authUser.id)
       .single()
 
@@ -81,6 +85,18 @@ export async function POST(request: NextRequest) {
       logger.warn('User not found', { authId: authUser.id, error: userError })
       const { response, statusCode } = handleApiError(
         new AuthenticationError('User not found.')
+      )
+      return NextResponse.json(response, { status: statusCode })
+    }
+
+    const caller = user as { id: string; role: string }
+    if (caller.role !== 'admin') {
+      logger.warn('Broadcast denied: admin role required', {
+        authId: authUser.id,
+        role: caller.role,
+      })
+      const { response, statusCode } = handleApiError(
+        new AuthorizationError('Only administrators can send broadcast notifications.')
       )
       return NextResponse.json(response, { status: statusCode })
     }
@@ -118,7 +134,7 @@ export async function POST(request: NextRequest) {
     if (userIds.length === 0) {
       logger.info('Broadcast skipped: no recipients with FCM tokens', {
         audience: validatedBody.audience,
-        callerUserId: user.id,
+        callerUserId: caller.id,
       })
       return NextResponse.json(
         {
@@ -143,7 +159,7 @@ export async function POST(request: NextRequest) {
 
     logger.info('Broadcast notifications sent', {
       audience: validatedBody.audience,
-      callerUserId: user.id,
+      callerUserId: caller.id,
       recipientCount: userIds.length,
       notificationType: validatedBody.notification_type,
       successCount: notificationResult.successCount,

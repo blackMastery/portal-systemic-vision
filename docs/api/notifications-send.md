@@ -103,9 +103,9 @@ These two endpoints accept the same JSON shape.
 | `data` | object | String keys and string values only (same as targeted send). |
 | `notification_type` | string | Logged server-side with the broadcast; not required for FCM. |
 
-### Security note
+### Authorization
 
-Any authenticated user with a valid `users` row can call `/api/notifications/broadcast` and message **every** driver or **every** rider who has an FCM token. For production, consider restricting this route to `admin` (or a dedicated role) in code.
+Only users with `users.role === 'admin'` may call `/api/notifications/broadcast`. Others receive **403** with `AUTHORIZATION_ERROR`. The admin web app uses this from **Admin → Notifications** with the signed-in admin session.
 
 ### Example
 
@@ -356,7 +356,7 @@ Sends that resolve users by id and load tokens from the database may still clear
 
 1. **Authentication** — Valid Supabase session and `users` row required.  
 2. **Token targeting** — An authenticated caller can send to any FCM token they supply; restrict who can call this API and audit usage if needed.  
-3. **Broadcast** — `/api/notifications/broadcast` can notify an entire role cohort; treat as high privilege or gate behind `admin` if appropriate.  
+3. **Broadcast** — `/api/notifications/broadcast` is **admin-only** and messages an entire driver or rider cohort; use the admin Notifications page or a trusted server process with an admin token.  
 4. **Service accounts** — Never commit keys; use secrets management.  
 5. **Rate limiting** — Consider rate limits at the edge or API layer for production.  
 

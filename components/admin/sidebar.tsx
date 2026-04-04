@@ -12,7 +12,8 @@ import {
   Settings,
   Menu,
   X,
-  FileText
+  FileText,
+  Megaphone,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -23,6 +24,7 @@ const navigation = [
   { name: 'Trips', href: '/admin/trips', icon: Route },
   { name: 'Payments', href: '/admin/payments', icon: CreditCard },
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
+  { name: 'Notifications', href: '/admin/notifications', icon: Megaphone },
   { name: 'Audit Log', href: '/admin/audit-log', icon: FileText },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ]
