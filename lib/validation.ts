@@ -96,6 +96,30 @@ export const notificationSchema = z.object({
 export type FcmNotificationRequest = z.infer<typeof notificationSchema>
 
 /**
+ * Broadcast push to all users of a role (drivers or riders with FCM tokens)
+ */
+export const broadcastNotificationSchema = z.object({
+  audience: z.enum(['driver', 'rider'], {
+    required_error: 'audience is required',
+    invalid_type_error: 'audience must be "driver" or "rider"',
+  }),
+  title: z
+    .string()
+    .min(1, 'Title is required')
+    .max(100, 'Title must be less than 100 characters'),
+  body: z
+    .string()
+    .min(1, 'Body is required')
+    .max(500, 'Body must be less than 500 characters'),
+  data: z.record(z.string()).optional(),
+  notification_type: z.string().optional(),
+})
+
+export type BroadcastNotificationRequest = z.infer<
+  typeof broadcastNotificationSchema
+>
+
+/**
  * Update trip status schema
  */
 export const updateTripStatusSchema = z.object({

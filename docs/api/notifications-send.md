@@ -2,11 +2,14 @@
 
 ## Overview
 
-The Push Notifications API allows authenticated users to send Firebase Cloud Messaging (FCM) push notifications to a **specific device** by providing its FCM registration token and a notification payload. There are two endpoints so messages go through the correct Firebase project (driver app vs rider app).
+The Push Notifications API allows authenticated users to send Firebase Cloud Messaging (FCM) push notifications in two ways:
 
-**Important**: This implementation uses **two separate Firebase projects**—one for the driver app and one for the rider app. Choose `/api/notifications/send/drivers` or `/api/notifications/send/riders` based on which app registered the token; sending through the wrong endpoint will fail or not reach the device.
+1. **Targeted send** — provide a device `fcm_token` and payload via `/api/notifications/send/drivers` or `/api/notifications/send/riders` (correct project per app).
+2. **Broadcast** — send the same payload to **all users** of a role who have an `fcm_token` stored, via `POST /api/notifications/broadcast`.
 
-**Use case**: Send a push to a known device token (for example after your backend resolves the recipient and their current `fcm_token`), for trip updates, promotions, system messages, and so on.
+**Important**: This implementation uses **two separate Firebase projects**—one for the driver app and one for the rider app. For targeted sends, choose `/send/drivers` or `/send/riders` based on which app registered the token. For broadcast, set `audience` to `driver` or `rider` so the server uses the matching Firebase project and user list.
+
+**Use cases**: Per-device messages (trip updates, rider→driver or driver→rider), or announcements to every driver or every rider with a registered token.
 
 ## Authentication
 
@@ -32,6 +35,14 @@ The access token is obtained from the `/api/auth/login` endpoint after successfu
 - **Method**: `POST`
 - **Content-Type**: `application/json`
 
+### Broadcast to all drivers or riders (by role)
+
+- **URL**: `/api/notifications/broadcast`
+- **Method**: `POST`
+- **Content-Type**: `application/json`
+
+Looks up every row in `users` with the given `role` (`driver` or `rider`) and a non-null `fcm_token`, then sends via `sendNotificationsToUsers` in `lib/firebase/notifications.ts` (correct Firebase project, batching, default sound, invalid-token cleanup on `users.fcm_token`).
+
 ### Headers
 
 ```
@@ -39,9 +50,9 @@ Authorization: Bearer <access_token>
 Content-Type: application/json
 ```
 
-## Request body
+## Request body (targeted: `/send/drivers`, `/send/riders`)
 
-Both endpoints accept the same JSON shape.
+These two endpoints accept the same JSON shape.
 
 ### Required fields
 
@@ -75,6 +86,43 @@ Both endpoints accept the same JSON shape.
 5. **Data payload**  
    All values in `data` must be strings. They are forwarded to FCM as string key-value pairs.
 
+## Request body (broadcast: `/broadcast`)
+
+### Required fields
+
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| `audience` | string | Must be `driver` or `rider`. Selects `users.role` and the Firebase project used to send. | `"driver"` |
+| `title` | string | Notification title (max 100 characters). | `"Maintenance tonight"` |
+| `body` | string | Notification body (max 500 characters). | `"The service will be unavailable 2–4am."` |
+
+### Optional fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data` | object | String keys and string values only (same as targeted send). |
+| `notification_type` | string | Logged server-side with the broadcast; not required for FCM. |
+
+### Security note
+
+Any authenticated user with a valid `users` row can call `/api/notifications/broadcast` and message **every** driver or **every** rider who has an FCM token. For production, consider restricting this route to `admin` (or a dedicated role) in code.
+
+### Example
+
+```bash
+curl -X POST https://portal-systemic-vision.vercel.app/api/notifications/broadcast \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "audience": "rider",
+    "title": "App update",
+    "body": "Please update to the latest version.",
+    "notification_type": "announcement"
+  }'
+```
+
+If no users match (no tokens), the API returns **200** with `requestedCount: 0` and a message explaining there were no recipients.
+
 ## Response formats
 
 ### Success response (200 OK)
@@ -94,10 +142,10 @@ Both endpoints accept the same JSON shape.
 |-------|------|-------------|
 | `success` | boolean | `true` when the HTTP handler completed without error. |
 | `message` | string | Short status message. |
-| `requestedCount` | number | Always `1` (one token per request). |
-| `successCount` | number | FCM successes for this send (0 or 1 for a single token). |
+| `requestedCount` | number | For **targeted** sends, always `1`. For **broadcast**, number of users with an FCM token that were included in the send. |
+| `successCount` | number | FCM success deliveries in this request (for broadcast, can be up to `requestedCount`). |
 | `failureCount` | number | FCM failures for this send. |
-| `invalidTokensRemoved` | number | Count of tokens FCM treated as invalid/unregistered in this response. **Not** the number of rows updated in the database (direct send does not clear `users.fcm_token`). |
+| `invalidTokensRemoved` | number | For **targeted** send: count of invalid tokens per FCM (tokens are **not** cleared in DB for that path). For **broadcast**: invalid tokens reported by FCM; matching rows **are** cleared in `users.fcm_token` via `sendNotificationsToUsers`. |
 
 Partial FCM failure (for example bad token) can still return **200** with `successCount: 0` and `failureCount: 1`; check counts for delivery outcome.
 
@@ -115,7 +163,8 @@ Partial FCM failure (for example bad token) can still return **200** with `succe
 
 Common causes:
 
-- Missing or empty `fcm_token`
+- Missing or empty `fcm_token` (targeted sends)
+- Missing or invalid `audience` (broadcast)
 - Missing or invalid `title` / `body`
 - `title` or `body` over max length
 - `data` values that are not strings
@@ -307,8 +356,9 @@ Sends that resolve users by id and load tokens from the database may still clear
 
 1. **Authentication** — Valid Supabase session and `users` row required.  
 2. **Token targeting** — An authenticated caller can send to any FCM token they supply; restrict who can call this API and audit usage if needed.  
-3. **Service accounts** — Never commit keys; use secrets management.  
-4. **Rate limiting** — Consider rate limits at the edge or API layer for production.  
+3. **Broadcast** — `/api/notifications/broadcast` can notify an entire role cohort; treat as high privilege or gate behind `admin` if appropriate.  
+4. **Service accounts** — Never commit keys; use secrets management.  
+5. **Rate limiting** — Consider rate limits at the edge or API layer for production.  
 
 ## Related documentation
 
