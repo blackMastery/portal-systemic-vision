@@ -41,6 +41,14 @@ export async function sendDriverPushNotification(
 
   const db = createServiceClient()
 
+  // Resolve admin's user ID for logging
+  const { data: adminUser } = await db
+    .from('users')
+    .select('id')
+    .eq('auth_id', authUser.id)
+    .single()
+  const adminUserId = (adminUser as { id: string } | null)?.id ?? null
+
   // Verify the target user_id belongs to a driver
   const { data: targetUserRaw, error: userError } = await db
     .from('users')
@@ -84,6 +92,18 @@ export async function sendDriverPushNotification(
       logger.warn('Failed to create notification record', { error: insertError, driverUserId })
     }
   }
+
+  // Log to message_logs for admin audit trail
+  await db.from('message_logs').insert({
+    channel: 'push',
+    recipient_user_id: driverUserId,
+    title,
+    message: body,
+    status: result.successCount > 0 ? 'sent' : 'failed',
+    sent_by_user_id: adminUserId,
+    notification_type: 'push',
+    metadata: { success_count: result.successCount, failure_count: result.failureCount },
+  })
 
   logger.info('Admin sent push notification to driver', {
     driverUserId,

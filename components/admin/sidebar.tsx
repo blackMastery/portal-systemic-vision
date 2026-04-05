@@ -14,6 +14,7 @@ import {
   X,
   FileText,
   Megaphone,
+  MessageSquare,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -25,6 +26,7 @@ const navigation = [
   { name: 'Payments', href: '/admin/payments', icon: CreditCard },
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
   { name: 'Notifications', href: '/admin/notifications', icon: Megaphone },
+  { name: 'Message Logs', href: '/admin/message-logs', icon: MessageSquare },
   { name: 'Audit Log', href: '/admin/audit-log', icon: FileText },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ]

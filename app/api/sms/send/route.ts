@@ -6,6 +6,7 @@ import {
   ValidationError,
 } from '@/lib/errors'
 import { logger } from '@/lib/logger'
+import { createSupabaseServiceClient } from '@/lib/firebase/notifications'
 
 function createSupabaseClientWithToken(accessToken: string) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -125,8 +126,17 @@ export async function POST(request: NextRequest) {
 
     const twilioData = await twilioResponse.json() as { sid?: string; message?: string; code?: number }
 
+    const serviceSupabase = createSupabaseServiceClient()
+
     if (!twilioResponse.ok) {
       logger.error('Twilio API error', { status: twilioResponse.status, data: twilioData })
+      await serviceSupabase.from('message_logs').insert({
+        channel: 'sms',
+        recipient_phone: to.trim(),
+        message: message.trim(),
+        status: 'failed',
+        sent_by_user_id: user.id,
+      })
       const { response, statusCode } = handleApiError(
         new Error(twilioData.message || 'Failed to send SMS.')
       )
@@ -134,6 +144,14 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info('SMS sent successfully', { to: to.trim(), messageSid: twilioData.sid })
+    await serviceSupabase.from('message_logs').insert({
+      channel: 'sms',
+      recipient_phone: to.trim(),
+      message: message.trim(),
+      status: 'sent',
+      sent_by_user_id: user.id,
+      external_id: twilioData.sid,
+    })
 
     return NextResponse.json(
       { success: true, messageSid: twilioData.sid },

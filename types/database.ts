@@ -289,6 +289,40 @@ export interface Database {
         }
         Relationships: []
       }
+      message_logs: {
+        Row: {
+          id: string
+          channel: 'sms' | 'push'
+          recipient_user_id: string | null
+          recipient_phone: string | null
+          title: string | null
+          message: string
+          status: 'sent' | 'failed'
+          sent_by_user_id: string | null
+          external_id: string | null
+          notification_type: string | null
+          audience: string | null
+          metadata: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          channel: 'sms' | 'push'
+          recipient_user_id?: string | null
+          recipient_phone?: string | null
+          title?: string | null
+          message: string
+          status: 'sent' | 'failed'
+          sent_by_user_id?: string | null
+          external_id?: string | null
+          notification_type?: string | null
+          audience?: string | null
+          metadata?: Json | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['message_logs']['Insert']>
+        Relationships: []
+      }
     }
     Views: {}
     Functions: {}

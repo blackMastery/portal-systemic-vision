@@ -1,6 +1,24 @@
 -- WARNING: This schema is for context only and is not meant to be run.
 -- Table order and constraints may not be valid for execution.
 
+CREATE TABLE public.message_logs (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  channel text NOT NULL CHECK (channel IN ('sms', 'push')),
+  recipient_user_id uuid REFERENCES public.users(id),
+  recipient_phone text,
+  title text,
+  message text NOT NULL,
+  status text NOT NULL CHECK (status IN ('sent', 'failed')),
+  sent_by_user_id uuid REFERENCES public.users(id),
+  external_id text,
+  notification_type text,
+  audience text,
+  metadata jsonb,
+  created_at timestamp with time zone DEFAULT now()
+);
+CREATE INDEX idx_message_logs_created_at ON public.message_logs(created_at DESC);
+CREATE INDEX idx_message_logs_channel ON public.message_logs(channel);
+
 CREATE TABLE public.audit_logs (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   table_name text NOT NULL,

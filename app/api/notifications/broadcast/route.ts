@@ -166,6 +166,22 @@ export async function POST(request: NextRequest) {
       failureCount: notificationResult.failureCount,
     })
 
+    await serviceSupabase.from('message_logs').insert({
+      channel: 'push',
+      title: validatedBody.title,
+      message: validatedBody.body,
+      status: notificationResult.successCount > 0 ? 'sent' : 'failed',
+      sent_by_user_id: caller.id,
+      notification_type: validatedBody.notification_type ?? 'broadcast',
+      audience: validatedBody.audience,
+      metadata: {
+        requested_count: userIds.length,
+        success_count: notificationResult.successCount,
+        failure_count: notificationResult.failureCount,
+        invalid_tokens_removed: notificationResult.invalidTokens.length,
+      },
+    })
+
     return NextResponse.json(
       {
         success: true,

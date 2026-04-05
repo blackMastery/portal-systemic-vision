@@ -26,6 +26,8 @@ import {
   CreditCard,
 } from 'lucide-react'
 import type { Database, TripType, TripStatus } from '@/types/database'
+import { TripRouteMap } from '@/components/drivers/trip-route-map'
+import type { TripRoutePoint } from '@/components/drivers/trip-route-map'
 
 // Extended row types to cover DB columns not yet in the TS type
 type TripRow = Database['public']['Tables']['trips']['Row'] & {
@@ -52,6 +54,21 @@ type TripDetailData = {
     trip_request: Database['public']['Tables']['trip_requests']['Row'] | null
     cancelled_by_user: Database['public']['Tables']['users']['Row'] | null
   }
+}
+
+async function fetchTripRoute(tripId: string): Promise<TripRoutePoint[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('location_history')
+    .select('latitude, longitude, recorded_at')
+    .eq('trip_id', tripId)
+    .order('recorded_at', { ascending: true })
+  if (error) throw error
+  return ((data || []) as Array<{ latitude: unknown; longitude: unknown; recorded_at: string }>).map((p) => ({
+    latitude: Number(p.latitude),
+    longitude: Number(p.longitude),
+    recorded_at: p.recorded_at,
+  }))
 }
 
 async function fetchTripDetail(tripId: string): Promise<TripDetailData> {
@@ -157,6 +174,13 @@ export default function TripDetailPage() {
     enabled: !!tripId,
   })
 
+  const { data: routePoints = [], isLoading: isLoadingRoute } = useQuery({
+    queryKey: ['trip-route', tripId],
+    queryFn: () => fetchTripRoute(tripId),
+    enabled: !!tripId,
+    staleTime: 5 * 60 * 1000,
+  })
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -187,6 +211,7 @@ export default function TripDetailPage() {
   }
 
   const { trip } = data
+
   const fare = trip.actual_fare ?? trip.estimated_fare
   const distance = trip.actual_distance_km ?? trip.estimated_distance_km
   const duration = trip.actual_duration_minutes ?? trip.estimated_duration_minutes
@@ -285,39 +310,12 @@ export default function TripDetailPage() {
           <MapPin className="h-5 w-5 text-gray-500" />
           Route
         </h2>
-        <div className="space-y-4">
-          <div className="flex items-start gap-3">
-            <div className="mt-1 h-3 w-3 rounded-full bg-green-500 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-gray-900">{trip.pickup_address}</p>
-              <p className="text-xs text-gray-400">
-                {trip.pickup_latitude}, {trip.pickup_longitude}
-              </p>
-            </div>
-          </div>
-          <div className="ml-1.5 w-0.5 h-6 bg-gray-200" />
-          <div className="flex items-start gap-3">
-            <div className="mt-1 h-3 w-3 rounded-full bg-red-500 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-gray-900">
-                {trip.destination_address || 'No destination set'}
-              </p>
-              {trip.destination_latitude && (
-                <p className="text-xs text-gray-400">
-                  {trip.destination_latitude}, {trip.destination_longitude}
-                </p>
-              )}
-            </div>
-          </div>
-          {trip.completed_latitude && (
-            <div className="mt-2 pt-3 border-t border-gray-100">
-              <p className="text-xs text-gray-500">
-                <span className="font-medium">Completed at:</span>{' '}
-                {trip.completed_latitude}, {trip.completed_longitude}
-              </p>
-            </div>
-          )}
-        </div>
+        <TripRouteMap
+          trip={trip}
+          routePoints={routePoints}
+          isLoadingRoute={isLoadingRoute}
+          showTripInfo={false}
+        />
       </div>
 
       {/* Participants */}

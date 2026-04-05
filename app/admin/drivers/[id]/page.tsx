@@ -32,12 +32,14 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { useState, useCallback } from 'react'
-import type { 
-  DriverWithDetails, 
+import { useState, useCallback, useEffect } from 'react'
+import type {
+  DriverWithDetails,
   VerificationStatus,
-  Database 
+  Database
 } from '@/types/database'
+import { TripRouteMap } from '@/components/drivers/trip-route-map'
+import type { TripRoutePoint } from '@/components/drivers/trip-route-map'
 
 type DriverDetailData = {
   driver: DriverWithDetails & {
@@ -159,12 +161,96 @@ const verificationIcons = {
   suspended: Ban,
 }
 
+function DriverDocumentPreview({
+  url,
+  title,
+}: {
+  url: string | null | undefined
+  title: string
+}) {
+  const [imgError, setImgError] = useState(false)
+
+  useEffect(() => {
+    setImgError(false)
+  }, [url])
+
+  if (!url?.trim()) {
+    return (
+      <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4">
+        <p className="text-sm font-medium text-gray-900 mb-1">{title}</p>
+        <p className="text-sm text-gray-400">Not uploaded</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-gray-100 bg-white">
+        <p className="text-sm font-medium text-gray-900">{title}</p>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs font-medium text-blue-600 hover:text-blue-800 shrink-0"
+        >
+          Open full size
+        </a>
+      </div>
+      <div className="p-4">
+        {imgError ? (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <FileText className="h-5 w-5 text-gray-500 shrink-0" aria-hidden />
+            View file
+          </a>
+        ) : (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="relative mx-auto block aspect-[4/3] max-h-72 w-full max-w-lg overflow-hidden rounded-lg border border-gray-200 bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            <Image
+              src={url}
+              alt={title}
+              fill
+              className="object-contain"
+              sizes="(max-width: 768px) 100vw, 400px"
+              unoptimized
+              onError={() => setImgError(true)}
+            />
+          </a>
+        )}
+      </div>
+    </div>
+  )
+}
+
 const statusColors = {
   requested: 'bg-yellow-100 text-yellow-800',
   accepted: 'bg-blue-100 text-blue-800',
   picked_up: 'bg-purple-100 text-purple-800',
   completed: 'bg-green-100 text-green-800',
   cancelled: 'bg-red-100 text-red-800',
+}
+
+async function fetchTripRoute(tripId: string): Promise<TripRoutePoint[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('location_history')
+    .select('latitude, longitude, recorded_at')
+    .eq('trip_id', tripId)
+    .order('recorded_at', { ascending: true })
+  if (error) throw error
+  return ((data || []) as Array<{ latitude: unknown; longitude: unknown; recorded_at: string }>).map((p) => ({
+    latitude: Number(p.latitude),
+    longitude: Number(p.longitude),
+    recorded_at: p.recorded_at,
+  }))
 }
 
 async function fetchNextPendingDriver(currentCreatedAt: string): Promise<string | null> {
@@ -190,6 +276,7 @@ export default function DriverDetailPage() {
   const [showVerificationModal, setShowVerificationModal] = useState(false)
   const [showSmsModal, setShowSmsModal] = useState(false)
   const [showPushModal, setShowPushModal] = useState(false)
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(null)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['driver-detail', driverId],
@@ -202,6 +289,13 @@ export default function DriverDetailPage() {
     queryFn: () => fetchNextPendingDriver(data!.driver.created_at),
     enabled: !!data?.driver.created_at,
     staleTime: 30_000,
+  })
+
+  const { data: routePoints = [], isLoading: isLoadingRoute } = useQuery({
+    queryKey: ['trip-route', selectedTripId],
+    queryFn: () => fetchTripRoute(selectedTripId!),
+    enabled: !!selectedTripId,
+    staleTime: 5 * 60 * 1000,
   })
 
   if (isLoading) {
@@ -235,6 +329,8 @@ export default function DriverDetailPage() {
   }
 
   const { driver, trips, subscriptions, payments, verificationLogs } = data
+
+  const selectedTrip = trips.find((t) => t.id === selectedTripId) ?? null
 
   return (
     <div className="space-y-6">
@@ -459,35 +555,16 @@ export default function DriverDetailPage() {
             </div>
           )}
         </div>
-        {(driver.national_id_url || driver.drivers_license_url) && (
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <p className="text-sm text-gray-500 mb-3">Documents</p>
-            <div className="flex gap-4">
-              {driver.national_id_url && (
-                <a
-                  href={driver.national_id_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  View National ID
-                </a>
-              )}
-              {driver.drivers_license_url && (
-                <a
-                  href={driver.drivers_license_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  View Driver&apos;s License
-                </a>
-              )}
-            </div>
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <p className="text-sm text-gray-500 mb-3">Documents</p>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <DriverDocumentPreview url={driver.national_id_url} title="National ID" />
+            <DriverDocumentPreview
+              url={driver.drivers_license_url}
+              title="Driver's license"
+            />
           </div>
-        )}
+        </div>
       </div>
 
       {/* Vehicles */}
@@ -524,7 +601,13 @@ export default function DriverDetailPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {trips.map((trip) => (
-                  <tr key={trip.id} className="hover:bg-gray-50">
+                  <tr
+                    key={trip.id}
+                    onClick={() => setSelectedTripId(trip.id === selectedTripId ? null : trip.id)}
+                    className={`cursor-pointer transition-colors ${
+                      trip.id === selectedTripId ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-gray-50'
+                    }`}
+                  >
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                       {format(new Date(trip.requested_at), 'MMM dd, yyyy HH:mm')}
                     </td>
@@ -561,6 +644,24 @@ export default function DriverDetailPage() {
           </div>
         ) : (
           <p className="text-gray-500 text-center py-8">No trips found</p>
+        )}
+      </div>
+
+      {/* Trip Route Map */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Trip Route</h2>
+        {selectedTrip ? (
+          <TripRouteMap
+            trip={selectedTrip}
+            routePoints={routePoints}
+            isLoadingRoute={isLoadingRoute}
+            showTripInfo
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+            <MapPin className="h-12 w-12 mb-3 text-gray-300" />
+            <p className="text-sm">Select a trip from the table above to view its route</p>
+          </div>
         )}
       </div>
 
