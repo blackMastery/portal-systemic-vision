@@ -4,7 +4,15 @@ import { useParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { format } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
+
+/** All trip timestamps display in Guyana local time (UTC−4, no DST). */
+const GUYANA_TIMEZONE = 'America/Guyana'
+
+function formatGuyana(date: string | Date, formatStr: string) {
+  const d = typeof date === 'string' ? new Date(date) : date
+  return formatInTimeZone(d, GUYANA_TIMEZONE, formatStr)
+}
 import {
   ArrowLeft,
   MapPin,
@@ -157,7 +165,7 @@ function TimelineItem({
       <div className="pb-4">
         <p className="text-sm font-medium text-gray-900">{label}</p>
         <p className="text-xs text-gray-500">
-          {format(new Date(timestamp), 'MMM d, yyyy • h:mm:ss a')}
+          {formatGuyana(timestamp, 'MMM d, yyyy • h:mm:ss a')}
         </p>
       </div>
     </div>
@@ -495,7 +503,7 @@ export default function TripDetailPage() {
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Expires At</p>
                     <p className="text-sm font-medium text-gray-900">
-                      {format(new Date(trip.trip_request.expires_at), 'MMM d, h:mm a')}
+                      {formatGuyana(trip.trip_request.expires_at, 'MMM d, h:mm a')}
                     </p>
                   </div>
                 )}
@@ -509,7 +517,7 @@ export default function TripDetailPage() {
               <div>
                 <p className="text-xs text-gray-500 mb-1">Created</p>
                 <p className="text-sm text-gray-700">
-                  {format(new Date(trip.trip_request.created_at), 'MMM d, yyyy • h:mm a')}
+                  {formatGuyana(trip.trip_request.created_at, 'MMM d, yyyy • h:mm a')}
                 </p>
               </div>
             </div>
@@ -574,7 +582,7 @@ export default function TripDetailPage() {
               <div>
                 <p className="text-xs text-red-700 mb-0.5">Cancelled at</p>
                 <p className="text-sm font-medium text-red-900">
-                  {format(new Date(trip.cancelled_at), 'MMM d, yyyy • h:mm:ss a')}
+                  {formatGuyana(trip.cancelled_at, 'MMM d, yyyy • h:mm:ss a')}
                 </p>
               </div>
             )}
