@@ -91,12 +91,12 @@ export async function GET(request: NextRequest) {
     }
 
     const latestBuild = String(row.build_number)
-    const versionMatch = clientVersion === latestVersion
-    const buildMatch = parseInt(clientBuild, 10) === row.build_number
+    const versionMatch = clientVersion >= latestVersion
+    const buildMatch = parseInt(clientBuild, 10) >= row.build_number
 
-    const upToDate = versionMatch && buildMatch
+    const upToDate = versionMatch || buildMatch
     const mandatoryUpdate = Boolean(row.mandatory_update)
-    const updateRequired = !upToDate && mandatoryUpdate
+    // const updateRequired = !upToDate && mandatoryUpdate
 
     logger.info('App version check', {
       app: appType,
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
       latestBuild,
       upToDate,
       mandatory_update: mandatoryUpdate,
-      update_required: updateRequired,
+      // update_required: updateRequired,
     })
 
     return NextResponse.json(
@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
         latest_version: latestVersion,
         latest_build_number: latestBuild,
         mandatory_update: mandatoryUpdate,
-        update_required: updateRequired,
+        // update_required: updateRequired,
       },
       { status: 200 }
     )
