@@ -70,6 +70,12 @@ export default function AdminNotificationsPage() {
     setSubmitting(true)
     try {
       const supabase = createClient()
+      const { error: userError } = await supabase.auth.getUser()
+      if (userError) {
+        setError('Session expired or invalid. Please sign in again.')
+        setSubmitting(false)
+        return
+      }
       const {
         data: { session },
       } = await supabase.auth.getSession()

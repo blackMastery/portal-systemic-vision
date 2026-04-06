@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
+import type { User } from '@supabase/supabase-js'
+import type { Database } from '@/types/database'
 import { handleApiError, AuthenticationError } from '@/lib/errors'
 import { validate, broadcastNotificationSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
@@ -43,33 +47,61 @@ function extractBearerToken(request: NextRequest): string | null {
   return parts[1]
 }
 
+/**
+ * Prefer validating the Bearer token; if it is stale or invalid (e.g. bad_jwt),
+ * fall back to the Supabase session from cookies (same-origin browser requests).
+ * Returns a JWT suitable for PostgREST RLS on a dedicated client.
+ */
+async function resolveCallerAuth(request: NextRequest): Promise<{
+  authUser: User
+  jwtForRls: string
+} | null> {
+  const routeClient = createRouteHandlerClient<Database>({ cookies })
+  const bearer = extractBearerToken(request)
+
+  if (bearer) {
+    const { data: { user }, error } = await routeClient.auth.getUser(bearer)
+    if (!error && user) {
+      return { authUser: user, jwtForRls: bearer }
+    }
+    logger.warn('Bearer token rejected; trying cookie session', {
+      code: error?.code,
+    })
+  }
+
+  const { data: { user }, error } = await routeClient.auth.getUser()
+  if (error || !user) {
+    logger.warn('Invalid or missing auth', {
+      code: error?.code,
+      hadBearer: Boolean(bearer),
+    })
+    return null
+  }
+
+  const { data: { session } } = await routeClient.auth.getSession()
+  const jwtForRls = session?.access_token
+  if (!jwtForRls) {
+    logger.warn('No access_token in cookie session after getUser')
+    return null
+  }
+
+  return { authUser: user, jwtForRls }
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const accessToken = extractBearerToken(request)
-
-    if (!accessToken) {
+    const resolved = await resolveCallerAuth(request)
+    if (!resolved) {
       const { response, statusCode } = handleApiError(
         new AuthenticationError(
-          'Missing or invalid Authorization header. Expected: Bearer <token>'
+          'Invalid or expired session. Sign in again, or send Authorization: Bearer <access_token> from a fresh session.'
         )
       )
       return NextResponse.json(response, { status: statusCode })
     }
 
-    const supabase = createSupabaseClientWithToken(accessToken)
-
-    const {
-      data: { user: authUser },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !authUser) {
-      logger.warn('Invalid or expired token', { error: authError })
-      const { response, statusCode } = handleApiError(
-        new AuthenticationError('Invalid or expired token.')
-      )
-      return NextResponse.json(response, { status: statusCode })
-    }
+    const { authUser, jwtForRls } = resolved
+    const supabase = createSupabaseClientWithToken(jwtForRls)
 
     const { data: user } = await supabase
       .from('users')
