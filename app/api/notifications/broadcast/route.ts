@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import {
-  handleApiError,
-  AuthenticationError,
-  AuthorizationError,
-} from '@/lib/errors'
+import { handleApiError, AuthenticationError } from '@/lib/errors'
 import { validate, broadcastNotificationSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import {
@@ -75,31 +71,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: statusCode })
     }
 
-    const { data: user, error: userError } = await supabase
+    const { data: user } = await supabase
       .from('users')
-      .select('id, role')
+      .select('id')
       .eq('auth_id', authUser.id)
-      .single()
+      .maybeSingle()
 
-    if (userError || !user) {
-      logger.warn('User not found', { authId: authUser.id, error: userError })
-      const { response, statusCode } = handleApiError(
-        new AuthenticationError('User not found.')
-      )
-      return NextResponse.json(response, { status: statusCode })
-    }
-
-    const caller = user as { id: string; role: string }
-    // if (caller.role !== 'admin') {
-    //   logger.warn('Broadcast denied: admin role required', {
-    //     authId: authUser.id,
-    //     role: caller.role,
-    //   })
-    //   const { response, statusCode } = handleApiError(
-    //     new AuthorizationError('Only administrators can send broadcast notifications.')
-    //   )
-    //   return NextResponse.json(response, { status: statusCode })
-    // }
+    const callerUserId = user ? (user as { id: string }).id : null
 
     let body: unknown
     try {
@@ -134,7 +112,8 @@ export async function POST(request: NextRequest) {
     if (userIds.length === 0) {
       logger.info('Broadcast skipped: no recipients with FCM tokens', {
         audience: validatedBody.audience,
-        callerUserId: caller.id,
+        callerUserId,
+        authId: authUser.id,
       })
       return NextResponse.json(
         {
@@ -159,7 +138,8 @@ export async function POST(request: NextRequest) {
 
     logger.info('Broadcast notifications sent', {
       audience: validatedBody.audience,
-      callerUserId: caller.id,
+      callerUserId,
+      authId: authUser.id,
       recipientCount: userIds.length,
       notificationType: validatedBody.notification_type,
       successCount: notificationResult.successCount,
@@ -171,7 +151,7 @@ export async function POST(request: NextRequest) {
       title: validatedBody.title,
       message: validatedBody.body,
       status: notificationResult.successCount > 0 ? 'sent' : 'failed',
-      sent_by_user_id: caller.id,
+      sent_by_user_id: callerUserId,
       notification_type: validatedBody.notification_type ?? 'broadcast',
       audience: validatedBody.audience,
       metadata: {
@@ -179,6 +159,7 @@ export async function POST(request: NextRequest) {
         success_count: notificationResult.successCount,
         failure_count: notificationResult.failureCount,
         invalid_tokens_removed: notificationResult.invalidTokens.length,
+        ...(callerUserId ? {} : { auth_id: authUser.id }),
       },
     })
 
