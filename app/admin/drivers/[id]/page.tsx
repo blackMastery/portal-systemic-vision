@@ -72,6 +72,7 @@ async function fetchDriverDetail(driverId: string): Promise<DriverDetailData> {
     .eq('id', driverId)
     .single()
 
+  console.log("🚀 ~ fetchDriverDetail ~ driverError:", driverError)
   if (driverError) throw driverError
   if (!driverData) throw new Error('Driver not found')
 
@@ -1341,31 +1342,38 @@ function VerificationUpdateModal({
 
       if (logError) throw logError
 
-      // Optionally create notification for driver
+      // In-app notification + FCM push (push failure does not block status update)
       if (userId) {
-        const notificationData = {
-          user_id: userId,
-          title: status === 'approved' 
-            ? 'Verification Approved!' 
+        const title =
+          status === 'approved'
+            ? 'Verification Approved!'
             : status === 'rejected'
-            ? 'Verification Rejected'
-            : status === 'suspended'
-            ? 'Account Suspended'
-            : 'Verification Status Updated',
-          body: status === 'approved'
+              ? 'Verification Rejected'
+              : status === 'suspended'
+                ? 'Account Suspended'
+                : 'Verification Status Updated'
+        const body =
+          status === 'approved'
             ? 'Your driver account is now active. You can start accepting trips.'
             : status === 'rejected'
-            ? 'Your verification application has been rejected. Please review the reason and resubmit.'
-            : status === 'suspended'
-            ? 'Your driver account has been suspended. Please contact support for more information.'
-            : 'Your verification status has been updated.',
+              ? 'Your verification application has been rejected. Please review the reason and resubmit.'
+              : status === 'suspended'
+                ? 'Your driver account has been suspended. Please contact support for more information.'
+                : 'Your verification status has been updated.'
+
+        const { error: notifError } = await (supabase.from('notifications') as any).insert({
+          user_id: userId,
+          title,
+          body,
           notification_type: `verification_${status}`,
           is_read: false,
-        }
+        })
 
-        await (supabase
-          .from('notifications') as any)
-          .insert(notificationData)
+        if (!notifError) {
+          await sendDriverPushNotification(userId, title, body, {
+            skipInAppNotificationInsert: true,
+          })
+        }
       }
 
       onSuccess()

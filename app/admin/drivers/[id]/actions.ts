@@ -23,11 +23,18 @@ export interface SendDriverPushResult {
   error?: string
 }
 
+export interface SendDriverPushOptions {
+  /** When true, caller is responsible for the in-app `notifications` row (e.g. verification flow). */
+  skipInAppNotificationInsert?: boolean
+}
+
 export async function sendDriverPushNotification(
   driverUserId: string,
   title: string,
-  body: string
+  body: string,
+  options?: SendDriverPushOptions
 ): Promise<SendDriverPushResult> {
+  console.log("🚀 ~ sendDriverPushNotification ~ driverUserId:", driverUserId)
   // Use auth-helpers client solely for session verification
   const authClient = createServerActionClient({ cookies })
   const {
@@ -74,8 +81,8 @@ export async function sendDriverPushNotification(
     'driver'
   )
 
-  // Record the notification in the database if delivery succeeded
-  if (result.successCount > 0) {
+  // Record the notification in the database if delivery succeeded (unless caller already did)
+  if (!options?.skipInAppNotificationInsert && result.successCount > 0) {
     type NotificationInsert = Database['public']['Tables']['notifications']['Insert']
     const { error: insertError } = await db
       .from('notifications')
