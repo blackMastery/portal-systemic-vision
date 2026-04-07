@@ -5,6 +5,8 @@ import { createSupabaseServiceClient } from '@/lib/firebase/notifications'
 import { isValidAppVersionString, isValidBuildString } from '@/lib/app-version'
 import type { AppVersionAppType, AppVersionPlatform } from '@/types/database'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl

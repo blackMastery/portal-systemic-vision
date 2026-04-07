@@ -20,6 +20,8 @@ function isSubscriptionType(s: string): s is SubscriptionType {
   return SUBSCRIPTION_TYPES.includes(s as SubscriptionType);
 }
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   try {
     console.log("[MMG confirm-payment] POST request received");
