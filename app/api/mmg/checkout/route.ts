@@ -3,6 +3,8 @@ import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import { mmgService } from "@/lib/mmg";
 
+export const dynamic = "force-dynamic";
+
 interface CheckoutRequest {
   amount: number;
   currency?: string;
