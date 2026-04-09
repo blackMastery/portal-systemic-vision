@@ -123,7 +123,7 @@ export type BroadcastNotificationRequest = z.infer<
  * Update trip status schema
  */
 export const updateTripStatusSchema = z.object({
-  status: z.enum(['picked_up', 'completed', 'cancelled']),
+  status: z.enum(['picked_up', 'completed', 'cancelled', 'arrived']),
   actual_distance_km: z.number().positive().optional(),
   actual_fare: z.number().nonnegative().optional(),
   cancellation_reason: z.string().max(500).optional(),
