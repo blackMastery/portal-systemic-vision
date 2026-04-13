@@ -53,7 +53,14 @@ type DriverDetailData = {
     }
   }>
   subscriptions: Database['public']['Tables']['subscriptions']['Row'][]
-  payments: Database['public']['Tables']['payment_transactions']['Row'][]
+  payments: Array<
+    Database['public']['Tables']['payment_transactions']['Row'] & {
+      subscription: Pick<
+        Database['public']['Tables']['subscriptions']['Row'],
+        'id' | 'plan_type' | 'status' | 'start_date' | 'end_date' | 'user_role'
+      > | null
+    }
+  >
   verificationLogs: Array<Database['public']['Tables']['verification_logs']['Row'] & {
     admin?: Database['public']['Tables']['users']['Row']
   }>
@@ -72,7 +79,6 @@ async function fetchDriverDetail(driverId: string): Promise<DriverDetailData> {
     .eq('id', driverId)
     .single()
 
-  console.log("🚀 ~ fetchDriverDetail ~ driverError:", driverError)
   if (driverError) throw driverError
   if (!driverData) throw new Error('Driver not found')
 
@@ -105,22 +111,33 @@ async function fetchDriverDetail(driverId: string): Promise<DriverDetailData> {
 
   if (tripsError) throw tripsError
 
-  // Fetch subscriptions
-  const { data: subscriptionsData, error: subscriptionsError } = await supabase
-    .from('subscriptions')
-    .select('*')
-    .eq('user_id', driver.user_id!)
-    .order('created_at', { ascending: false })
+  const userId = driver.user_id
+
+  // Driver subscription rows only (same user can also have rider history)
+  const { data: subscriptionsData, error: subscriptionsError } = userId
+    ? await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('user_role', 'driver')
+        .order('created_at', { ascending: false })
+    : { data: [] as Database['public']['Tables']['subscriptions']['Row'][], error: null }
 
   if (subscriptionsError) throw subscriptionsError
 
-  // Fetch payment transactions
-  const { data: paymentsData, error: paymentsError } = await supabase
-    .from('payment_transactions')
-    .select('*')
-    .eq('user_id', driver.user_id!)
-    .order('created_at', { ascending: false })
-    .limit(20)
+  const { data: paymentsData, error: paymentsError } = userId
+    ? await supabase
+        .from('payment_transactions')
+        .select(
+          `
+          *,
+          subscription:subscription_id (id, plan_type, status, start_date, end_date, user_role)
+        `
+        )
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(100)
+    : { data: [], error: null }
 
   if (paymentsError) throw paymentsError
 
@@ -143,7 +160,9 @@ async function fetchDriverDetail(driverId: string): Promise<DriverDetailData> {
     } as DriverDetailData['driver'],
     trips: (tripsData || []) as DriverDetailData['trips'],
     subscriptions: (subscriptionsData || []) as DriverDetailData['subscriptions'],
-    payments: (paymentsData || []) as DriverDetailData['payments'],
+    payments: ((paymentsData || []) as unknown as DriverDetailData['payments']).filter(
+      (p) => !p.subscription || p.subscription.user_role === 'driver'
+    ),
     verificationLogs: (logsData || []) as DriverDetailData['verificationLogs'],
   }
 }
@@ -153,6 +172,13 @@ const verificationBadgeColors = {
   approved: 'bg-green-100 text-green-800',
   rejected: 'bg-red-100 text-red-800',
   suspended: 'bg-gray-100 text-gray-800',
+}
+
+const subscriptionBadgeColors = {
+  active: 'bg-green-100 text-green-800',
+  trial: 'bg-blue-100 text-blue-800',
+  expired: 'bg-red-100 text-red-800',
+  cancelled: 'bg-gray-100 text-gray-800',
 }
 
 const verificationIcons = {
@@ -523,15 +549,35 @@ export default function DriverDetailPage() {
           </div>
           <div>
             <p className="text-sm text-gray-500 mb-1">Subscription Status</p>
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              driver.subscription_status === 'active' 
-                ? 'bg-green-100 text-green-800'
-                : driver.subscription_status === 'trial'
-                ? 'bg-blue-100 text-blue-800'
-                : 'bg-red-100 text-red-800'
-            }`}>
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                subscriptionBadgeColors[driver.subscription_status]
+              }`}
+            >
               {driver.subscription_status}
             </span>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 mb-1">Subscription Start (profile)</p>
+            <p className="text-base font-medium text-gray-900">
+              {driver.subscription_start_date
+                ? format(new Date(driver.subscription_start_date), 'MMM dd, yyyy HH:mm')
+                : 'N/A'}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 mb-1">Subscription End (profile)</p>
+            <p className="text-base font-medium text-gray-900">
+              {driver.subscription_end_date
+                ? format(new Date(driver.subscription_end_date), 'MMM dd, yyyy HH:mm')
+                : 'N/A'}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 mb-1">Monthly Fee</p>
+            <p className="text-base font-medium text-gray-900">
+              GYD {Number(driver.monthly_fee_amount).toFixed(2)}
+            </p>
           </div>
           <div>
             <p className="text-sm text-gray-500 mb-1">Verification Status</p>
@@ -669,28 +715,38 @@ export default function DriverDetailPage() {
       {/* Subscriptions */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Subscriptions</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Subscription records for this driver account (<span className="font-medium">user_role: driver</span>).
+        </p>
         {subscriptions.length > 0 ? (
           <div className="space-y-4">
             {subscriptions.map((subscription) => (
               <div key={subscription.id} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-medium text-gray-900">{subscription.plan_type}</p>
                     <p className="text-sm text-gray-500">
-                      {format(new Date(subscription.start_date), 'MMM dd, yyyy')} - {format(new Date(subscription.end_date), 'MMM dd, yyyy')}
+                      {format(new Date(subscription.start_date), 'MMM dd, yyyy')} –{' '}
+                      {format(new Date(subscription.end_date), 'MMM dd, yyyy')}
                     </p>
+                    {subscription.payment_reference && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Ref: {subscription.payment_reference}
+                        {subscription.payment_date
+                          ? ` · Paid ${format(new Date(subscription.payment_date), 'MMM dd, yyyy HH:mm')}`
+                          : ''}
+                      </p>
+                    )}
                   </div>
-                  <div className="text-right">
+                  <div className="text-left sm:text-right">
                     <p className="font-semibold text-gray-900">
-                      {subscription.currency} {subscription.amount.toFixed(2)}
+                      {subscription.currency} {Number(subscription.amount).toFixed(2)}
                     </p>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
-                      subscription.status === 'active' 
-                        ? 'bg-green-100 text-green-800'
-                        : subscription.status === 'trial'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
+                        subscriptionBadgeColors[subscription.status]
+                      }`}
+                    >
                       {subscription.status}
                     </span>
                   </div>
@@ -699,21 +755,27 @@ export default function DriverDetailPage() {
             ))}
           </div>
         ) : (
-          <p className="text-gray-500 text-center py-8">No subscriptions found</p>
+          <p className="text-gray-500 text-center py-8">No driver subscriptions found</p>
         )}
       </div>
 
       {/* Payment History */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Payment History</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Payment transactions linked to this driver&apos;s user account (includes subscription renewals and related charges).
+        </p>
         {payments.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Completed</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plan</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Method</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reference</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 </tr>
               </thead>
@@ -723,11 +785,34 @@ export default function DriverDetailPage() {
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                       {format(new Date(payment.created_at), 'MMM dd, yyyy HH:mm')}
                     </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                      {payment.completed_at
+                        ? format(new Date(payment.completed_at), 'MMM dd, yyyy HH:mm')
+                        : '—'}
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {payment.currency} {payment.amount.toFixed(2)}
+                      {payment.currency} {Number(payment.amount).toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-700">
+                      {payment.subscription ? (
+                        <div>
+                          <p className="font-medium text-gray-900">{payment.subscription.plan_type}</p>
+                          <p className="text-xs text-gray-500">
+                            {payment.subscription.status}
+                            {payment.subscription.user_role
+                              ? ` · ${payment.subscription.user_role}`
+                              : ''}
+                          </p>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {payment.payment_method}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 max-w-[10rem] truncate" title={payment.mmg_reference ?? undefined}>
+                      {payment.mmg_reference || payment.mmg_transaction_id || '—'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

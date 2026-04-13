@@ -693,15 +693,23 @@ function DriversContent() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        driver.subscription_status === 'active' 
-                          ? 'bg-green-100 text-green-800'
-                          : driver.subscription_status === 'trial'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {driver.subscription_status}
-                      </span>
+                      <div className="space-y-1">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          driver.subscription_status === 'active' 
+                            ? 'bg-green-100 text-green-800'
+                            : driver.subscription_status === 'trial'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {driver.subscription_status}
+                        </span>
+                        <p className="text-xs text-gray-500">
+                          Ends:{' '}
+                          {driver.subscription_end_date
+                            ? new Date(driver.subscription_end_date).toLocaleDateString()
+                            : 'N/A'}
+                        </p>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div>{driver.total_trips} trips</div>
