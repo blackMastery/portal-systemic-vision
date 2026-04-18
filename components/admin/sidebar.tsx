@@ -2,19 +2,20 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { 
-  LayoutDashboard, 
-  Users, 
-  Car, 
-  Route, 
-  CreditCard, 
-  BarChart3, 
+import {
+  LayoutDashboard,
+  Users,
+  Car,
+  Route,
+  CreditCard,
+  BarChart3,
   Settings,
   Menu,
   X,
   FileText,
   Megaphone,
   MessageSquare,
+  ClipboardList,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -23,6 +24,7 @@ const navigation = [
   { name: 'Drivers', href: '/admin/drivers', icon: Car },
   { name: 'Riders', href: '/admin/riders', icon: Users },
   { name: 'Trips', href: '/admin/trips', icon: Route },
+  { name: 'Trip Requests', href: '/admin/trip-requests', icon: ClipboardList },
   { name: 'Payments', href: '/admin/payments', icon: CreditCard },
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
   { name: 'Notifications', href: '/admin/notifications', icon: Megaphone },

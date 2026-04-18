@@ -23,9 +23,11 @@ async function fetchSubscriptions(filters: {
   userRole: string
   planType: string
   searchQuery: string
+  dateFrom: string
+  dateTo: string
 }) {
   const supabase = createClient()
-  
+
   let query = supabase
     .from('subscriptions')
     .select(`
@@ -44,6 +46,14 @@ async function fetchSubscriptions(filters: {
 
   if (filters.planType !== 'all') {
     query = query.eq('plan_type', filters.planType)
+  }
+
+  if (filters.dateFrom) {
+    query = query.gte('created_at', filters.dateFrom)
+  }
+
+  if (filters.dateTo) {
+    query = query.lte('created_at', filters.dateTo + 'T23:59:59')
   }
 
   const { data, error } = await query
@@ -69,9 +79,11 @@ async function fetchPaymentTransactions(filters: {
   status: string
   paymentMethod: string
   searchQuery: string
+  dateFrom: string
+  dateTo: string
 }) {
   const supabase = createClient()
-  
+
   let query = supabase
     .from('payment_transactions')
     .select(`
@@ -87,6 +99,14 @@ async function fetchPaymentTransactions(filters: {
 
   if (filters.paymentMethod !== 'all') {
     query = query.eq('payment_method', filters.paymentMethod)
+  }
+
+  if (filters.dateFrom) {
+    query = query.gte('initiated_at', filters.dateFrom)
+  }
+
+  if (filters.dateTo) {
+    query = query.lte('initiated_at', filters.dateTo + 'T23:59:59')
   }
 
   const { data, error } = await query
@@ -147,22 +167,26 @@ export default function PaymentsPage() {
   const [userRole, setUserRole] = useState('all')
   const [planType, setPlanType] = useState('all')
   const [subscriptionSearch, setSubscriptionSearch] = useState('')
-  
+  const [subscriptionDateFrom, setSubscriptionDateFrom] = useState('')
+  const [subscriptionDateTo, setSubscriptionDateTo] = useState('')
+
   // Transactions filters
   const [transactionStatus, setTransactionStatus] = useState('all')
   const [paymentMethod, setPaymentMethod] = useState('all')
   const [transactionSearch, setTransactionSearch] = useState('')
+  const [transactionDateFrom, setTransactionDateFrom] = useState('')
+  const [transactionDateTo, setTransactionDateTo] = useState('')
 
   // Subscriptions query
   const { data: subscriptions, isLoading: subscriptionsLoading } = useQuery({
-    queryKey: ['subscriptions', subscriptionStatus, userRole, planType, subscriptionSearch],
-    queryFn: () => fetchSubscriptions({ status: subscriptionStatus, userRole, planType, searchQuery: subscriptionSearch }),
+    queryKey: ['subscriptions', subscriptionStatus, userRole, planType, subscriptionSearch, subscriptionDateFrom, subscriptionDateTo],
+    queryFn: () => fetchSubscriptions({ status: subscriptionStatus, userRole, planType, searchQuery: subscriptionSearch, dateFrom: subscriptionDateFrom, dateTo: subscriptionDateTo }),
   })
 
   // Transactions query
   const { data: transactions, isLoading: transactionsLoading } = useQuery({
-    queryKey: ['payment-transactions', transactionStatus, paymentMethod, transactionSearch],
-    queryFn: () => fetchPaymentTransactions({ status: transactionStatus, paymentMethod, searchQuery: transactionSearch }),
+    queryKey: ['payment-transactions', transactionStatus, paymentMethod, transactionSearch, transactionDateFrom, transactionDateTo],
+    queryFn: () => fetchPaymentTransactions({ status: transactionStatus, paymentMethod, searchQuery: transactionSearch, dateFrom: transactionDateFrom, dateTo: transactionDateTo }),
   })
 
   // Calculate metrics for subscriptions
@@ -306,17 +330,33 @@ export default function PaymentsPage() {
                 </select>
               </div>
             </div>
-            <div className="mt-4">
+            <div className="mt-4 flex flex-wrap gap-4 items-center">
               <select
                 value={planType}
                 onChange={(e) => setPlanType(e.target.value)}
-                className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="all">All Plan Types</option>
                 <option value="monthly">Monthly</option>
                 <option value="biannual">Biannual</option>
                 <option value="annual">Annual</option>
               </select>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-gray-400" />
+                <input
+                  type="date"
+                  value={subscriptionDateFrom}
+                  onChange={(e) => setSubscriptionDateFrom(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+                <span className="text-gray-400 text-sm">to</span>
+                <input
+                  type="date"
+                  value={subscriptionDateTo}
+                  onChange={(e) => setSubscriptionDateTo(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+              </div>
             </div>
           </div>
 
@@ -530,6 +570,22 @@ export default function PaymentsPage() {
                   <option value="other">Other</option>
                 </select>
               </div>
+            </div>
+            <div className="mt-4 flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-gray-400" />
+              <input
+                type="date"
+                value={transactionDateFrom}
+                onChange={(e) => setTransactionDateFrom(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              />
+              <span className="text-gray-400 text-sm">to</span>
+              <input
+                type="date"
+                value={transactionDateTo}
+                onChange={(e) => setTransactionDateTo(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              />
             </div>
           </div>
 
