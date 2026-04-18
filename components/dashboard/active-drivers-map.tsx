@@ -21,10 +21,12 @@ type ActiveDriverData = {
   vehicles: Array<{ make: string; model: string; license_plate: string }> | null
 }
 
-type DriverProfile = {
+/** Row shape from PostgREST embeds (many-to-one FKs are still typed as arrays). */
+type DriverQueryRow = {
   id: string
   is_available: boolean
-  user: { full_name: string; phone_number: string } | null
+  current_location: unknown
+  user: { full_name: string; phone_number: string }[] | null
   vehicles: Array<{ make: string; model: string; license_plate: string }> | null
 }
 
@@ -48,8 +50,10 @@ async function fetchActiveDrivers(): Promise<ActiveDriverData[]> {
   if (driversError) throw driversError
   if (!drivers || drivers.length === 0) return []
 
+  const rows = drivers as DriverQueryRow[]
+
   // Get all driver IDs
-  const driverIds = (drivers as DriverProfile[]).map(d => d.id)
+  const driverIds = rows.map(d => d.id)
 
   // Fetch latest locations for all drivers in a single query using IN clause
   // This avoids N+1 query problem
@@ -79,17 +83,18 @@ async function fetchActiveDrivers(): Promise<ActiveDriverData[]> {
   }
 
   // Combine driver data with locations
-  const driversWithLocations = (drivers as DriverProfile[]).map((driver) => {
+  const driversWithLocations = rows.map((driver): ActiveDriverData => {
     const location = locationMap.get(driver.id)
+    const user = driver.user?.[0] ?? null
 
     return {
       id: driver.id,
       is_available: driver.is_available,
       latitude: location?.latitude ? Number(location.latitude) : null,
       longitude: location?.longitude ? Number(location.longitude) : null,
-      user: driver.user,
+      user,
       vehicles: driver.vehicles,
-    } as ActiveDriverData
+    }
   })
 
   return driversWithLocations

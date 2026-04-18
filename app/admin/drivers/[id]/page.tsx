@@ -36,6 +36,7 @@ import { useState, useCallback, useEffect } from 'react'
 import type {
   DriverWithDetails,
   VerificationStatus,
+  SubscriptionStatus,
   Database
 } from '@/types/database'
 import { TripRouteMap } from '@/components/drivers/trip-route-map'
@@ -301,6 +302,7 @@ export default function DriverDetailPage() {
   const queryClient = useQueryClient()
   const driverId = params.id as string
   const [showVerificationModal, setShowVerificationModal] = useState(false)
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
   const [showSmsModal, setShowSmsModal] = useState(false)
   const [showPushModal, setShowPushModal] = useState(false)
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null)
@@ -533,7 +535,16 @@ export default function DriverDetailPage() {
 
       {/* Driver Details */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Driver Details</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Driver Details</h2>
+          <button
+            onClick={() => setShowSubscriptionModal(true)}
+            className="inline-flex items-center px-3 py-1.5 text-sm bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors"
+          >
+            <Edit className="h-3.5 w-3.5 mr-1.5" />
+            Edit Subscription
+          </button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <p className="text-sm text-gray-500 mb-1">License Number</p>
@@ -912,6 +923,18 @@ export default function DriverDetailPage() {
             queryClient.invalidateQueries({ queryKey: ['driver-detail', driverId] })
             queryClient.invalidateQueries({ queryKey: ['next-pending-driver'] })
             setShowVerificationModal(false)
+          }}
+        />
+      )}
+
+      {/* Subscription Update Modal */}
+      {showSubscriptionModal && (
+        <SubscriptionUpdateModal
+          driver={driver}
+          onClose={() => setShowSubscriptionModal(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['driver-detail', driverId] })
+            setShowSubscriptionModal(false)
           }}
         />
       )}
@@ -1346,6 +1369,129 @@ function SendPushNotificationModal({
               disabled={isSubmitting || success}
             >
               {isSubmitting ? 'Sending...' : 'Send Notification'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function SubscriptionUpdateModal({
+  driver,
+  onClose,
+  onSuccess,
+}: {
+  driver: DriverWithDetails
+  onClose: () => void
+  onSuccess: () => void
+}) {
+  const [status, setStatus] = useState<SubscriptionStatus>(driver.subscription_status)
+  const [startDate, setStartDate] = useState(
+    driver.subscription_start_date
+      ? driver.subscription_start_date.slice(0, 10)
+      : ''
+  )
+  const [endDate, setEndDate] = useState(
+    driver.subscription_end_date
+      ? driver.subscription_end_date.slice(0, 10)
+      : ''
+  )
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const supabase = createClient()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setIsSubmitting(true)
+
+    try {
+      const { error: updateError } = await (supabase.from('driver_profiles') as any)
+        .update({
+          subscription_status: status,
+          subscription_start_date: startDate || null,
+          subscription_end_date: endDate || null,
+        })
+        .eq('id', driver.id)
+
+      if (updateError) throw updateError
+      onSuccess()
+    } catch (err: any) {
+      setError(err.message || 'Failed to update subscription')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Edit Subscription</h2>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Subscription Status
+            </label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as SubscriptionStatus)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              required
+            >
+              <option value="active">Active</option>
+              <option value="trial">Trial</option>
+              <option value="expired">Expired</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Subscription Start Date
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Subscription End Date
+            </label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+          </div>
+
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </form>
