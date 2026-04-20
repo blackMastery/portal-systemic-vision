@@ -12,6 +12,8 @@ async function fetchTrips(filters: {
   status: string
   tripType: string
   searchQuery: string
+  startDate: string
+  endDate: string
 }) {
   const supabase = createClient()
   
@@ -37,6 +39,16 @@ async function fetchTrips(filters: {
 
   if (filters.tripType !== 'all') {
     query = query.eq('trip_type', filters.tripType)
+  }
+
+  if (filters.startDate) {
+    const startDateTime = new Date(`${filters.startDate}T00:00:00`)
+    query = query.gte('requested_at', startDateTime.toISOString())
+  }
+
+  if (filters.endDate) {
+    const endDateTime = new Date(`${filters.endDate}T23:59:59.999`)
+    query = query.lte('requested_at', endDateTime.toISOString())
   }
 
   const { data, error } = await query
@@ -77,10 +89,12 @@ export default function TripsPage() {
   const [status, setStatus] = useState('all')
   const [tripType, setTripType] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
 
   const { data: trips, isLoading } = useQuery({
-    queryKey: ['trips', status, tripType, searchQuery],
-    queryFn: () => fetchTrips({ status, tripType, searchQuery }),
+    queryKey: ['trips', status, tripType, searchQuery, startDate, endDate],
+    queryFn: () => fetchTrips({ status, tripType, searchQuery, startDate, endDate }),
   })
 
   const activeTripsCount = trips?.filter(t => ['accepted', 'picked_up'].includes(t.status)).length || 0
@@ -119,7 +133,7 @@ export default function TripsPage() {
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           {/* Search */}
           <div className="md:col-span-2">
             <div className="relative">
@@ -148,6 +162,28 @@ export default function TripsPage() {
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
             </select>
+          </div>
+
+          {/* Start Date Filter */}
+          <div>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              aria-label="Filter from date"
+            />
+          </div>
+
+          {/* End Date Filter */}
+          <div>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              aria-label="Filter to date"
+            />
           </div>
 
           {/* Trip Type Filter */}
