@@ -174,7 +174,6 @@ export async function PATCH(
         updates.cancellation_reason = validatedBody.cancellation_reason;
         updates.cancelled_by_user_id = user.id;
         updates.cancelled_at = new Date().toISOString();
-
       }
     }
 
@@ -207,22 +206,39 @@ export async function PATCH(
         const requestId = (tripRow as Record<string, unknown> | null)
           ?.request_id as string | undefined;
         if (requestId) {
-          await serviceClient
+          // check if the trip_request is expired
+          const { data: tripRequest } = await serviceClient
             .from("trip_requests")
-            .update({
-              status: "requested",
-              expires_at: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
-            })
-            .eq("id", requestId);
+            .select("*")
+            .eq("id", requestId)
+            .maybeSingle();
 
-          // send notification to rider that the trip has been cancelled and is now available to be requested again
-          await sendNotificationsToUsers(
-            [tripRow?.rider_id as string],
-            "Trip Cancelled",
-            "Your trip has been cancelled and is now available to be requested again",
-            "rider",
-            { trip_id: tripId, notification_type: `trip_cancelled` },
-          );
+          const isExpired =
+            tripRequest?.expires_at &&
+            new Date(tripRequest.expires_at) < new Date();
+          // if not expired, update the trip_request to requested and calculate remaining time to be expired in 10 minutes
+          const remainingTime =
+            new Date(tripRequest.expires_at).getTime() - new Date().getTime();
+          const expiresAt = new Date(Date.now() + remainingTime);
+
+          if (!isExpired) {
+            await serviceClient
+              .from("trip_requests")
+              .update({
+                status: "requested",
+                expires_at: expiresAt.toISOString(),
+              })
+              .eq("id", requestId);
+          } else {
+            // send notification to rider that the trip has been cancelled and is now available to be requested again
+            await sendNotificationsToUsers(
+              [tripRow?.rider_id as string],
+              "Trip Cancelled",
+              "Your trip has been cancelled and is now available to be requested again",
+              "rider",
+              { trip_id: tripId, notification_type: `trip_cancelled` },
+            );
+          }
           logger.info("Reset trip_request to requested", { requestId });
         }
       } catch (e) {
