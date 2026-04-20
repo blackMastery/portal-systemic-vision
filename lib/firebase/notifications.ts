@@ -11,6 +11,8 @@ import type { MulticastMessage } from 'firebase-admin/messaging'
 
 // FCM supports up to 500 tokens per batch
 const FCM_BATCH_SIZE = 500
+// Keep PostgREST `in` filters bounded to avoid oversized requests.
+const SUPABASE_IN_FILTER_BATCH_SIZE = 200
 
 /** Platform overrides so notifications play the default system sound (iOS + Android). */
 const NOTIFICATION_PLATFORM_SOUND = {
@@ -77,16 +79,29 @@ export async function fetchFCMTokensForUsers(
   }
 
   const supabase = createSupabaseServiceClient()
+  const users: Array<{ id: string; fcm_token: string | null }> = []
 
-  const { data: users, error } = await supabase
-    .from('users')
-    .select('id, fcm_token')
-    .in('id', userIds)
-    .not('fcm_token', 'is', null)
+  for (let i = 0; i < userIds.length; i += SUPABASE_IN_FILTER_BATCH_SIZE) {
+    const userIdBatch = userIds.slice(i, i + SUPABASE_IN_FILTER_BATCH_SIZE)
 
-  if (error) {
-    logger.error('Failed to fetch FCM tokens', error, { userIds })
-    throw error
+    const { data: usersBatch, error } = await supabase
+      .from('users')
+      .select('id, fcm_token')
+      .in('id', userIdBatch)
+      .not('fcm_token', 'is', null)
+
+    if (error) {
+      logger.error('Failed to fetch FCM tokens', error, {
+        userIds,
+        batchStart: i,
+        batchSize: userIdBatch.length,
+      })
+      throw error
+    }
+
+    if (usersBatch && usersBatch.length > 0) {
+      users.push(...(usersBatch as Array<{ id: string; fcm_token: string | null }>))
+    }
   }
 
   if (!users || users.length === 0) {
@@ -95,9 +110,7 @@ export async function fetchFCMTokensForUsers(
   }
 
   // Filter out any null tokens (shouldn't happen due to query, but TypeScript safety)
-  // Type assertion needed because Supabase select with specific columns returns a narrowed type
-  type UserWithFCMToken = { id: string; fcm_token: string | null }
-  const tokensWithUsers: FCMTokenWithUser[] = (users as UserWithFCMToken[])
+  const tokensWithUsers: FCMTokenWithUser[] = users
     .filter((user) => user.fcm_token !== null)
     .map((user) => ({
       user_id: user.id,

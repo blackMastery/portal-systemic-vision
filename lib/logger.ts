@@ -60,6 +60,15 @@ class Logger {
   }
 
   error(message: string, error?: Error | unknown, context?: LogContext): void {
+    const objectErrorContext =
+      error &&
+      typeof error === 'object' &&
+      !(error instanceof Error)
+        ? {
+            errorObject: error as Record<string, unknown>,
+          }
+        : {}
+
     const errorContext: LogContext = {
       ...context,
       ...(error instanceof Error
@@ -69,6 +78,7 @@ class Logger {
             errorStack: error.stack,
           }
         : { error: String(error) }),
+      ...objectErrorContext,
     }
     this.log('error', message, errorContext)
   }
