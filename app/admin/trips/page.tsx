@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { Search, Route, MapPin, DollarSign, Clock, User, Car, Star, Moon } from 'lucide-react'
+import { Search, Route, MapPin, DollarSign, Clock, User, Car, Star, Moon, List, LayoutGrid } from 'lucide-react'
 import Link from 'next/link'
 import type { TripWithDetails } from '@/types/database'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -91,6 +91,7 @@ export default function TripsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('table')
 
   const { data: trips, isLoading } = useQuery({
     queryKey: ['trips', status, tripType, searchQuery, startDate, endDate],
@@ -203,13 +204,122 @@ export default function TripsPage() {
         </div>
       </div>
 
-      {/* Trips Table */}
+      {/* View Toggle + Trips */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500">{trips?.length ?? 0} trips</p>
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('table')}
+            className={`p-1.5 rounded-md transition-colors ${viewMode === 'table' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+            aria-label="Table view"
+          >
+            <List className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setViewMode('card')}
+            className={`p-1.5 rounded-md transition-colors ${viewMode === 'card' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+            aria-label="Card view"
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           </div>
         ) : trips && trips.length > 0 ? (
+          viewMode === 'card' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
+              {trips.map((trip) => {
+                const fare = trip.actual_fare ?? trip.estimated_fare
+                const fareIsEstimated = !trip.actual_fare && trip.estimated_fare
+                const distance = trip.actual_distance_km ?? trip.estimated_distance_km
+                const distanceIsEstimated = !trip.actual_distance_km && trip.estimated_distance_km
+
+                return (
+                  <div key={trip.id} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow flex flex-col gap-3">
+                    {/* Status row */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[trip.status]}`}>
+                          {trip.status}
+                        </span>
+                        {trip.is_night_trip && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                            <Moon className="h-3 w-3 mr-1" />
+                            Night
+                          </span>
+                        )}
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${tripTypeColors[trip.trip_type]}`}>
+                          {trip.trip_type.replace('_', ' ')}
+                        </span>
+                      </div>
+                      <span className="text-xs text-gray-400">{format(new Date(trip.requested_at), 'MMM d, yyyy')}</span>
+                    </div>
+
+                    {/* Route */}
+                    <div className="flex items-start gap-2 text-sm">
+                      <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-gray-900 truncate font-medium">{trip.pickup_address}</p>
+                        <p className="text-gray-500 truncate">→ {trip.destination_address}</p>
+                      </div>
+                    </div>
+
+                    {/* People */}
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-6 w-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <User className="h-3 w-3 text-green-600" />
+                        </div>
+                        <span className="text-gray-700 truncate max-w-[100px]">
+                          {trip.rider?.user?.full_name ?? 'Unknown'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-6 w-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Car className="h-3 w-3 text-blue-600" />
+                        </div>
+                        <span className="text-gray-700 truncate max-w-[100px]">
+                          {trip.driver?.user?.full_name ?? 'Unassigned'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Fare + distance + actions */}
+                    <div className="flex items-center justify-between pt-1 border-t border-gray-100">
+                      <div className="flex items-center gap-3 text-sm text-gray-600">
+                        {fare ? (
+                          <span className="flex items-center font-medium text-gray-900">
+                            <DollarSign className="h-3.5 w-3.5 text-green-600 mr-0.5" />
+                            {fare.toFixed(2)}
+                            {fareIsEstimated && <span className="ml-0.5 text-xs text-gray-400">(est.)</span>}
+                          </span>
+                        ) : null}
+                        {distance ? (
+                          <span className="text-xs text-gray-500">
+                            {distance.toFixed(2)} km{distanceIsEstimated && ' (est.)'}
+                          </span>
+                        ) : null}
+                        {(trip.rider_rating || trip.driver_rating) && (
+                          <span className="flex items-center text-xs text-gray-500">
+                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 mr-0.5" />
+                            {trip.rider_rating ?? trip.driver_rating}
+                          </span>
+                        )}
+                      </div>
+                      <Link href={`/admin/trips/${trip.id}`} className="text-xs text-blue-600 hover:text-blue-900 font-medium">
+                        View →
+                      </Link>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -400,6 +510,7 @@ export default function TripsPage() {
               </tbody>
             </table>
           </div>
+          )
         ) : (
           <div className="text-center py-12">
             <Route className="h-12 w-12 text-gray-300 mx-auto mb-3" />

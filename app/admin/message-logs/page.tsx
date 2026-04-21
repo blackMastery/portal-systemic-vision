@@ -3,7 +3,7 @@
 import { useState, Suspense } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { Search, MessageSquare } from 'lucide-react'
+import { Search, MessageSquare, List, LayoutGrid, X } from 'lucide-react'
 import { format } from 'date-fns'
 
 type MessageLog = {
@@ -92,6 +92,8 @@ function MessageLogsContent() {
   const [status, setStatus] = useState('all')
   const [dateRange, setDateRange] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('table')
+  const [selectedLog, setSelectedLog] = useState<MessageLog | null>(null)
 
   const { data: logs, isLoading } = useQuery({
     queryKey: ['message_logs', channel, status, dateRange, searchQuery],
@@ -180,125 +182,191 @@ function MessageLogsContent() {
         </div>
       </div>
 
-      {/* Table */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500">{logs?.length ?? 0} logs</p>
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('table')}
+            className={`p-1.5 rounded-md transition-colors ${viewMode === 'table' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+            aria-label="Table view"
+          >
+            <List className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setViewMode('card')}
+            className={`p-1.5 rounded-md transition-colors ${viewMode === 'card' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+            aria-label="Card view"
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Logs */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           </div>
         ) : logs && logs.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Channel
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Recipient
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Message
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Sent By
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-gray-50">
-                    {/* Channel */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-col gap-1">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            log.channel === 'sms'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-purple-100 text-purple-800'
-                          }`}
-                        >
-                          {log.channel.toUpperCase()}
-                        </span>
-                        {log.audience && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">
-                            {log.audience} broadcast
-                          </span>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* Recipient */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm">
-                        {log.recipient?.full_name ? (
-                          <div className="font-medium text-gray-900">{log.recipient.full_name}</div>
-                        ) : log.audience ? (
-                          <div className="text-gray-500 italic">All {log.audience}s</div>
-                        ) : null}
-                        {(log.recipient_phone || log.recipient?.phone_number) && (
-                          <div className="text-gray-500">
-                            {log.recipient_phone ?? log.recipient?.phone_number}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* Message */}
-                    <td className="px-6 py-4 max-w-xs">
-                      {log.title && (
-                        <div className="text-sm font-medium text-gray-900 truncate">{log.title}</div>
-                      )}
-                      <div className="text-sm text-gray-500 truncate max-w-[280px]">
-                        {log.message.length > 80 ? log.message.slice(0, 80) + '…' : log.message}
-                      </div>
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-6 py-4 whitespace-nowrap">
+          viewMode === 'card' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-6">
+              {logs.map((log) => (
+                <button
+                  key={log.id}
+                  type="button"
+                  onClick={() => setSelectedLog(log)}
+                  className="text-left border border-gray-200 rounded-xl p-4 hover:shadow-md hover:border-gray-300 transition-all"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          log.status === 'sent'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
+                          log.channel === 'sms' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                        }`}
+                      >
+                        {log.channel.toUpperCase()}
+                      </span>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          log.status === 'sent' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                         }`}
                       >
                         {log.status}
                       </span>
-                      {log.metadata && log.channel === 'push' && (
-                        <div className="text-xs text-gray-400 mt-1">
-                          {(log.metadata.success_count as number) ?? 0}/
-                          {(log.metadata.requested_count as number) ??
-                            ((log.metadata.success_count as number) ?? 0) +
-                              ((log.metadata.failure_count as number) ?? 0)}{' '}
-                          delivered
-                        </div>
-                      )}
-                    </td>
+                    </div>
+                    <span className="text-xs text-gray-400">{format(new Date(log.created_at), 'MMM d')}</span>
+                  </div>
 
-                    {/* Sent By */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {log.sent_by?.full_name ?? '—'}
-                    </td>
-
-                    {/* Date */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {format(new Date(log.created_at), 'MMM d, yyyy')}
-                      <div className="text-xs text-gray-400">
-                        {format(new Date(log.created_at), 'h:mm a')}
-                      </div>
-                    </td>
+                  <div className="mt-3 space-y-1">
+                    <p className="text-sm font-medium text-gray-900">
+                      {log.recipient?.full_name ?? (log.audience ? `All ${log.audience}s` : 'Unknown recipient')}
+                    </p>
+                    <p className="text-xs text-gray-500">{log.recipient_phone ?? log.recipient?.phone_number ?? 'No phone'}</p>
+                    {log.title && <p className="text-sm text-gray-700 line-clamp-1">{log.title}</p>}
+                    <p className="text-sm text-gray-500 line-clamp-2">{log.message}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Channel
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Recipient
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Message
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Sent By
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {logs.map((log) => (
+                    <tr
+                      key={log.id}
+                      onClick={() => setSelectedLog(log)}
+                      className="hover:bg-gray-50 cursor-pointer"
+                    >
+                      {/* Channel */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col gap-1">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              log.channel === 'sms'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-purple-100 text-purple-800'
+                            }`}
+                          >
+                            {log.channel.toUpperCase()}
+                          </span>
+                          {log.audience && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">
+                              {log.audience} broadcast
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Recipient */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm">
+                          {log.recipient?.full_name ? (
+                            <div className="font-medium text-gray-900">{log.recipient.full_name}</div>
+                          ) : log.audience ? (
+                            <div className="text-gray-500 italic">All {log.audience}s</div>
+                          ) : null}
+                          {(log.recipient_phone || log.recipient?.phone_number) && (
+                            <div className="text-gray-500">
+                              {log.recipient_phone ?? log.recipient?.phone_number}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Message */}
+                      <td className="px-6 py-4 max-w-xs">
+                        {log.title && (
+                          <div className="text-sm font-medium text-gray-900 truncate">{log.title}</div>
+                        )}
+                        <div className="text-sm text-gray-500 truncate max-w-[280px]">
+                          {log.message.length > 80 ? log.message.slice(0, 80) + '…' : log.message}
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            log.status === 'sent'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}
+                        >
+                          {log.status}
+                        </span>
+                        {log.metadata && log.channel === 'push' && (
+                          <div className="text-xs text-gray-400 mt-1">
+                            {(log.metadata.success_count as number) ?? 0}/
+                            {(log.metadata.requested_count as number) ??
+                              ((log.metadata.success_count as number) ?? 0) +
+                                ((log.metadata.failure_count as number) ?? 0)}{' '}
+                            delivered
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Sent By */}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {log.sent_by?.full_name ?? '—'}
+                      </td>
+
+                      {/* Date */}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {format(new Date(log.created_at), 'MMM d, yyyy')}
+                        <div className="text-xs text-gray-400">
+                          {format(new Date(log.created_at), 'h:mm a')}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
         ) : (
           <div className="text-center py-12">
             <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-3" />
@@ -306,6 +374,102 @@ function MessageLogsContent() {
           </div>
         )}
       </div>
+
+      {selectedLog && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 p-4 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Message log details"
+          onClick={() => setSelectedLog(null)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Message Log Details</h2>
+                <p className="text-xs text-gray-500 mt-1">Log ID: {selectedLog.id}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedLog(null)}
+                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+                aria-label="Close details dialog"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Channel</p>
+                  <p className="mt-2 text-sm font-medium text-gray-900">{selectedLog.channel.toUpperCase()}</p>
+                </div>
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Status</p>
+                  <p className="mt-2 text-sm font-medium text-gray-900">{selectedLog.status}</p>
+                </div>
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Date Sent</p>
+                  <p className="mt-2 text-sm font-medium text-gray-900">
+                    {format(new Date(selectedLog.created_at), 'MMM d, yyyy h:mm:ss a')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold text-gray-900">Recipient</h3>
+                  <div className="rounded-lg border border-gray-200 p-3 space-y-1 text-sm text-gray-700">
+                    <p>{selectedLog.recipient?.full_name ?? (selectedLog.audience ? `All ${selectedLog.audience}s` : 'Unknown')}</p>
+                    <p>{selectedLog.recipient_phone ?? selectedLog.recipient?.phone_number ?? 'No phone number'}</p>
+                    <p className="text-xs text-gray-500">Recipient user ID: {selectedLog.recipient_user_id ?? 'N/A'}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold text-gray-900">Sender</h3>
+                  <div className="rounded-lg border border-gray-200 p-3 space-y-1 text-sm text-gray-700">
+                    <p>{selectedLog.sent_by?.full_name ?? 'Unknown sender'}</p>
+                    <p className="text-xs text-gray-500">Sender user ID: {selectedLog.sent_by_user_id ?? 'N/A'}</p>
+                    <p className="text-xs text-gray-500">Notification type: {selectedLog.notification_type ?? 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-gray-900">Content</h3>
+                <div className="rounded-lg border border-gray-200 p-3 space-y-2 text-sm">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Title</p>
+                  <p className="text-gray-900">{selectedLog.title ?? 'N/A'}</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide pt-2">Message</p>
+                  <p className="text-gray-700 whitespace-pre-wrap">{selectedLog.message}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">External ID</p>
+                  <p className="mt-2 text-sm text-gray-800 break-all">{selectedLog.external_id ?? 'N/A'}</p>
+                </div>
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Audience</p>
+                  <p className="mt-2 text-sm text-gray-800">{selectedLog.audience ?? 'N/A'}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-gray-900">Metadata</h3>
+                <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg overflow-x-auto text-xs max-h-64 overflow-y-auto">
+                  {selectedLog.metadata ? JSON.stringify(selectedLog.metadata, null, 2) : 'No metadata'}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

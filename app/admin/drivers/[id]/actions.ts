@@ -74,15 +74,22 @@ export async function sendDriverPushNotification(
   }
 
   // Send via Firebase FCM
-  const result = await sendNotificationsToUsers(
+  const resultDriver = await sendNotificationsToUsers(
     [driverUserId],
     title,
     body,
     'driver'
   )
 
+  const resultRider = await sendNotificationsToUsers(
+    [driverUserId],
+    title,
+    body,
+    'rider'
+  )
+
   // Record the notification in the database if delivery succeeded (unless caller already did)
-  if (!options?.skipInAppNotificationInsert && result.successCount > 0) {
+  if (!options?.skipInAppNotificationInsert && (resultDriver.successCount > 0 || resultRider.successCount > 0)) {
     type NotificationInsert = Database['public']['Tables']['notifications']['Insert']
     const { error: insertError } = await db
       .from('notifications')
@@ -106,21 +113,21 @@ export async function sendDriverPushNotification(
     recipient_user_id: driverUserId,
     title,
     message: body,
-    status: result.successCount > 0 ? 'sent' : 'failed',
+    status: resultDriver.successCount > 0 || resultRider.successCount > 0 ? 'sent' : 'failed',
     sent_by_user_id: adminUserId,
     notification_type: 'push',
-    metadata: { success_count: result.successCount, failure_count: result.failureCount },
+    metadata: { success_count: resultDriver.successCount + resultRider.successCount, failure_count: resultDriver.failureCount + resultRider.failureCount, invalid_tokens_removed: resultDriver.invalidTokens.length + resultRider.invalidTokens.length   },
   })
 
   logger.info('Admin sent push notification to driver', {
     driverUserId,
-    successCount: result.successCount,
-    failureCount: result.failureCount,
+    successCount: resultDriver.successCount + resultRider.successCount,
+    failureCount: resultDriver.failureCount + resultRider.failureCount,
   })
 
   return {
-    success: result.successCount > 0,
-    successCount: result.successCount,
-    failureCount: result.failureCount,
+    success: resultDriver.successCount > 0 || resultRider.successCount > 0,
+    successCount: resultDriver.successCount + resultRider.successCount,
+    failureCount: resultDriver.failureCount + resultRider.failureCount,
   }
 }

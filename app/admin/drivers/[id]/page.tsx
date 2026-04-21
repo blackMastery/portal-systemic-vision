@@ -362,64 +362,64 @@ export default function DriverDetailPage() {
   const selectedTrip = trips.find((t) => t.id === selectedTripId) ?? null
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="flex min-w-0 items-start gap-3 sm:gap-4">
           <Link
             href="/admin/drivers"
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="shrink-0 rounded-lg p-2 transition-colors hover:bg-gray-100"
           >
             <ArrowLeft className="h-5 w-5 text-gray-600" />
           </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold leading-tight text-gray-900">
               {driver.user?.full_name || 'Driver Details'}
             </h1>
-            <p className="mt-1 text-sm text-gray-600">
+            <p className="mt-1 text-sm text-gray-600 break-all">
               Driver ID: {driver.id}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 xl:justify-end">
           {nextPendingQuery.isLoading ? (
-            <button disabled className="inline-flex items-center px-4 py-2 bg-yellow-100 text-yellow-500 rounded-lg opacity-70 cursor-not-allowed">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-500 mr-2" />
+            <button disabled className="inline-flex items-center rounded-lg bg-yellow-100 px-3 py-1.5 text-xs font-medium text-yellow-600 opacity-70 cursor-not-allowed sm:px-4 sm:py-2 sm:text-sm">
+              <div className="mr-1.5 h-3.5 w-3.5 animate-spin rounded-full border-b-2 border-yellow-500 sm:mr-2 sm:h-4 sm:w-4" />
               Loading...
             </button>
           ) : nextPendingQuery.data ? (
             <button
               onClick={() => router.push(`/admin/drivers/${nextPendingQuery.data}`)}
-              className="inline-flex items-center px-4 py-2 bg-yellow-50 text-yellow-800 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors"
+              className="inline-flex items-center rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-1.5 text-xs font-medium text-yellow-800 transition-colors hover:bg-yellow-100 sm:px-4 sm:py-2 sm:text-sm"
             >
-              <ChevronRight className="h-4 w-4 mr-1" />
+              <ChevronRight className="mr-1 h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Next Pending
             </button>
           ) : null}
-          <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
+          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium sm:px-3 sm:py-1.5 sm:text-sm ${
             verificationBadgeColors[driver.verification_status]
           }`}>
             {driver.verification_status}
           </span>
           <button
             onClick={() => setShowSmsModal(true)}
-            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            className="inline-flex items-center rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700 sm:px-4 sm:py-2 sm:text-sm"
           >
-            <MessageSquare className="h-4 w-4 mr-2" />
+            <MessageSquare className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
             Send SMS
           </button>
           <button
             onClick={() => setShowPushModal(true)}
-            className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            className="inline-flex items-center rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-purple-700 sm:px-4 sm:py-2 sm:text-sm"
           >
-            <Bell className="h-4 w-4 mr-2" />
+            <Bell className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
             Send Push
           </button>
           <button
             onClick={() => setShowVerificationModal(true)}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700 sm:px-4 sm:py-2 sm:text-sm"
           >
-            <Edit className="h-4 w-4 mr-2" />
+            <Edit className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
             Update Verification
           </button>
         </div>

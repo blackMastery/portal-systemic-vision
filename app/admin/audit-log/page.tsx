@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Fragment } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -8,9 +8,10 @@ import {
   ChevronLeft,
   ChevronRight,
   User,
-  ChevronDown,
-  ChevronUp,
   Filter,
+  List,
+  LayoutGrid,
+  X,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Database } from '@/types/database'
@@ -97,7 +98,8 @@ export default function AuditLogPage() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [page, setPage] = useState(0)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('table')
+  const [selectedEntry, setSelectedEntry] = useState<AuditLogRow | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['audit-logs', tableName, action, dateFrom, dateTo, page],
@@ -197,6 +199,28 @@ export default function AuditLogPage() {
         </div>
       </div>
 
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500">
+          Showing {rows.length} entry{rows.length === 1 ? '' : 'ies'} on this page
+        </p>
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('table')}
+            className={`p-1.5 rounded-md transition-colors ${viewMode === 'table' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+            aria-label="Table view"
+          >
+            <List className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setViewMode('card')}
+            className={`p-1.5 rounded-md transition-colors ${viewMode === 'card' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+            aria-label="Card view"
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center">
@@ -204,48 +228,82 @@ export default function AuditLogPage() {
           </div>
         ) : rows.length > 0 ? (
           <>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Time
-                    </th>
-                    <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Table
-                    </th>
-                    <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Record ID
-                    </th>
-                    <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Action
-                    </th>
-                    <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actor
-                    </th>
-                    <th className="px-4 md:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Details
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {rows.map((row) => (
-                    <Fragment key={row.id}>
-                      <tr className="hover:bg-gray-50">
+            {viewMode === 'card' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-6">
+                {rows.map((row) => (
+                  <button
+                    key={row.id}
+                    type="button"
+                    onClick={() => setSelectedEntry(row)}
+                    className="text-left border border-gray-200 rounded-xl p-4 hover:shadow-md hover:border-gray-300 transition-all"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${actionColors[row.action]}`}
+                      >
+                        {row.action}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {format(new Date(row.changed_at), 'MMM d')}
+                      </span>
+                    </div>
+                    <div className="mt-3 space-y-1">
+                      <p className="text-sm font-semibold text-gray-900">{row.table_name}</p>
+                      <p className="text-xs text-gray-500 font-mono truncate">{row.record_id}</p>
+                      <p className="text-xs text-gray-600">
+                        {row.actor_id ? actors.get(row.actor_id) ?? row.actor_id : 'System'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {format(new Date(row.changed_at), 'MMM d, yyyy h:mm:ss a')}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Time
+                      </th>
+                      <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Table
+                      </th>
+                      <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Record ID
+                      </th>
+                      <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Action
+                      </th>
+                      <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actor
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {rows.map((row) => (
+                      <tr
+                        key={row.id}
+                        onClick={() => setSelectedEntry(row)}
+                        className="hover:bg-gray-50 cursor-pointer"
+                      >
                         <td className="px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-500">
                           {format(new Date(row.changed_at), 'MMM d, yyyy HH:mm:ss')}
                         </td>
                         <td className="px-4 md:px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                           {row.table_name}
                         </td>
-                        <td className="px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-600 font-mono truncate max-w-[8rem] md:max-w-[12rem]" title={row.record_id}>
+                        <td
+                          className="px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-600 font-mono truncate max-w-[8rem] md:max-w-[12rem]"
+                          title={row.record_id}
+                        >
                           {row.record_id}
                         </td>
                         <td className="px-4 md:px-6 py-3 whitespace-nowrap">
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              actionColors[row.action]
-                            }`}
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${actionColors[row.action]}`}
                           >
                             {row.action}
                           </span>
@@ -260,60 +318,12 @@ export default function AuditLogPage() {
                             <span className="text-gray-400">System</span>
                           )}
                         </td>
-                        <td className="px-4 md:px-6 py-3 text-right">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setExpandedId(expandedId === row.id ? null : row.id)
-                            }
-                            className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800"
-                          >
-                            {expandedId === row.id ? (
-                              <>
-                                <ChevronUp className="h-4 w-4 mr-1" />
-                                Hide
-                              </>
-                            ) : (
-                              <>
-                                <ChevronDown className="h-4 w-4 mr-1" />
-                                Show
-                              </>
-                            )}
-                          </button>
-                        </td>
                       </tr>
-                      {expandedId === row.id && (
-                        <tr>
-                          <td colSpan={6} className="px-4 md:px-6 py-3 bg-gray-50">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                              {row.old_data != null && (
-                                <div>
-                                  <div className="font-medium text-gray-700 mb-1">Previous (old_data)</div>
-                                  <pre className="p-3 bg-white border border-gray-200 rounded-lg overflow-x-auto text-xs max-h-64 overflow-y-auto">
-                                    {JSON.stringify(row.old_data, null, 2)}
-                                  </pre>
-                                </div>
-                              )}
-                              {row.new_data != null && (
-                                <div>
-                                  <div className="font-medium text-gray-700 mb-1">Current (new_data)</div>
-                                  <pre className="p-3 bg-white border border-gray-200 rounded-lg overflow-x-auto text-xs max-h-64 overflow-y-auto">
-                                    {JSON.stringify(row.new_data, null, 2)}
-                                  </pre>
-                                </div>
-                              )}
-                              {row.old_data == null && row.new_data == null && (
-                                <div className="text-gray-500">No payload</div>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
             {totalPages > 1 && (
               <div className="px-4 md:px-6 py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-2">
@@ -353,6 +363,86 @@ export default function AuditLogPage() {
           </div>
         )}
       </div>
+
+      {selectedEntry && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 p-4 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Audit entry details"
+          onClick={() => setSelectedEntry(null)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl w-full max-w-5xl max-h-[85vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Audit Entry Details</h2>
+                <p className="text-xs text-gray-500 mt-1">Entry ID: {selectedEntry.id}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedEntry(null)}
+                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+                aria-label="Close details dialog"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Action</p>
+                  <p className="mt-2 text-sm font-medium text-gray-900">{selectedEntry.action}</p>
+                </div>
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Table</p>
+                  <p className="mt-2 text-sm font-medium text-gray-900">{selectedEntry.table_name}</p>
+                </div>
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Record ID</p>
+                  <p className="mt-2 text-sm text-gray-900 font-mono break-all">{selectedEntry.record_id}</p>
+                </div>
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Changed At</p>
+                  <p className="mt-2 text-sm font-medium text-gray-900">
+                    {format(new Date(selectedEntry.changed_at), 'MMM d, yyyy h:mm:ss a')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-gray-200 p-3">
+                <p className="text-xs uppercase tracking-wide text-gray-500">Actor</p>
+                <p className="mt-2 text-sm text-gray-900">
+                  {selectedEntry.actor_id ? actors.get(selectedEntry.actor_id) ?? selectedEntry.actor_id : 'System'}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Actor ID: {selectedEntry.actor_id ?? 'N/A'}</p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 mb-2">Previous (old_data)</p>
+                  <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg overflow-x-auto text-xs max-h-80 overflow-y-auto">
+                    {selectedEntry.old_data != null
+                      ? JSON.stringify(selectedEntry.old_data, null, 2)
+                      : 'No previous payload'}
+                  </pre>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 mb-2">Current (new_data)</p>
+                  <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg overflow-x-auto text-xs max-h-80 overflow-y-auto">
+                    {selectedEntry.new_data != null
+                      ? JSON.stringify(selectedEntry.new_data, null, 2)
+                      : 'No current payload'}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
