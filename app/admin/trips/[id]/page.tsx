@@ -125,8 +125,8 @@ const tripTypeColors: Record<TripType, string> = {
 function StarRating({ value, label }: { value: number | null | undefined; label: string }) {
   if (!value) return null
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm text-gray-500 w-40">{label}</span>
+    <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2">
+      <span className="text-sm text-gray-500 sm:w-40">{label}</span>
       <div className="flex items-center gap-0.5">
         {[1, 2, 3, 4, 5].map((n) => (
           <Star
@@ -235,85 +235,85 @@ export default function TripDetailPage() {
   ].filter((e) => !!e.timestamp)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/admin/trips" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+          <Link href="/admin/trips" className="shrink-0 p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <ArrowLeft className="h-5 w-5 text-gray-600" />
           </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Trip Details</h1>
-            <p className="mt-1 text-sm text-gray-500 font-mono">{trip.id}</p>
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold leading-tight text-gray-900">Trip Details</h1>
+            <p className="mt-1 text-sm text-gray-500 font-mono break-all">{trip.id}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           {trip.is_night_trip && (
-            <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
-              <Moon className="h-4 w-4 mr-1.5" />
+            <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-medium text-indigo-800 sm:px-3 sm:py-1.5 sm:text-sm">
+              <Moon className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Night Trip
             </span>
           )}
-          <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${tripTypeColors[trip.trip_type]}`}>
+          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize sm:px-3 sm:py-1.5 sm:text-sm ${tripTypeColors[trip.trip_type]}`}>
             {trip.trip_type.replace('_', ' ')}
           </span>
-          <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${statusColors[trip.status]}`}>
+          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize sm:px-3 sm:py-1.5 sm:text-sm ${statusColors[trip.status]}`}>
             {trip.status.replace('_', ' ')}
           </span>
         </div>
       </div>
 
       {/* Overview Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <div className="grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 lg:grid-cols-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
           <div className="flex items-center gap-3 mb-1">
             <DollarSign className="h-5 w-5 text-green-600" />
             <span className="text-sm text-gray-500">Fare</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">
+          <p className="text-xl sm:text-2xl font-bold text-gray-900 break-words">
             {fare ? `${trip.currency ?? 'GYD'} ${Number(fare).toFixed(2)}` : 'N/A'}
           </p>
           {!trip.actual_fare && trip.estimated_fare && (
             <p className="text-xs text-gray-400 mt-1">Estimated</p>
           )}
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
           <div className="flex items-center gap-3 mb-1">
             <Route className="h-5 w-5 text-blue-600" />
             <span className="text-sm text-gray-500">Distance</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">
+          <p className="text-xl sm:text-2xl font-bold text-gray-900">
             {distance ? `${Number(distance).toFixed(2)} km` : 'N/A'}
           </p>
           {!trip.actual_distance_km && trip.estimated_distance_km && (
             <p className="text-xs text-gray-400 mt-1">Estimated</p>
           )}
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
           <div className="flex items-center gap-3 mb-1">
             <Clock className="h-5 w-5 text-purple-600" />
             <span className="text-sm text-gray-500">Duration</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">
+          <p className="text-xl sm:text-2xl font-bold text-gray-900">
             {duration ? `${duration} min` : 'N/A'}
           </p>
           {!trip.actual_duration_minutes && trip.estimated_duration_minutes && (
             <p className="text-xs text-gray-400 mt-1">Estimated</p>
           )}
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
           <div className="flex items-center gap-3 mb-1">
             <CreditCard className="h-5 w-5 text-orange-600" />
             <span className="text-sm text-gray-500">Payment</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900 capitalize">
+          <p className="text-xl sm:text-2xl font-bold text-gray-900 capitalize">
             {trip.payment_method ?? 'Cash'}
           </p>
         </div>
       </div>
 
       {/* Route */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <MapPin className="h-5 w-5 text-gray-500" />
           Route
@@ -329,7 +329,7 @@ export default function TripDetailPage() {
       {/* Participants */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Rider */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <User className="h-5 w-5 text-gray-500" />
             Rider
@@ -362,7 +362,7 @@ export default function TripDetailPage() {
         </div>
 
         {/* Driver */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Car className="h-5 w-5 text-gray-500" />
             Driver
@@ -397,12 +397,12 @@ export default function TripDetailPage() {
 
       {/* Vehicle */}
       {trip.vehicle && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Car className="h-5 w-5 text-gray-500" />
             Vehicle
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4 md:gap-6">
             <div>
               <p className="text-xs text-gray-500 mb-1">Make & Model</p>
               <p className="text-sm font-medium text-gray-900">
@@ -432,7 +432,7 @@ export default function TripDetailPage() {
       {/* Timeline & Trip Request side by side */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Timeline */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Clock className="h-5 w-5 text-gray-500" />
             Timeline
@@ -453,7 +453,7 @@ export default function TripDetailPage() {
         </div>
 
         {/* Trip Request */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <FileText className="h-5 w-5 text-gray-500" />
             Original Trip Request
@@ -464,7 +464,7 @@ export default function TripDetailPage() {
                 <p className="text-xs text-gray-500 mb-1">Request ID</p>
                 <p className="text-xs font-mono text-gray-700">{trip.trip_request.id}</p>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2">
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Status</p>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[trip.trip_request.status ?? 'requested']}`}>
@@ -529,7 +529,7 @@ export default function TripDetailPage() {
 
       {/* Ratings & Feedback */}
       {(trip.rider_rating || trip.driver_rating) && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Star className="h-5 w-5 text-gray-500" />
             Ratings & Feedback
@@ -572,7 +572,7 @@ export default function TripDetailPage() {
 
       {/* Cancellation Info */}
       {trip.status === 'cancelled' && (
-        <div className="bg-red-50 rounded-xl border border-red-200 p-6">
+        <div className="bg-red-50 rounded-xl border border-red-200 p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-red-900 mb-4 flex items-center gap-2">
             <Ban className="h-5 w-5 text-red-500" />
             Cancellation

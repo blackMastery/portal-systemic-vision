@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { Search, Clock, Users, Star, Route } from 'lucide-react'
+import { Search, Clock, Users, Star, Route, List, LayoutGrid } from 'lucide-react'
 import Link from 'next/link'
 import type { RiderWithDetails } from '@/types/database'
 import { format } from 'date-fns'
@@ -56,6 +56,7 @@ export default function RidersPage() {
   const [subscriptionStatus, setSubscriptionStatus] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [accountStatus, setAccountStatus] = useState('all')
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('table')
 
   const { data: riders, isLoading } = useQuery({
     queryKey: ['riders', subscriptionStatus, searchQuery, accountStatus],
@@ -152,13 +153,94 @@ export default function RidersPage() {
         </div>
       </div>
 
-      {/* Riders Table */}
+      {/* View Toggle */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500">{riders?.length ?? 0} riders</p>
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('table')}
+            className={`p-1.5 rounded-md transition-colors ${viewMode === 'table' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+            aria-label="Table view"
+          >
+            <List className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setViewMode('card')}
+            className={`p-1.5 rounded-md transition-colors ${viewMode === 'card' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+            aria-label="Card view"
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           </div>
         ) : riders && riders.length > 0 ? (
+          viewMode === 'card' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
+              {riders.map((rider) => {
+                const isTrialExpiringSoon = rider.subscription_status === 'trial' &&
+                  rider.trial_end_date &&
+                  new Date(rider.trial_end_date) <= new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) &&
+                  new Date(rider.trial_end_date) > new Date()
+
+                return (
+                  <div key={rider.id} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow flex flex-col gap-3">
+                    {/* Avatar + name */}
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-green-600 font-medium">
+                          {rider.user?.full_name?.charAt(0) || '?'}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{rider.user?.full_name}</p>
+                        <p className="text-xs text-gray-500 truncate">{rider.user?.phone_number}</p>
+                        {rider.user?.email && <p className="text-xs text-gray-400 truncate">{rider.user.email}</p>}
+                      </div>
+                    </div>
+
+                    {/* Badges */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${rider.user?.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                        {rider.user?.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${subscriptionBadgeColors[rider.subscription_status]}`}>
+                        {rider.subscription_status}
+                      </span>
+                      {isTrialExpiringSoon && rider.trial_end_date && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          <Clock className="h-3 w-3 mr-1" />
+                          Expires {format(new Date(rider.trial_end_date), 'MMM d')}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Stats + action */}
+                    <div className="flex items-center justify-between pt-1 border-t border-gray-100">
+                      <div className="flex items-center gap-3 text-xs text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Route className="h-3.5 w-3.5" />
+                          {rider.total_trips} trips
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                          {rider.rating_average.toFixed(1)}
+                        </span>
+                      </div>
+                      <Link href={`/admin/riders/${rider.id}`} className="text-xs text-blue-600 hover:text-blue-900 font-medium">
+                        View →
+                      </Link>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -285,6 +367,7 @@ export default function RidersPage() {
               </tbody>
             </table>
           </div>
+          )
         ) : (
           <div className="text-center py-12">
             <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />

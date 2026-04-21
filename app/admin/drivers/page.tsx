@@ -15,6 +15,8 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
+  List,
+  LayoutGrid,
 } from 'lucide-react'
 import Link from 'next/link'
 import type { DriverWithDetails } from '@/types/database'
@@ -234,6 +236,7 @@ function DriversContent() {
 
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [advancedFiltersExpanded, setAdvancedFiltersExpanded] = useState(true)
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('table')
 
   useEffect(() => {
     if (!filtersOpen) return
@@ -582,6 +585,37 @@ function DriversContent() {
         </div>
       )}
 
+      {/* View Toggle */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500">{totalCount} drivers</p>
+        <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-1">
+          <button
+            type="button"
+            onClick={() => setViewMode('table')}
+            className={`rounded-md p-1.5 transition-colors ${
+              viewMode === 'table'
+                ? 'bg-white text-gray-900 shadow'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+            aria-label="Table view"
+          >
+            <List className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('card')}
+            className={`rounded-md p-1.5 transition-colors ${
+              viewMode === 'card'
+                ? 'bg-white text-gray-900 shadow'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+            aria-label="Card view"
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
       {/* Drivers Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {isLoading ? (
@@ -590,154 +624,224 @@ function DriversContent() {
           </div>
         ) : drivers && drivers.length > 0 ? (
           <>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Driver
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    License #
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    National ID / License
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Vehicle
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Verification
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Subscription
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Stats
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedDrivers.map((driver) => (
-                  <tr key={driver.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 flex-shrink-0">
-                          <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                            <span className="text-blue-600 font-medium">
-                              {driver.user?.full_name?.charAt(0) || '?'}
+            {viewMode === 'table' ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Driver
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        License #
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        National ID / License
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Vehicle
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Verification
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Subscription
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Stats
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {paginatedDrivers.map((driver) => (
+                      <tr key={driver.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 flex-shrink-0">
+                              <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span className="text-blue-600 font-medium">
+                                  {driver.user?.full_name?.charAt(0) || '?'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">
+                                {driver.user?.full_name ?? '—'}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {driver.user?.email ?? driver.user?.phone_number ?? '—'}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm text-gray-900 font-mono tabular-nums">
+                            {driver.drivers_license_number?.trim()
+                              ? driver.drivers_license_number
+                              : '—'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-wrap items-start gap-4">
+                            <div className="min-w-0">
+                              <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                                National ID
+                              </p>
+                              <DocumentThumb url={driver.national_id_url} label="National ID" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                                License
+                              </p>
+                              <DocumentThumb
+                                url={driver.drivers_license_url}
+                                label="Driver license"
+                              />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {driver.vehicles && driver.vehicles[0] ? (
+                            <div className="text-sm">
+                              <div className="text-gray-900">
+                                {driver.vehicles[0].make} {driver.vehicles[0].model}
+                              </div>
+                              <div className="text-gray-500">
+                                {driver.vehicles[0].license_plate}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-gray-400">No vehicle</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            verificationBadgeColors[driver.verification_status]
+                          }`}>
+                            {driver.verification_status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="space-y-1">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              driver.subscription_status === 'active'
+                                ? 'bg-green-100 text-green-800'
+                                : driver.subscription_status === 'trial'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-red-100 text-red-800'
+                            }`}>
+                              {driver.subscription_status}
                             </span>
+                            <p className="text-xs text-gray-500">
+                              Ends:{' '}
+                              {driver.subscription_end_date
+                                ? new Date(driver.subscription_end_date).toLocaleDateString()
+                                : 'N/A'}
+                            </p>
                           </div>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {driver.user?.full_name ?? '—'}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {driver.user?.email ?? driver.user?.phone_number ?? '—'}
-                          </div>
-                        </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <div>{driver.total_trips} trips</div>
+                          <div>⭐ {driver.rating_average.toFixed(1)}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center ${
+                            driver.is_online ? 'text-green-600' : 'text-gray-400'
+                          }`}>
+                            <span className={`mr-2 h-2 w-2 rounded-full ${
+                              driver.is_online ? 'bg-green-500' : 'bg-gray-400'
+                            }`}></span>
+                            {driver.is_online ? 'Online' : 'Offline'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <Link
+                            href={`/admin/drivers/${driver.id}`}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            View Details
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 xl:grid-cols-3">
+                {paginatedDrivers.map((driver) => (
+                  <div key={driver.id} className="rounded-xl border border-gray-200 p-4">
+                    <div className="mb-3 flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-gray-900">
+                          {driver.user?.full_name ?? '—'}
+                        </p>
+                        <p className="truncate text-xs text-gray-500">
+                          {driver.user?.email ?? driver.user?.phone_number ?? '—'}
+                        </p>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900 font-mono tabular-nums">
-                        {driver.drivers_license_number?.trim()
-                          ? driver.drivers_license_number
-                          : '—'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap items-start gap-4">
-                        <div className="min-w-0">
-                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500 mb-1">
-                            National ID
-                          </p>
-                          <DocumentThumb url={driver.national_id_url} label="National ID" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500 mb-1">
-                            License
-                          </p>
-                          <DocumentThumb
-                            url={driver.drivers_license_url}
-                            label="Driver license"
-                          />
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {driver.vehicles && driver.vehicles[0] ? (
-                        <div className="text-sm">
-                          <div className="text-gray-900">
-                            {driver.vehicles[0].make} {driver.vehicles[0].model}
-                          </div>
-                          <div className="text-gray-500">
-                            {driver.vehicles[0].license_plate}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-gray-400">No vehicle</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                         verificationBadgeColors[driver.verification_status]
                       }`}>
                         {driver.verification_status}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="space-y-1">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          driver.subscription_status === 'active' 
-                            ? 'bg-green-100 text-green-800'
-                            : driver.subscription_status === 'trial'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-red-100 text-red-800'
+                    </div>
+
+                    <div className="space-y-2 text-sm">
+                      <p className="text-gray-700">
+                        <span className="text-gray-500">License:</span>{' '}
+                        <span className="font-mono">{driver.drivers_license_number?.trim() || '—'}</span>
+                      </p>
+                      <p className="text-gray-700">
+                        <span className="text-gray-500">Vehicle:</span>{' '}
+                        {driver.vehicles && driver.vehicles[0]
+                          ? `${driver.vehicles[0].make} ${driver.vehicles[0].model} (${driver.vehicles[0].license_plate})`
+                          : 'No vehicle'}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-gray-600">
+                        <span className={`inline-flex items-center ${
+                          driver.is_online ? 'text-green-600' : 'text-gray-400'
                         }`}>
-                          {driver.subscription_status}
+                          <span className={`mr-1.5 h-2 w-2 rounded-full ${
+                            driver.is_online ? 'bg-green-500' : 'bg-gray-400'
+                          }`}></span>
+                          {driver.is_online ? 'Online' : 'Offline'}
                         </span>
-                        <p className="text-xs text-gray-500">
-                          Ends:{' '}
-                          {driver.subscription_end_date
-                            ? new Date(driver.subscription_end_date).toLocaleDateString()
-                            : 'N/A'}
-                        </p>
+                        <span>•</span>
+                        <span>{driver.total_trips} trips</span>
+                        <span>•</span>
+                        <span>⭐ {driver.rating_average.toFixed(1)}</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div>{driver.total_trips} trips</div>
-                      <div>⭐ {driver.rating_average.toFixed(1)}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center ${
-                        driver.is_online ? 'text-green-600' : 'text-gray-400'
-                      }`}>
-                        <span className={`h-2 w-2 rounded-full mr-2 ${
-                          driver.is_online ? 'bg-green-500' : 'bg-gray-400'
-                        }`}></span>
-                        {driver.is_online ? 'Online' : 'Offline'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex flex-wrap items-start gap-3 pt-1">
+                        <div>
+                          <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-gray-500">ID</p>
+                          <DocumentThumb url={driver.national_id_url} label="National ID" />
+                        </div>
+                        <div>
+                          <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-gray-500">License</p>
+                          <DocumentThumb url={driver.drivers_license_url} label="Driver license" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 border-t border-gray-100 pt-3">
                       <Link
                         href={`/admin/drivers/${driver.id}`}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="text-sm font-medium text-blue-600 hover:text-blue-900"
                       >
                         View Details
                       </Link>
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            )}
             <div className="border-t border-gray-200 px-4 py-3 sm:px-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-gray-50/80">
               <p className="text-sm text-gray-600">
                 Showing{' '}
