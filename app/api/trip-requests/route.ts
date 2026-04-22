@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import {
   handleApiError,
   AuthenticationError,
+  AuthorizationError,
   NotFoundError,
 } from '@/lib/errors'
 import { validate, tripRequestSchema } from '@/lib/validation'
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
     // 4. Verify user exists in database and get user profile
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, role')
+      .select('id, role, is_active')
       .eq('auth_id', authUser.id)
       .single()
 
@@ -85,6 +86,14 @@ export async function POST(request: NextRequest) {
       logger.warn('User not found', { authId: authUser.id, error: userError })
       const { response, statusCode } = handleApiError(
         new AuthenticationError('User not found.')
+      )
+      return NextResponse.json(response, { status: statusCode })
+    }
+
+    if (!user.is_active) {
+      logger.warn('Inactive user attempted to create trip request', { userId: user.id })
+      const { response, statusCode } = handleApiError(
+        new AuthorizationError('User account is inactive.')
       )
       return NextResponse.json(response, { status: statusCode })
     }
@@ -103,6 +112,17 @@ export async function POST(request: NextRequest) {
       )
       return NextResponse.json(response, { status: statusCode })
     }
+
+    // if (riderProfile.subscription_status === 'expired') {
+    //   logger.warn('Expired rider subscription attempted trip request', {
+    //     userId: user.id,
+    //     riderId: riderProfile.id,
+    //   })
+    //   const { response, statusCode } = handleApiError(
+    //     new AuthorizationError('Subscription is expired. Please renew to request trips.')
+    //   )
+    //   return NextResponse.json(response, { status: statusCode })
+    // }
 
     // 7. Parse and validate request body
     let body: unknown

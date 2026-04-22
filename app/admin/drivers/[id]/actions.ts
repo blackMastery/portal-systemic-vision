@@ -26,6 +26,46 @@ export interface SendDriverPushResult {
 export interface SendDriverPushOptions {
   /** When true, caller is responsible for the in-app `notifications` row (e.g. verification flow). */
   skipInAppNotificationInsert?: boolean
+  /**
+   * Optional JSON object string for FCM `data` (key/value for the client app).
+   * Must be a JSON object (not an array). Nested values are JSON-stringified per FCM string rules.
+   */
+  dataJson?: string
+}
+
+function parseFcmDataFromJson(
+  dataJson: string | undefined
+): { ok: true; data: Record<string, string> | undefined } | { ok: false; error: string } {
+  if (dataJson == null || dataJson.trim() === '') {
+    return { ok: true, data: undefined }
+  }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(dataJson)
+  } catch {
+    return { ok: false, error: 'Data must be valid JSON' }
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return { ok: false, error: 'Data must be a JSON object (not an array or primitive)' }
+  }
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+    if (k.length > 256) {
+      return { ok: false, error: 'Data contains a key that is too long' }
+    }
+    if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
+      out[k] = String(v)
+    } else if (v === null) {
+      out[k] = ''
+    } else {
+      out[k] = JSON.stringify(v)
+    }
+  }
+  const serialized = JSON.stringify(out)
+  if (serialized.length > 3500) {
+    return { ok: false, error: 'Data payload is too large for FCM (try fewer or smaller keys)' }
+  }
+  return { ok: true, data: Object.keys(out).length > 0 ? out : undefined }
 }
 
 export async function sendDriverPushNotification(
@@ -34,7 +74,6 @@ export async function sendDriverPushNotification(
   body: string,
   options?: SendDriverPushOptions
 ): Promise<SendDriverPushResult> {
-  console.log("🚀 ~ sendDriverPushNotification ~ driverUserId:", driverUserId)
   // Use auth-helpers client solely for session verification
   const authClient = createServerActionClient({ cookies })
   const {
@@ -73,19 +112,27 @@ export async function sendDriverPushNotification(
     return { success: false, successCount: 0, failureCount: 0, error: 'Target user is not a driver' }
   }
 
+  const parsedData = parseFcmDataFromJson(options?.dataJson)
+  if (!parsedData.ok) {
+    return { success: false, successCount: 0, failureCount: 0, error: parsedData.error }
+  }
+  const fcmData = parsedData.data
+
   // Send via Firebase FCM
   const resultDriver = await sendNotificationsToUsers(
     [driverUserId],
     title,
     body,
-    'driver'
+    'driver',
+    fcmData
   )
 
   const resultRider = await sendNotificationsToUsers(
     [driverUserId],
     title,
     body,
-    'rider'
+    'rider',
+    fcmData
   )
 
   // Record the notification in the database if delivery succeeded (unless caller already did)
@@ -116,7 +163,12 @@ export async function sendDriverPushNotification(
     status: resultDriver.successCount > 0 || resultRider.successCount > 0 ? 'sent' : 'failed',
     sent_by_user_id: adminUserId,
     notification_type: 'push',
-    metadata: { success_count: resultDriver.successCount + resultRider.successCount, failure_count: resultDriver.failureCount + resultRider.failureCount, invalid_tokens_removed: resultDriver.invalidTokens.length + resultRider.invalidTokens.length   },
+    metadata: {
+      success_count: resultDriver.successCount + resultRider.successCount,
+      failure_count: resultDriver.failureCount + resultRider.failureCount,
+      invalid_tokens_removed: resultDriver.invalidTokens.length + resultRider.invalidTokens.length,
+      ...(fcmData ? { fcm_data_keys: Object.keys(fcmData) } : {}),
+    },
   })
 
   logger.info('Admin sent push notification to driver', {
