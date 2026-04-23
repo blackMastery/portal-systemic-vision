@@ -1,7 +1,7 @@
 'use client'
 
 import { GoogleMap, useLoadScript, Marker, Polyline } from '@react-google-maps/api'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { MapPin } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -58,6 +58,19 @@ const statusColors: Record<string, string> = {
   cancelled: 'bg-red-100 text-red-800',
 }
 
+/** ~120 m at this latitude: first GPS sample “in pickup area” (deg², planar approx). */
+const PICKUP_PROXIMITY_DEG_SQ = 0.0011 * 0.0011
+
+function latLngDistSq(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const dLat = a.lat - b.lat
+  const dLng = a.lng - b.lng
+  return dLat * dLat + dLng * dLng
+}
+
+function formatCoord(lat: number, lng: number) {
+  return `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+}
+
 export function TripRouteMap({ trip, routePoints, isLoadingRoute, showTripInfo = false }: TripRouteMapProps) {
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY || '',
@@ -81,6 +94,36 @@ export function TripRouteMap({ trip, routePoints, isLoadingRoute, showTripInfo =
     [routePoints]
   )
 
+  const pickupToEndPath = useMemo(() => {
+    if (polylinePath.length < 1) return null
+    const pickup = { lat: Number(trip.pickup_latitude), lng: Number(trip.pickup_longitude) }
+
+    let startIdx: number | null = null
+    for (let i = 0; i < polylinePath.length; i++) {
+      if (latLngDistSq(pickup, polylinePath[i]) < PICKUP_PROXIMITY_DEG_SQ) {
+        startIdx = i
+        break
+      }
+    }
+    if (startIdx === null) {
+      startIdx = 0
+      let best = latLngDistSq(pickup, polylinePath[0])
+      for (let i = 1; i < polylinePath.length; i++) {
+        const d = latLngDistSq(pickup, polylinePath[i])
+        if (d < best) {
+          best = d
+          startIdx = i
+        }
+      }
+    }
+
+    const tail = polylinePath.slice(startIdx)
+    if (latLngDistSq(pickup, tail[0]) < 1e-10) {
+      return tail
+    }
+    return [pickup, ...tail]
+  }, [polylinePath, trip.pickup_latitude, trip.pickup_longitude])
+
   const pickupIcon = useMemo(() => {
     if (typeof window === 'undefined' || typeof (window as any).google === 'undefined') return undefined
     return {
@@ -96,6 +139,65 @@ export function TripRouteMap({ trip, routePoints, isLoadingRoute, showTripInfo =
       scaledSize: new (window as any).google.maps.Size(40, 40),
     }
   }, [isLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Red teardrop pin at last GPS point (vs red-dot for address destination). */
+  const routeEndIcon = useMemo(() => {
+    if (typeof window === 'undefined' || typeof (window as any).google === 'undefined') return undefined
+    return {
+      url: 'http://maps.google.com/mapfiles/ms/icons/red.png',
+      scaledSize: new (window as any).google.maps.Size(40, 40),
+    }
+  }, [isLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [gpsAddresses, setGpsAddresses] = useState<{
+    pickup: string | null
+    routeEnd: string | null
+    destination: string | null
+  }>({ pickup: null, routeEnd: null, destination: null })
+
+  useEffect(() => {
+    if (!isLoaded || typeof window === 'undefined') return
+    const g = (window as any).google?.maps
+    if (!g?.Geocoder) return
+
+    setGpsAddresses({ pickup: null, routeEnd: null, destination: null })
+
+    const geocoder = new g.Geocoder()
+    let cancelled = false
+
+    const resolve = (lat: number, lng: number, key: 'pickup' | 'routeEnd' | 'destination') => {
+      geocoder.geocode({ location: { lat, lng } }, (results: { formatted_address?: string }[] | null, status: string) => {
+        if (cancelled) return
+        if (status === 'OK' && results?.[0]?.formatted_address) {
+          setGpsAddresses((prev) => ({ ...prev, [key]: results[0]!.formatted_address! }))
+        } else {
+          setGpsAddresses((prev) => ({ ...prev, [key]: formatCoord(lat, lng) }))
+        }
+      })
+    }
+
+    resolve(Number(trip.pickup_latitude), Number(trip.pickup_longitude), 'pickup')
+
+    if (polylinePath.length > 0) {
+      const last = polylinePath[polylinePath.length - 1]
+      resolve(last.lat, last.lng, 'routeEnd')
+    }
+
+    if (trip.destination_latitude != null && trip.destination_longitude != null) {
+      resolve(Number(trip.destination_latitude), Number(trip.destination_longitude), 'destination')
+    }
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    isLoaded,
+    trip.pickup_latitude,
+    trip.pickup_longitude,
+    trip.destination_latitude,
+    trip.destination_longitude,
+    polylinePath,
+  ])
 
   return (
     <div>
@@ -167,10 +269,29 @@ export function TripRouteMap({ trip, routePoints, isLoadingRoute, showTripInfo =
               />
             )}
 
+            {pickupToEndPath && (
+              <Polyline
+                path={pickupToEndPath}
+                options={{
+                  strokeColor: '#22c55e',
+                  strokeOpacity: 0.9,
+                  strokeWeight: 3,
+                }}
+              />
+            )}
+
             <Marker
               position={{ lat: Number(trip.pickup_latitude), lng: Number(trip.pickup_longitude) }}
               icon={pickupIcon}
             />
+
+            {polylinePath.length > 0 && (
+              <Marker
+                position={polylinePath[polylinePath.length - 1]}
+                icon={routeEndIcon}
+                title="End of route (last GPS point)"
+              />
+            )}
 
             {trip.destination_latitude != null && trip.destination_longitude != null && (
               <Marker
@@ -190,6 +311,33 @@ export function TripRouteMap({ trip, routePoints, isLoadingRoute, showTripInfo =
           </div>
         )}
       </div>
+
+      {isLoaded && !loadError && (
+        <div className="mt-3 space-y-2.5 text-sm">
+          <div>
+            <p className="font-medium text-green-800">Green marker (pickup)</p>
+            <p className="text-gray-600 break-words mt-0.5">
+              {gpsAddresses.pickup ?? 'Resolving address…'}
+            </p>
+          </div>
+          {polylinePath.length > 0 && (
+            <div>
+              <p className="font-medium text-red-800">Red marker (end of route)</p>
+              <p className="text-gray-600 break-words mt-0.5">
+                {gpsAddresses.routeEnd ?? 'Resolving address…'}
+              </p>
+            </div>
+          )}
+          {trip.destination_latitude != null && trip.destination_longitude != null && (
+            <div>
+              <p className="font-medium text-red-800">Red marker (destination)</p>
+              <p className="text-gray-600 break-words mt-0.5">
+                {gpsAddresses.destination ?? 'Resolving address…'}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {isLoaded && !isLoadingRoute && routePoints.length === 0 && (
         <p className="text-xs text-gray-400 text-center mt-2">
