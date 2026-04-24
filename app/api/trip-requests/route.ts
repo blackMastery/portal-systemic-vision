@@ -8,6 +8,54 @@ import {
 } from '@/lib/errors'
 import { validate, tripRequestSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
+import type { Database, Json } from '@/types/database'
+
+const TRIP_REQUESTS_CONFIG_KEY = 'trip_requests' as const
+
+function createSupabaseServiceClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Missing Supabase environment variables')
+  }
+
+  return createClient<Database>(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+}
+
+/**
+ * If row is missing or malformed, returns true (fail-open) and logs a warning.
+ */
+async function isTripRequestCreationEnabled(): Promise<boolean> {
+  const service = createSupabaseServiceClient()
+  const { data, error } = await service
+    .from('system_config')
+    .select('value')
+    .eq('key', TRIP_REQUESTS_CONFIG_KEY)
+    .maybeSingle()
+
+  if (error) {
+    logger.warn('Trip requests system_config read failed; allowing creation', { error })
+    return true
+  }
+  if (!data?.value) {
+    logger.warn('Trip requests system_config row missing; allowing creation', {
+      key: TRIP_REQUESTS_CONFIG_KEY,
+    })
+    return true
+  }
+  const v = data.value as Json
+  if (v !== null && typeof v === 'object' && !Array.isArray(v) && 'enabled' in v) {
+    const e = (v as { enabled: unknown }).enabled
+    if (typeof e === 'boolean') {
+      return e
+    }
+  }
+  logger.warn('Trip requests system_config value malformed; allowing creation', { value: v })
+  return true
+}
 
 // Create a Supabase client with Bearer token authentication
 function createSupabaseClientWithToken(accessToken: string) {
@@ -94,6 +142,15 @@ export async function POST(request: NextRequest) {
       logger.warn('Inactive user attempted to create trip request', { userId: user.id })
       const { response, statusCode } = handleApiError(
         new AuthorizationError('User account is inactive.')
+      )
+      return NextResponse.json(response, { status: statusCode })
+    }
+
+    const tripRequestsEnabled = await isTripRequestCreationEnabled()
+    if (!tripRequestsEnabled) {
+      logger.warn('Trip request blocked by system config', { userId: user.id })
+      const { response, statusCode } = handleApiError(
+        new AuthorizationError('Trip requests are temporarily unavailable.', 'TRIP_REQUESTS_DISABLED')
       )
       return NextResponse.json(response, { status: statusCode })
     }

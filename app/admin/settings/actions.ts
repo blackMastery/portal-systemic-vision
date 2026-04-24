@@ -14,8 +14,12 @@ import type {
   AppVersionConfigRow,
   AppVersionConfigInput,
   GetAppVersionConfigResult,
+  GetTripRequestsConfigResult,
+  SetTripRequestsEnabledResult,
   UpdateAppVersionConfigResult,
 } from './types'
+
+const TRIP_REQUESTS_CONFIG_KEY = 'trip_requests' as const
 
 function createServiceClient() {
   return createClient<Database>(
@@ -26,7 +30,8 @@ function createServiceClient() {
 }
 
 async function requireAdmin(): Promise<
-  { ok: true; db: ReturnType<typeof createServiceClient> } | { ok: false; error: string }
+  | { ok: true; db: ReturnType<typeof createServiceClient>; adminUserId: string }
+  | { ok: false; error: string }
 > {
   const authClient = createServerActionClient({ cookies })
   const {
@@ -41,7 +46,7 @@ async function requireAdmin(): Promise<
   const db = createServiceClient()
   const { data: userRow, error: userError } = await db
     .from('users')
-    .select('role')
+    .select('id, role')
     .eq('auth_id', authUser.id)
     .single()
 
@@ -49,7 +54,7 @@ async function requireAdmin(): Promise<
     return { ok: false, error: 'Only administrators can manage app versions.' }
   }
 
-  return { ok: true, db }
+  return { ok: true, db, adminUserId: userRow.id }
 }
 
 function sortRows(rows: AppVersionConfigRow[]): AppVersionConfigRow[] {
@@ -160,5 +165,64 @@ export async function updateAppVersionConfig(
   }
 
   logger.info('App version config updated by admin')
+  return { ok: true }
+}
+
+export async function getTripRequestsConfig(): Promise<GetTripRequestsConfigResult> {
+  const gate = await requireAdmin()
+  if (!gate.ok) {
+    return { ok: false, error: gate.error }
+  }
+
+  const { data, error } = await gate.db
+    .from('system_config')
+    .select('value')
+    .eq('key', TRIP_REQUESTS_CONFIG_KEY)
+    .maybeSingle()
+
+  if (error) {
+    logger.error('getTripRequestsConfig failed', { error })
+    return { ok: false, error: 'Failed to load trip request settings.' }
+  }
+
+  if (!data?.value || typeof data.value !== 'object' || data.value === null) {
+    return { ok: true, enabled: true }
+  }
+  const raw = 'enabled' in data.value ? (data.value as { enabled: unknown }).enabled : undefined
+  if (typeof raw === 'boolean') {
+    return { ok: true, enabled: raw }
+  }
+  return { ok: true, enabled: true }
+}
+
+export async function setTripRequestsEnabled(
+  enabled: boolean
+): Promise<SetTripRequestsEnabledResult> {
+  const gate = await requireAdmin()
+  if (!gate.ok) {
+    return { ok: false, error: gate.error }
+  }
+
+  const now = new Date().toISOString()
+  const { error } = await gate.db
+    .from('system_config')
+    .upsert(
+      {
+        key: TRIP_REQUESTS_CONFIG_KEY,
+        value: { enabled },
+        description:
+          'When enabled is false, POST /api/trip-requests returns 403 until an admin re-enables it.',
+        updated_at: now,
+        updated_by: gate.adminUserId,
+      },
+      { onConflict: 'key' }
+    )
+
+  if (error) {
+    logger.error('setTripRequestsEnabled failed', { error, enabled })
+    return { ok: false, error: 'Failed to save trip request setting.' }
+  }
+
+  logger.info('Trip requests config updated by admin', { enabled })
   return { ok: true }
 }
