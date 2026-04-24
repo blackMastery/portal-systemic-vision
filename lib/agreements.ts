@@ -3,6 +3,14 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database, AgreementAudience, UserRole } from '@/types/database'
 
+/**
+ * Agreement gating (see `supabase/migrations/20260423140000_agreement_management.sql` header).
+ *
+ * The flag `requires_acceptance` returned by `GET /api/agreements/status` is not a database column.
+ * It is derived by comparing the *current* published `agreement_versions` row (for the audience) to
+ * `agreement_acceptances`: the user must have a row for that `agreement_version_id`. At most one
+ * acceptance per (user, version) is allowed by the unique constraint.
+ */
 export const AGREEMENT_PDFS_BUCKET = 'agreement_pdfs' as const
 
 type Db = SupabaseClient<Database>
@@ -42,7 +50,8 @@ function wrapToLines(text: string, maxChars: number): string[] {
 }
 
 /**
- * Latest published version for the audience, by published time then created time.
+ * The "current" published version for gating: latest row for `audience` with `published_at` set,
+ * ordered by `published_at` then `created_at` (see migration header).
  */
 export async function getCurrentPublishedVersion(db: Db, audience: AgreementAudience) {
   const { data, error } = await db
@@ -60,6 +69,10 @@ export async function getCurrentPublishedVersion(db: Db, audience: AgreementAudi
   return { data, error: null as null }
 }
 
+/**
+ * Whether the user has an acceptance row for a specific `agreement_version_id` (at most one per user + version).
+ * Used to set `requires_acceptance` in the status API: false if this returns true for the current version id.
+ */
 export async function hasUserAcceptedVersion(
   db: Db,
   userId: string,
@@ -127,7 +140,9 @@ export async function isVersionCurrentlyPublished(
 }
 
 /**
- * Most recent acceptance for this user in the given audience (any published version they accepted).
+ * Most recent `agreement_acceptances` row for this user among versions in the audience (any version).
+ * Used for `last_accepted_at` / `last_accepted_version_id` in the status API; not the source of
+ * `requires_acceptance` (that uses {@link hasUserAcceptedVersion} against the *current* version only).
  */
 export async function getLastAcceptanceForAudience(
   db: Db,

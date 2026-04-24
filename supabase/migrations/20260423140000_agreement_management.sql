@@ -1,4 +1,15 @@
 -- User agreements: versioned text, acceptances, PDF storage.
+--
+-- The rider and driver mobile apps use the portal HTTP API (e.g. GET /api/agreements/status?audience=rider).
+-- The JSON field `requires_acceptance` is not stored in this database; it is computed in the API.
+-- Typical rule: find the *current* published version for the audience, i.e. the latest row in
+-- `agreement_versions` where `audience` matches (e.g. 'rider') and `published_at` is set, using the
+-- same ordering as the app (by published time, then created time for ties). Then, for the
+-- logged-in user, if there is no row in `agreement_acceptances` linking that user to that
+-- `agreement_version_id`, `requires_acceptance` is true; if such a row exists, it is false.
+-- (Optional fields like last_accepted_at in the same JSON can refer to a different, older
+-- version for display or audit; they do not by themselves set the boolean.)
+-- The unique constraint on `agreement_acceptances` enforces at most one row per (user_id, agreement_version_id).
 
 create table if not exists public.agreement_versions (
   id uuid primary key default gen_random_uuid(),
@@ -36,7 +47,7 @@ create index if not exists agreement_versions_audience_published_at_idx
   on public.agreement_versions (audience, published_at desc nulls last);
 
 comment on table public.agreement_versions is 'Published and draft user agreements (driver / rider), versioned.';
-comment on table public.agreement_acceptances is 'User acceptance of a specific agreement version; audit + PDF path.';
+comment on table public.agreement_acceptances is 'User acceptance of a specific agreement version; audit + PDF path. At most one row per (user_id, agreement_version_id). The API may expose a computed requires_acceptance (not a column) by checking acceptance for the current published version only.';
 
 alter table public.agreement_versions enable row level security;
 alter table public.agreement_acceptances enable row level security;

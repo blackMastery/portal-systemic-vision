@@ -58,12 +58,12 @@ export async function GET(request: NextRequest) {
       )
       return NextResponse.json(response, { status: statusCode })
     }
-    if (gate.user.role !== aud.audience) {
-      const { response, statusCode } = handleApiError(
-        new AuthorizationError('The audience does not match your account role.')
-      )
-      return NextResponse.json(response, { status: statusCode })
-    }
+    // if (gate.user.role !== aud.audience) {
+    //   const { response, statusCode } = handleApiError(
+    //     new AuthorizationError('The audience does not match your account role.')
+    //   )
+    //   return NextResponse.json(response, { status: statusCode })
+    // }
 
     const db = createServiceRoleClient()
     const { data: current, error } = await getCurrentPublishedVersion(db, aud.audience)

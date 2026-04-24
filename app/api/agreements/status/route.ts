@@ -83,6 +83,9 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // `requires_acceptance` is computed here only (not a DB column): true unless there is a row in
+    // `agreement_acceptances` for (this user, current agreement_version_id). See migration
+    // 20260423140000_agreement_management.sql header and `lib/agreements.ts`.
     const accepted = await hasUserAcceptedVersion(db, gate.user.id, current.id)
     const last = await getLastAcceptanceForAudience(db, gate.user.id, aud.audience)
 
