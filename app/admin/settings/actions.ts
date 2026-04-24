@@ -9,6 +9,7 @@ import {
   isValidAppVersionString,
   parseBuildNumber,
 } from '@/lib/app-version'
+import { sendTripRequestsPausedNotificationToRidersAndDrivers } from '@/lib/firebase/notifications'
 import { APP_VERSION_ROW_ORDER } from './constants'
 import type {
   AppVersionConfigRow,
@@ -195,6 +196,17 @@ export async function getTripRequestsConfig(): Promise<GetTripRequestsConfigResu
   return { ok: true, enabled: true }
 }
 
+function parseTripRequestsEnabledFromValue(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || value === null) {
+    return true
+  }
+  const raw = 'enabled' in value ? (value as { enabled: unknown }).enabled : undefined
+  if (typeof raw === 'boolean') {
+    return raw
+  }
+  return true
+}
+
 export async function setTripRequestsEnabled(
   enabled: boolean
 ): Promise<SetTripRequestsEnabledResult> {
@@ -202,6 +214,14 @@ export async function setTripRequestsEnabled(
   if (!gate.ok) {
     return { ok: false, error: gate.error }
   }
+
+  const { data: priorRow } = await gate.db
+    .from('system_config')
+    .select('value')
+    .eq('key', TRIP_REQUESTS_CONFIG_KEY)
+    .maybeSingle()
+
+  const previousEnabled = parseTripRequestsEnabledFromValue(priorRow?.value)
 
   const now = new Date().toISOString()
   const { error } = await gate.db
@@ -224,5 +244,14 @@ export async function setTripRequestsEnabled(
   }
 
   logger.info('Trip requests config updated by admin', { enabled })
+
+  if (!enabled && previousEnabled) {
+    try {
+      await sendTripRequestsPausedNotificationToRidersAndDrivers(gate.adminUserId)
+    } catch (pushErr) {
+      logger.error('Trip pause push or message_logs failed after config save', pushErr)
+    }
+  }
+
   return { ok: true }
 }

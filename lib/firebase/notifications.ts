@@ -351,3 +351,101 @@ export async function sendNotificationsToUsers(
 
   return aggregatedResult
 }
+
+const TRIP_REQUESTS_PAUSED_TITLE = 'Trips temporarily unavailable'
+const TRIP_REQUESTS_PAUSED_BODY =
+  'New trip requests are paused. We will let you know when you can request trips again.'
+
+const TRIP_REQUESTS_FCM_DATA: Record<string, string> = {
+  trip_requests_enabled: 'false',
+}
+
+/**
+ * Broadcast to all riders and drivers with an FCM token that trip request creation is paused.
+ * Logs a single message_logs row. Use after system_config is updated to disabled.
+ */
+export async function sendTripRequestsPausedNotificationToRidersAndDrivers(
+  sentByUserId: string
+): Promise<void> {
+  const supabase = createSupabaseServiceClient()
+
+  const { data: riderRows, error: ridersError } = await supabase
+    .from('users')
+    .select('id')
+    .eq('role', 'rider')
+    .not('fcm_token', 'is', null)
+
+  if (ridersError) {
+    logger.error('Failed to list rider recipients for trip pause push', ridersError)
+    throw ridersError
+  }
+
+  const { data: driverRows, error: driversError } = await supabase
+    .from('users')
+    .select('id')
+    .eq('role', 'driver')
+    .not('fcm_token', 'is', null)
+
+  if (driversError) {
+    logger.error('Failed to list driver recipients for trip pause push', driversError)
+    throw driversError
+  }
+
+  const riderUserIds = ((riderRows ?? []) as { id: string }[]).map((r) => r.id)
+  const driverUserIds = ((driverRows ?? []) as { id: string }[]).map((r) => r.id)
+
+  const requestedRider = riderUserIds.length
+  const requestedDriver = driverUserIds.length
+
+  const [riderResult, driverResult] = await Promise.all([
+    sendNotificationsToUsers(
+      riderUserIds,
+      TRIP_REQUESTS_PAUSED_TITLE,
+      TRIP_REQUESTS_PAUSED_BODY,
+      'rider',
+      TRIP_REQUESTS_FCM_DATA
+    ),
+    sendNotificationsToUsers(
+      driverUserIds,
+      TRIP_REQUESTS_PAUSED_TITLE,
+      TRIP_REQUESTS_PAUSED_BODY,
+      'driver',
+      TRIP_REQUESTS_FCM_DATA
+    ),
+  ])
+
+  const successCount = riderResult.successCount + driverResult.successCount
+  const failureCount = riderResult.failureCount + driverResult.failureCount
+  const invalidRemoved =
+    riderResult.invalidTokens.length + driverResult.invalidTokens.length
+
+  const { error: logError } = await supabase.from('message_logs').insert({
+    channel: 'push',
+    title: TRIP_REQUESTS_PAUSED_TITLE,
+    message: TRIP_REQUESTS_PAUSED_BODY,
+    status: successCount > 0 ? 'sent' : 'failed',
+    sent_by_user_id: sentByUserId,
+    notification_type: 'trip_requests_paused',
+    audience: 'rider,driver',
+    metadata: {
+      requested_rider_count: requestedRider,
+      requested_driver_count: requestedDriver,
+      success_count: successCount,
+      failure_count: failureCount,
+      invalid_tokens_removed: invalidRemoved,
+    },
+  })
+
+  if (logError) {
+    logger.error('message_logs insert failed after trip pause push', logError)
+    throw logError
+  }
+
+  logger.info('Trip requests paused push completed', {
+    sentByUserId,
+    requestedRider,
+    requestedDriver,
+    successCount,
+    failureCount,
+  })
+}
