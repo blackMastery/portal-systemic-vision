@@ -19,6 +19,8 @@ import { handleApiError } from '@/lib/errors'
 import { agreementAcceptBodySchema, validate } from '@/lib/validation'
 import type { Json } from '@/types/database'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   const db = createServiceRoleClient()
   let insertedAcceptanceId: string | null = null

@@ -11,6 +11,8 @@ import {
 import { agreementAudienceParamSchema, validate } from '@/lib/validation'
 import type { AgreementAudience } from '@/types/database'
 
+export const dynamic = 'force-dynamic'
+
 function parseAudience(
   sp: URLSearchParams
 ): { ok: true; audience: AgreementAudience } | { ok: false; message: string } {
