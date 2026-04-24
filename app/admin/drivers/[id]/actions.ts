@@ -135,13 +135,6 @@ export async function sendDriverPushNotification(
     fcmData
   )
 
-  const resultRider = await sendNotificationsToUsers(
-    [driverUserId],
-    title,
-    body,
-    'rider'
-  )
-
   // Record the notification in the database if delivery succeeded (unless caller already did)
   if (!options?.skipInAppNotificationInsert && (resultDriver.successCount > 0 || resultRider.successCount > 0)) {
     type NotificationInsert = Database['public']['Tables']['notifications']['Insert']
