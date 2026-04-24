@@ -101,6 +101,25 @@ export default function TripsPage() {
   const activeTripsCount = trips?.filter(t => ['accepted', 'picked_up'].includes(t.status)).length || 0
   const pendingRequestsCount = trips?.filter(t => t.status === 'requested').length || 0
 
+  const statusCounts: Record<string, number> = {
+    requested: 0,
+    accepted: 0,
+    picked_up: 0,
+    completed: 0,
+    cancelled: 0,
+  }
+  for (const trip of trips ?? []) {
+    if (trip.status in statusCounts) statusCounts[trip.status]++
+  }
+
+  const statusStats = [
+    { key: 'requested', label: 'Requested', color: 'bg-yellow-50 border-yellow-200 text-yellow-800', dot: 'bg-yellow-400' },
+    { key: 'accepted', label: 'Accepted', color: 'bg-blue-50 border-blue-200 text-blue-800', dot: 'bg-blue-400' },
+    { key: 'picked_up', label: 'Picked Up', color: 'bg-purple-50 border-purple-200 text-purple-800', dot: 'bg-purple-400' },
+    { key: 'completed', label: 'Completed', color: 'bg-green-50 border-green-200 text-green-800', dot: 'bg-green-400' },
+    { key: 'cancelled', label: 'Cancelled', color: 'bg-red-50 border-red-200 text-red-800', dot: 'bg-red-400' },
+  ]
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -130,6 +149,23 @@ export default function TripsPage() {
             )}
           </div>
         )}
+      </div>
+
+      {/* Status Count Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        {statusStats.map(({ key, label, color, dot }) => (
+          <button
+            key={key}
+            onClick={() => setStatus(status === key ? 'all' : key)}
+            className={`border rounded-xl p-4 text-left transition-all hover:shadow-sm ${color} ${status === key ? 'ring-2 ring-offset-1 ring-current' : ''}`}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <span className={`h-2 w-2 rounded-full ${dot}`} />
+              <span className="text-xs font-medium uppercase tracking-wide">{label}</span>
+            </div>
+            <p className="text-2xl font-bold">{statusCounts?.[key] ?? '—'}</p>
+          </button>
+        ))}
       </div>
 
       {/* Filters */}

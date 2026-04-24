@@ -322,7 +322,7 @@ export default function TripDetailPage() {
           trip={trip}
           routePoints={routePoints}
           isLoadingRoute={isLoadingRoute}
-          showTripInfo={false}
+          showTripInfo={true}
         />
       </div>
 

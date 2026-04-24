@@ -289,6 +289,29 @@ export interface Database {
         }
         Relationships: []
       }
+      system_config: {
+        Row: {
+          key: string
+          value: Json
+          description: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          key: string
+          value: Json
+          description?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          value?: Json
+          description?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       message_logs: {
         Row: {
           id: string

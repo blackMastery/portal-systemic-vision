@@ -1279,6 +1279,7 @@ function SendPushNotificationModal({
 }) {
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
+  const [dataJson, setDataJson] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -1292,7 +1293,23 @@ function SendPushNotificationModal({
       const userId = (driver as any).user_id
       if (!userId) throw new Error('Driver has no user ID on record')
 
-      const result = await sendDriverPushNotification(userId, title, body)
+      const trimmedData = dataJson.trim()
+      if (trimmedData) {
+        try {
+          const parsed = JSON.parse(trimmedData)
+          if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+            throw new Error('Data must be a JSON object')
+          }
+        } catch (parseErr) {
+          throw new Error(
+            parseErr instanceof SyntaxError ? 'Data must be valid JSON' : (parseErr as Error).message
+          )
+        }
+      }
+
+      const result = await sendDriverPushNotification(userId, title, body, {
+        dataJson: trimmedData || undefined,
+      })
 
       if (!result.success) {
         throw new Error(result.error || 'Driver has no registered device for push notifications')
@@ -1309,7 +1326,7 @@ function SendPushNotificationModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-1">Send Push Notification</h2>
         <p className="text-sm text-gray-500 mb-4">
           To: {(driver as any).user?.full_name || 'Driver'}
@@ -1340,6 +1357,23 @@ function SendPushNotificationModal({
               required
               maxLength={500}
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Data <span className="text-gray-400 font-normal">(optional JSON object)</span>
+            </label>
+            <textarea
+              value={dataJson}
+              onChange={(e) => setDataJson(e.target.value)}
+              rows={4}
+              spellCheck={false}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 font-mono text-sm"
+              placeholder='{"screen":"home","tripId":"..."}'
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              FCM requires string values; nested objects/arrays are sent as JSON strings per key.
+            </p>
           </div>
 
           {error && (

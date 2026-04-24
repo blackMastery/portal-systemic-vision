@@ -24,3 +24,11 @@ export type AppVersionConfigInput = {
   build_number: string
   mandatory_update: boolean
 }
+
+export type GetTripRequestsConfigResult =
+  | { ok: true; enabled: boolean }
+  | { ok: false; error: string }
+
+export type SetTripRequestsEnabledResult =
+  | { ok: true }
+  | { ok: false; error: string }
