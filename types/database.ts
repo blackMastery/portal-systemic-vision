@@ -14,6 +14,7 @@ export type TripType = 'airport' | 'short_drop' | 'market' | 'other'
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded'
 export type AppVersionAppType = 'driver' | 'rider'
 export type AppVersionPlatform = 'ios' | 'android'
+export type AgreementAudience = 'driver' | 'rider'
 
 export interface Database {
   public: {
@@ -41,6 +42,8 @@ export interface Database {
         Row: {
           id: string
           user_id: string
+          verification_status: VerificationStatus
+          verified_at: string | null
           subscription_status: SubscriptionStatus
           subscription_start_date: string | null
           subscription_end_date: string | null
@@ -50,6 +53,8 @@ export interface Database {
           rating_count: number
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
+          id_card_storage_path: string | null
+          profile_setup_completed: boolean
           created_at: string
           updated_at: string
         }
@@ -211,6 +216,7 @@ export interface Database {
         Row: {
           id: string
           driver_id: string | null
+          rider_id: string | null
           admin_id: string | null
           previous_status: VerificationStatus | null
           new_status: VerificationStatus
@@ -344,6 +350,58 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['message_logs']['Insert']>
+        Relationships: []
+      }
+      agreement_versions: {
+        Row: {
+          id: string
+          audience: AgreementAudience
+          version_label: string
+          title: string
+          body: string
+          content_sha256: string | null
+          published_at: string | null
+          created_at: string
+          created_by: string | null
+        }
+        Insert: {
+          id?: string
+          audience: AgreementAudience
+          version_label: string
+          title: string
+          body: string
+          content_sha256?: string | null
+          published_at?: string | null
+          created_at?: string
+          created_by?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['agreement_versions']['Insert']>
+        Relationships: []
+      }
+      agreement_acceptances: {
+        Row: {
+          id: string
+          user_id: string
+          agreement_version_id: string
+          accepted_at: string
+          ip_address: string | null
+          user_agent: string | null
+          device: Json | null
+          content_sha256: string
+          pdf_storage_path: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          agreement_version_id: string
+          accepted_at?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          device?: Json | null
+          content_sha256: string
+          pdf_storage_path?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['agreement_acceptances']['Insert']>
         Relationships: []
       }
     }

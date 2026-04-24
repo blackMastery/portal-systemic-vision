@@ -6,6 +6,8 @@ import {
   AuthorizationError,
   NotFoundError,
 } from '@/lib/errors'
+import { assertCurrentAgreementAccepted } from '@/lib/agreements'
+import { createServiceRoleClient } from '@/lib/supabase-service'
 import { validate, tripRequestSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import type { Database, Json } from '@/types/database'
@@ -146,6 +148,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: statusCode })
     }
 
+    const agree = await assertCurrentAgreementAccepted(
+      createServiceRoleClient(),
+      user.id,
+      user.role
+    )
+    if (!agree.ok) {
+      logger.warn('Trip request blocked: agreement not accepted', { userId: user.id })
+      const { response, statusCode } = handleApiError(
+        new AuthorizationError(
+          'You must accept the current terms of use before requesting a trip.',
+          agree.code
+        )
+      )
+      return NextResponse.json(response, { status: statusCode })
+    }
+
     const tripRequestsEnabled = await isTripRequestCreationEnabled()
     if (!tripRequestsEnabled) {
       logger.warn('Trip request blocked by system config', { userId: user.id })
@@ -158,7 +176,7 @@ export async function POST(request: NextRequest) {
     // 5. Get rider profile
     const { data: riderProfile, error: riderError } = await supabase
       .from('rider_profiles')
-      .select('id, subscription_status')
+      .select('id, subscription_status, verification_status')
       .eq('user_id', user.id)
       .single()
 
@@ -166,6 +184,21 @@ export async function POST(request: NextRequest) {
       logger.warn('Rider profile not found', { userId: user.id, error: riderError })
       const { response, statusCode } = handleApiError(
         new NotFoundError('Rider profile not found.')
+      )
+      return NextResponse.json(response, { status: statusCode })
+    }
+
+    if (riderProfile.verification_status !== 'approved') {
+      logger.warn('Rider verification not approved', {
+        userId: user.id,
+        riderId: riderProfile.id,
+        verification_status: riderProfile.verification_status,
+      })
+      const { response, statusCode } = handleApiError(
+        new AuthorizationError(
+          'Account verification is required before you can request trips.',
+          'RIDER_VERIFICATION_REQUIRED'
+        )
       )
       return NextResponse.json(response, { status: statusCode })
     }

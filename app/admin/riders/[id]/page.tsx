@@ -1,33 +1,36 @@
 'use client'
 
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { 
-  ArrowLeft, 
-  User, 
-  Phone, 
-  Mail, 
-  Calendar, 
-  Star, 
+import { sendRiderPushNotification } from './actions'
+import Image from 'next/image'
+import {
+  ArrowLeft,
+  User,
+  Phone,
+  Mail,
+  Calendar,
+  Star,
   TrendingUp,
   Clock,
   AlertCircle,
   Edit,
   CreditCard,
-  Route,
   Shield,
   Users,
   UserX,
-  UserCheck
+  UserCheck,
+  CheckCircle,
+  XCircle,
+  Ban,
+  ChevronRight,
+  FileText,
 } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { useState } from 'react'
-import type { 
-  RiderWithDetails, 
-  Database 
-} from '@/types/database'
+import { useState, useEffect, useCallback } from 'react'
+import type { RiderWithDetails, Database, VerificationStatus } from '@/types/database'
 
 type RiderDetailData = {
   rider: RiderWithDetails & {
@@ -41,6 +44,9 @@ type RiderDetailData = {
   }>
   subscriptions: Database['public']['Tables']['subscriptions']['Row'][]
   payments: Database['public']['Tables']['payment_transactions']['Row'][]
+  verificationLogs: Array<Database['public']['Tables']['verification_logs']['Row'] & {
+    admin?: Database['public']['Tables']['users']['Row']
+  }>
 }
 
 async function fetchRiderDetail(riderId: string): Promise<RiderDetailData> {
@@ -85,6 +91,7 @@ async function fetchRiderDetail(riderId: string): Promise<RiderDetailData> {
     .from('subscriptions')
     .select('*')
     .eq('user_id', rider.user_id)
+    .eq('user_role', 'rider')
     .order('created_at', { ascending: false })
 
   if (subscriptionsError) throw subscriptionsError
@@ -99,12 +106,182 @@ async function fetchRiderDetail(riderId: string): Promise<RiderDetailData> {
 
   if (paymentsError) throw paymentsError
 
+  const { data: logsData, error: logsError } = await supabase
+    .from('verification_logs')
+    .select(
+      `
+      *,
+      admin:admin_id (full_name, email)
+    `
+    )
+    .eq('rider_id', riderId)
+    .order('created_at', { ascending: false })
+
+  if (logsError) throw logsError
+
   return {
     rider: rider as RiderDetailData['rider'],
     trips: (tripsData || []) as RiderDetailData['trips'],
     subscriptions: (subscriptionsData || []) as RiderDetailData['subscriptions'],
     payments: (paymentsData || []) as RiderDetailData['payments'],
+    verificationLogs: (logsData || []) as RiderDetailData['verificationLogs'],
   }
+}
+
+const verificationBadgeColors = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  approved: 'bg-green-100 text-green-800',
+  rejected: 'bg-red-100 text-red-800',
+  suspended: 'bg-gray-100 text-gray-800',
+}
+
+const verificationIcons = {
+  pending: Clock,
+  approved: CheckCircle,
+  rejected: XCircle,
+  suspended: Ban,
+}
+
+function RiderDocumentPreview({
+  url,
+  title,
+}: {
+  url: string | null | undefined
+  title: string
+}) {
+  const [imgError, setImgError] = useState(false)
+
+  useEffect(() => {
+    setImgError(false)
+  }, [url])
+
+  if (!url?.trim()) {
+    return (
+      <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4">
+        <p className="text-sm font-medium text-gray-900 mb-1">{title}</p>
+        <p className="text-sm text-gray-400">Not uploaded</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-gray-100 bg-white">
+        <p className="text-sm font-medium text-gray-900">{title}</p>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs font-medium text-blue-600 hover:text-blue-800 shrink-0"
+        >
+          Open full size
+        </a>
+      </div>
+      <div className="p-4">
+        {imgError ? (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <FileText className="h-5 w-5 text-gray-500 shrink-0" aria-hidden />
+            View file
+          </a>
+        ) : (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="relative mx-auto block aspect-[4/3] max-h-72 w-full max-w-lg overflow-hidden rounded-lg border border-gray-200 bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            <Image
+              src={url}
+              alt={title}
+              fill
+              className="object-contain"
+              sizes="(max-width: 768px) 100vw, 400px"
+              unoptimized
+              onError={() => setImgError(true)}
+            />
+          </a>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function IdCardFromStoragePath({ path, title }: { path: string | null | undefined; title: string }) {
+  const [url, setUrl] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const load = useCallback(async (storagePath: string) => {
+    setLoading(true)
+    setErr(null)
+    setUrl(null)
+    try {
+      const supabase = createClient()
+      const { data, error: signError } = await supabase.storage
+        .from('rider_docs')
+        .createSignedUrl(storagePath.trim(), 3600)
+      if (signError) throw signError
+      if (data?.signedUrl) setUrl(data.signedUrl)
+      else setErr('Could not create link')
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Failed to load document')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!path?.trim()) {
+      setUrl(null)
+      setErr(null)
+      return
+    }
+    void load(path)
+  }, [path, load])
+
+  if (!path?.trim()) {
+    return <RiderDocumentPreview url={null} title={title} />
+  }
+
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4">
+        <p className="text-sm font-medium text-gray-900 mb-1">{title}</p>
+        <p className="text-sm text-gray-500">Loading preview…</p>
+      </div>
+    )
+  }
+
+  if (err) {
+    return (
+      <div className="rounded-xl border border-dashed border-red-200 bg-red-50 p-4">
+        <p className="text-sm font-medium text-gray-900 mb-1">{title}</p>
+        <p className="text-sm text-red-700">{err}</p>
+      </div>
+    )
+  }
+
+  return <RiderDocumentPreview url={url} title={title} />
+}
+
+async function fetchNextPendingRider(currentCreatedAt: string): Promise<string | null> {
+  const supabase = createClient()
+  const { data, error } = (await supabase
+    .from('rider_profiles')
+    .select('id')
+    .eq('verification_status', 'pending')
+    .lt('created_at', currentCreatedAt)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()) as { data: { id: string } | null; error: { message: string } | null }
+
+  if (error) throw error
+  return data?.id ?? null
 }
 
 const subscriptionBadgeColors = {
@@ -124,15 +301,24 @@ const statusColors = {
 
 export default function RiderDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const riderId = params.id as string
   const queryClient = useQueryClient()
   const [isTogglingActive, setIsTogglingActive] = useState(false)
   const [toggleError, setToggleError] = useState<string | null>(null)
+  const [showVerificationModal, setShowVerificationModal] = useState(false)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['rider-detail', riderId],
     queryFn: () => fetchRiderDetail(riderId),
     enabled: !!riderId,
+  })
+
+  const nextPendingQuery = useQuery({
+    queryKey: ['next-pending-rider', riderId, data?.rider.created_at],
+    queryFn: () => fetchNextPendingRider(data!.rider.created_at),
+    enabled: !!data?.rider.created_at,
+    staleTime: 30_000,
   })
 
   if (isLoading) {
@@ -165,7 +351,7 @@ export default function RiderDetailPage() {
     )
   }
 
-  const { rider, trips, subscriptions, payments } = data
+  const { rider, trips, subscriptions, payments, verificationLogs } = data
 
   async function handleToggleActive(newActive: boolean) {
     setToggleError(null)
@@ -194,24 +380,71 @@ export default function RiderDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="flex min-w-0 items-start gap-3 sm:gap-4">
           <Link
             href="/admin/riders"
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="shrink-0 rounded-lg p-2 transition-colors hover:bg-gray-100"
           >
             <ArrowLeft className="h-5 w-5 text-gray-600" />
           </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold leading-tight text-gray-900">
               {rider.user?.full_name || 'Rider Details'}
             </h1>
-            <p className="mt-1 text-sm text-gray-600">
-              Rider ID: {rider.id}
-            </p>
+            <p className="mt-1 text-sm text-gray-600 break-all">Rider ID: {rider.id}</p>
           </div>
         </div>
-        <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="flex flex-col items-stretch gap-2 sm:items-end xl:items-end">
+          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+            {nextPendingQuery.isLoading ? (
+              <button
+                type="button"
+                disabled
+                className="inline-flex items-center rounded-lg bg-yellow-100 px-3 py-1.5 text-xs font-medium text-yellow-600 opacity-70 cursor-not-allowed sm:px-4 sm:py-2 sm:text-sm"
+              >
+                <div className="mr-1.5 h-3.5 w-3.5 animate-spin rounded-full border-b-2 border-yellow-500 sm:mr-2 sm:h-4 sm:w-4" />
+                Loading...
+              </button>
+            ) : nextPendingQuery.data ? (
+              <button
+                type="button"
+                onClick={() => router.push(`/admin/riders/${nextPendingQuery.data}`)}
+                className="inline-flex items-center rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-1.5 text-xs font-medium text-yellow-800 transition-colors hover:bg-yellow-100 sm:px-4 sm:py-2 sm:text-sm"
+              >
+                <ChevronRight className="mr-1 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
+                Next Pending
+              </button>
+            ) : null}
+            <span
+              className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium sm:px-3 sm:py-1.5 sm:text-sm ${
+                verificationBadgeColors[rider.verification_status]
+              }`}
+            >
+              {rider.verification_status}
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowVerificationModal(true)}
+              className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700 sm:px-4 sm:py-2 sm:text-sm"
+            >
+              <Edit className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
+              Update Verification
+            </button>
+            <span
+              className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium sm:px-3 sm:py-1.5 sm:text-sm ${
+                subscriptionBadgeColors[rider.subscription_status]
+              }`}
+            >
+              {rider.subscription_status}
+            </span>
+            {isTrialExpiringSoon && (
+              <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-medium text-yellow-800 sm:px-3 sm:py-1.5 sm:text-sm">
+                <Clock className="mr-1 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
+                Trial Expiring Soon
+              </span>
+            )}
+          </div>
           {rider.user_id && (
             <div className="flex flex-col items-end gap-1">
               {rider.user?.is_active ? (
@@ -246,19 +479,6 @@ export default function RiderDetailPage() {
               )}
             </div>
           )}
-          <div className="flex items-center gap-3">
-            <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
-              subscriptionBadgeColors[rider.subscription_status]
-            }`}>
-              {rider.subscription_status}
-            </span>
-            {isTrialExpiringSoon && (
-              <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-                <Clock className="h-4 w-4 mr-1" />
-                Trial Expiring Soon
-              </span>
-            )}
-          </div>
         </div>
       </div>
 
@@ -331,6 +551,46 @@ export default function RiderDetailPage() {
               </div>
             </div>
           )}
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-amber-100 rounded-lg">
+              <Shield className="h-5 w-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Verification</p>
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  verificationBadgeColors[rider.verification_status]
+                }`}
+              >
+                {rider.verification_status}
+              </span>
+            </div>
+          </div>
+          {rider.verified_at && (
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-slate-100 rounded-lg">
+                <Clock className="h-5 w-5 text-slate-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Verified at</p>
+                <p className="text-base font-medium text-gray-900">
+                  {format(new Date(rider.verified_at), 'MMM dd, yyyy HH:mm')}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Identity & documents */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Identity &amp; documents</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Profile photo (account). ID card (setup wizard) — private file; link expires after one hour.
+        </p>
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <RiderDocumentPreview url={rider.user?.profile_photo_url} title="Profile photo" />
+          <IdCardFromStoragePath path={rider.id_card_storage_path} title="National ID" />
         </div>
       </div>
 
@@ -485,6 +745,91 @@ export default function RiderDetailPage() {
         </div>
       </div>
 
+      {/* Verification History */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Verification history</h2>
+        {verificationLogs.length > 0 ? (
+          <div className="space-y-4">
+            {verificationLogs.map((log) => {
+              const Icon = verificationIcons[log.new_status as VerificationStatus] || AlertCircle
+              return (
+                <div key={log.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start gap-4">
+                    <div
+                      className={`p-2 rounded-lg ${
+                        log.new_status === 'approved'
+                          ? 'bg-green-100'
+                          : log.new_status === 'rejected'
+                            ? 'bg-red-100'
+                            : log.new_status === 'suspended'
+                              ? 'bg-gray-100'
+                              : 'bg-yellow-100'
+                      }`}
+                    >
+                      <Icon
+                        className={`h-5 w-5 ${
+                          log.new_status === 'approved'
+                            ? 'text-green-600'
+                            : log.new_status === 'rejected'
+                              ? 'text-red-600'
+                              : log.new_status === 'suspended'
+                                ? 'text-gray-600'
+                                : 'text-yellow-600'
+                        }`}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            Status changed from{' '}
+                            <span className="text-gray-600">{log.previous_status || 'N/A'}</span> to{' '}
+                            <span
+                              className={`font-semibold ${
+                                log.new_status === 'approved'
+                                  ? 'text-green-600'
+                                  : log.new_status === 'rejected'
+                                    ? 'text-red-600'
+                                    : log.new_status === 'suspended'
+                                      ? 'text-gray-600'
+                                      : 'text-yellow-600'
+                              }`}
+                            >
+                              {log.new_status}
+                            </span>
+                          </p>
+                          {log.admin && (
+                            <p className="text-sm text-gray-500 mt-1">
+                              By {log.admin.full_name}{' '}
+                              {log.admin.email ? `(${log.admin.email})` : ''}
+                            </p>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-500 shrink-0">
+                          {format(new Date(log.created_at), 'MMM dd, yyyy HH:mm')}
+                        </p>
+                      </div>
+                      {log.admin_notes && (
+                        <p className="text-sm text-gray-700 mt-2">
+                          <span className="font-medium">Notes:</span> {log.admin_notes}
+                        </p>
+                      )}
+                      {log.rejection_reason && (
+                        <p className="text-sm text-red-700 mt-2">
+                          <span className="font-medium">Rejection reason:</span> {log.rejection_reason}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <p className="text-gray-500 text-center py-8">No verification history found</p>
+        )}
+      </div>
+
       {/* Recent Trips */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Trips</h2>
@@ -594,10 +939,200 @@ export default function RiderDetailPage() {
           <p className="text-gray-500 text-center py-8">No payment history found</p>
         )}
       </div>
+
+      {showVerificationModal && (
+        <RiderVerificationUpdateModal
+          rider={rider}
+          onClose={() => setShowVerificationModal(false)}
+          onSuccess={() => {
+            void queryClient.invalidateQueries({ queryKey: ['rider-detail', riderId] })
+            void queryClient.invalidateQueries({ queryKey: ['next-pending-rider'] })
+            void queryClient.invalidateQueries({ queryKey: ['riders'] })
+            setShowVerificationModal(false)
+          }}
+        />
+      )}
     </div>
   )
 }
 
+function RiderVerificationUpdateModal({
+  rider,
+  onClose,
+  onSuccess,
+}: {
+  rider: RiderWithDetails & { user: Database['public']['Tables']['users']['Row'] }
+  onClose: () => void
+  onSuccess: () => void
+}) {
+  const [status, setStatus] = useState<VerificationStatus>(rider.verification_status)
+  const [adminNotes, setAdminNotes] = useState('')
+  const [rejectionReason, setRejectionReason] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const supabase = createClient()
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setIsSubmitting(true)
 
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) {
+        throw new Error('Not authenticated')
+      }
+
+      const { data: adminUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', authUser.id)
+        .single()
+
+      if (!adminUser) {
+        throw new Error('Admin user not found')
+      }
+
+      const updateData: Database['public']['Tables']['rider_profiles']['Update'] = {
+        verification_status: status,
+      }
+
+      if (status === 'approved') {
+        updateData.verified_at = new Date().toISOString()
+      }
+
+      const { error: updateError } = await (supabase.from('rider_profiles') as any)
+        .update(updateData)
+        .eq('id', rider.id)
+
+      if (updateError) throw updateError
+
+      const { error: logError } = await (supabase.from('verification_logs') as any).insert({
+        rider_id: rider.id,
+        admin_id: (adminUser as { id: string }).id,
+        previous_status: rider.verification_status,
+        new_status: status,
+        admin_notes: adminNotes || null,
+        rejection_reason: status === 'rejected' ? rejectionReason || null : null,
+        driver_id: null,
+      })
+
+      if (logError) throw logError
+
+      const userId = rider.user_id
+      if (userId) {
+        const title =
+          status === 'approved'
+            ? 'Verification approved'
+            : status === 'rejected'
+              ? 'Verification rejected'
+              : status === 'suspended'
+                ? 'Account suspended'
+                : 'Verification status updated'
+        const body =
+          status === 'approved'
+            ? 'Your rider account verification is complete. You can use trip requests as usual.'
+            : status === 'rejected'
+              ? 'Your identity verification was rejected. Please review the reason and resubmit your documents.'
+              : status === 'suspended'
+                ? 'Your rider account has been suspended. Please contact support for more information.'
+                : 'Your verification status has been updated.'
+
+        const { error: notifError } = await (supabase.from('notifications') as any).insert({
+          user_id: userId,
+          title,
+          body,
+          notification_type: `verification_${status}`,
+          is_read: false,
+        })
+
+        if (!notifError) {
+          await sendRiderPushNotification(userId, title, body, {
+            skipInAppNotificationInsert: true,
+          })
+        }
+      }
+
+      onSuccess()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to update verification status')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Update verification status</h2>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Verification status</label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as VerificationStatus)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required
+            >
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Admin notes (optional)</label>
+            <textarea
+              value={adminNotes}
+              onChange={(e) => setAdminNotes(e.target.value)}
+              rows={3}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Add any notes about this verification status change…"
+            />
+          </div>
+
+          {status === 'rejected' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Rejection reason</label>
+              <textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                rows={2}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Explain why the verification was rejected…"
+                required
+              />
+            </div>
+          )}
+
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Updating…' : 'Update status'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
 

@@ -5,44 +5,61 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Search, Clock, Users, Star, Route, List, LayoutGrid } from 'lucide-react'
 import Link from 'next/link'
-import type { RiderWithDetails } from '@/types/database'
+import type { RiderWithDetails, VerificationStatus } from '@/types/database'
 import { format } from 'date-fns'
 
 async function fetchRiders(filters: {
   subscriptionStatus: string
   searchQuery: string
   accountStatus: string
+  verificationStatus: string
 }) {
   const supabase = createClient()
-  
+
   const query = supabase
     .from('rider_profiles')
-    .select(`
+    .select(
+      `
       *,
       user:user_id (*)
-    `)
+    `
+    )
     .order('created_at', { ascending: false })
 
   const { data, error } = await query
 
   if (error) throw error
 
-  let results = data as RiderWithDetails[]
+  const allRows = data as RiderWithDetails[]
+  const pendingVerificationTotal = allRows.filter(
+    (r) => r.verification_status === 'pending'
+  ).length
+
+  let results = allRows
   if (filters.searchQuery) {
     const searchLower = filters.searchQuery.toLowerCase()
-    results = results.filter(rider =>
-      rider.user?.full_name?.toLowerCase().includes(searchLower) ||
-      rider.user?.phone_number?.includes(searchLower) ||
-      rider.user?.email?.toLowerCase().includes(searchLower)
+    results = results.filter(
+      (rider) =>
+        rider.user?.full_name?.toLowerCase().includes(searchLower) ||
+        rider.user?.phone_number?.includes(searchLower) ||
+        rider.user?.email?.toLowerCase().includes(searchLower)
     )
   }
   if (filters.accountStatus === 'active') {
-    results = results.filter(rider => rider.user?.is_active === true)
+    results = results.filter((rider) => rider.user?.is_active === true)
   } else if (filters.accountStatus === 'inactive') {
-    results = results.filter(rider => rider.user?.is_active === false)
+    results = results.filter((rider) => rider.user?.is_active === false)
+  }
+  if (filters.subscriptionStatus !== 'all') {
+    results = results.filter((rider) => rider.subscription_status === filters.subscriptionStatus)
+  }
+  if (filters.verificationStatus !== 'all') {
+    results = results.filter(
+      (rider) => rider.verification_status === (filters.verificationStatus as VerificationStatus)
+    )
   }
 
-  return results
+  return { riders: results, pendingVerificationTotal }
 }
 
 const subscriptionBadgeColors = {
@@ -52,19 +69,31 @@ const subscriptionBadgeColors = {
   cancelled: 'bg-gray-100 text-gray-800',
 }
 
+const verificationBadgeColors: Record<VerificationStatus, string> = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  approved: 'bg-green-100 text-green-800',
+  rejected: 'bg-red-100 text-red-800',
+  suspended: 'bg-gray-100 text-gray-800',
+}
+
 export default function RidersPage() {
   const [subscriptionStatus, setSubscriptionStatus] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [accountStatus, setAccountStatus] = useState('all')
+  const [verificationStatus, setVerificationStatus] = useState('all')
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table')
 
-  const { data: riders, isLoading } = useQuery({
-    queryKey: ['riders', subscriptionStatus, searchQuery, accountStatus],
-    queryFn: () => fetchRiders({ subscriptionStatus, searchQuery, accountStatus }),
+  const { data: ridersData, isLoading } = useQuery({
+    queryKey: ['riders', subscriptionStatus, searchQuery, accountStatus, verificationStatus],
+    queryFn: () =>
+      fetchRiders({ subscriptionStatus, searchQuery, accountStatus, verificationStatus }),
   })
 
-  const expiredCount = riders?.filter(r => r.subscription_status === 'expired').length || 0
-  const trialExpiringSoon = riders?.filter(r => {
+  const riders = ridersData?.riders
+  const pendingVerificationCount = ridersData?.pendingVerificationTotal ?? 0
+
+  const expiredCount = riders?.filter((r) => r.subscription_status === 'expired').length || 0
+  const trialExpiringSoon = riders?.filter((r) => {
     if (r.subscription_status !== 'trial' || !r.trial_end_date) return false
     const trialEnd = new Date(r.trial_end_date)
     const now = new Date()
@@ -82,8 +111,13 @@ export default function RidersPage() {
             Manage rider accounts and subscriptions
           </p>
         </div>
-        {(expiredCount > 0 || trialExpiringSoon > 0) && (
-          <div className="flex gap-2">
+        {(expiredCount > 0 || trialExpiringSoon > 0 || pendingVerificationCount > 0) && (
+          <div className="flex flex-wrap gap-2">
+            {pendingVerificationCount > 0 && (
+              <span className="inline-flex items-center px-4 py-2 bg-amber-100 text-amber-900 rounded-lg">
+                {pendingVerificationCount} verification pending
+              </span>
+            )}
             {expiredCount > 0 && (
               <Link
                 href="/admin/riders?status=expired"
@@ -108,7 +142,7 @@ export default function RidersPage() {
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* Search */}
           <div className="lg:col-span-2">
             <div className="relative">
@@ -148,6 +182,21 @@ export default function RidersPage() {
               <option value="all">All Account Status</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
+            </select>
+          </div>
+
+          {/* Verification */}
+          <div>
+            <select
+              value={verificationStatus}
+              onChange={(e) => setVerificationStatus(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Verification</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="suspended">Suspended</option>
             </select>
           </div>
         </div>
@@ -209,6 +258,11 @@ export default function RidersPage() {
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${rider.user?.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                         {rider.user?.is_active ? 'Active' : 'Inactive'}
                       </span>
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${verificationBadgeColors[rider.verification_status]}`}
+                      >
+                        {rider.verification_status}
+                      </span>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${subscriptionBadgeColors[rider.subscription_status]}`}>
                         {rider.subscription_status}
                       </span>
@@ -250,6 +304,9 @@ export default function RidersPage() {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Account Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Verification
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Subscription
@@ -306,6 +363,15 @@ export default function RidersPage() {
                           rider.user?.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                         }`}>
                           {rider.user?.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            verificationBadgeColors[rider.verification_status]
+                          }`}
+                        >
+                          {rider.verification_status}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

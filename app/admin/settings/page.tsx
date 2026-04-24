@@ -9,6 +9,7 @@ import {
   setTripRequestsEnabled,
   updateAppVersionConfig,
 } from './actions'
+import { AgreementSettingsSection } from './agreement-section'
 import { APP_VERSION_UI_ROWS } from './constants'
 import type { AppVersionConfigInput } from './types'
 import type { AppVersionAppType, AppVersionPlatform } from '@/types/database'
@@ -197,6 +198,8 @@ export default function AdminSettingsPage() {
 
       {!loading && (
         <>
+          <AgreementSettingsSection />
+
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-4">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Trip requests</h2>

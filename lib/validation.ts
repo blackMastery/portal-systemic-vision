@@ -132,6 +132,30 @@ export const updateTripStatusSchema = z.object({
 export type UpdateTripStatusRequest = z.infer<typeof updateTripStatusSchema>
 
 /**
+ * Query param for /api/agreements/current and /api/agreements/status
+ */
+export const agreementAudienceParamSchema = z.enum(['driver', 'rider'], {
+  required_error: 'audience is required',
+  invalid_type_error: 'audience must be "driver" or "rider"',
+})
+
+/**
+ * Mobile client records acceptance (checkbox + I Agree on client)
+ */
+export const agreementAcceptBodySchema = z.object({
+  agreement_version_id: z.string().uuid('agreement_version_id must be a valid UUID'),
+  acknowledged: z.literal(true),
+  device: z
+    .object({
+      model: z.string().optional(),
+      os: z.string().optional(),
+      os_version: z.string().optional(),
+    })
+    .strict()
+    .optional(),
+})
+
+/**
  * Validates data against a Zod schema and throws ValidationError if invalid
  */
 export function validate<T>(schema: z.ZodSchema<T>, data: unknown): T {
