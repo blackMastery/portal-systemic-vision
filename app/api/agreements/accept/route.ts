@@ -42,12 +42,6 @@ export async function POST(request: NextRequest) {
       )
       return NextResponse.json(response, { status: statusCode })
     }
-    if (gate.user.role !== 'driver' && gate.user.role !== 'rider') {
-      const { response, statusCode } = handleApiError(
-        new AuthorizationError('This endpoint is for driver and rider accounts only.')
-      )
-      return NextResponse.json(response, { status: statusCode })
-    }
 
     let body: unknown
     try {
@@ -80,13 +74,6 @@ export async function POST(request: NextRequest) {
       )
       return NextResponse.json(response, { status: statusCode })
     }
-    if (version.audience !== gate.user.role) {
-      const { response, statusCode } = handleApiError(
-        new AuthorizationError('This agreement is not for your account type.')
-      )
-      return NextResponse.json(response, { status: statusCode })
-    }
-
     const currentOk = await isVersionCurrentlyPublished(db, version.id)
     if (!currentOk) {
       const { response, statusCode } = handleApiError(

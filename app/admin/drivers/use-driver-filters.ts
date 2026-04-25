@@ -17,6 +17,7 @@ const DEFAULTS = {
   vehicle: 'all',
   ldoc:    'all',
   nid:     'all',
+  indoc:   'all',
   trips:   'all',
   page:    '1',
   size:    String(DEFAULT_PAGE_SIZE),
@@ -38,6 +39,7 @@ export function useDriverFilters() {
   const hasVehicle          = searchParams.get('vehicle') ?? 'all'
   const licenseDoc          = searchParams.get('ldoc')   ?? 'all'
   const nationalIdDoc       = searchParams.get('nid')    ?? 'all'
+  const insuranceDoc        = searchParams.get('indoc')  ?? 'all'
   const tripsFilter         = searchParams.get('trips')  ?? 'all'
   const page = Math.max(1, Number(searchParams.get('page') ?? '1'))
   const rawSize = Number(searchParams.get('size') ?? String(DEFAULT_PAGE_SIZE))
@@ -105,12 +107,13 @@ export function useDriverFilters() {
     if (hasVehicle !== 'all') n++
     if (licenseDoc !== 'all') n++
     if (nationalIdDoc !== 'all') n++
+    if (insuranceDoc !== 'all') n++
     if (tripsFilter !== 'all') n++
     if (sortBy !== 'newest') n++
     return { activeFilterCount: n, hasActiveFilters: n > 0 }
   }, [
     verificationStatus, subscriptionStatus, urlSearch, onlineStatus,
-    licenseExpiry, hasVehicle, licenseDoc, nationalIdDoc, tripsFilter, sortBy,
+    licenseExpiry, hasVehicle, licenseDoc, nationalIdDoc, insuranceDoc, tripsFilter, sortBy,
   ])
 
   return {
@@ -122,6 +125,7 @@ export function useDriverFilters() {
     hasVehicle,
     licenseDoc,
     nationalIdDoc,
+    insuranceDoc,
     tripsFilter,
     searchInput,
     setSearchInput,

@@ -16,6 +16,7 @@ import {
   Megaphone,
   MessageSquare,
   ClipboardList,
+  FileCheck,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -30,6 +31,7 @@ const navigation = [
   { name: 'Notifications', href: '/admin/notifications', icon: Megaphone },
   { name: 'Message Logs', href: '/admin/message-logs', icon: MessageSquare },
   { name: 'Audit Log', href: '/admin/audit-log', icon: FileText },
+  { name: 'Agreement Acceptances', href: '/admin/agreement-acceptances', icon: FileCheck },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ]
 

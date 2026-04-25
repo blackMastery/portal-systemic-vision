@@ -55,6 +55,7 @@ async function fetchDrivers(filters: {
   hasVehicle: string
   licenseDoc: string
   nationalIdDoc: string
+  insuranceDoc: string
   tripsFilter: string
 }) {
   const supabase = createClient()
@@ -130,6 +131,14 @@ async function fetchDrivers(filters: {
       filters.nationalIdDoc === 'uploaded'
         ? !!driver.national_id_url
         : !driver.national_id_url
+    )
+  }
+
+  if (filters.insuranceDoc !== 'all') {
+    results = results.filter(driver =>
+      filters.insuranceDoc === 'uploaded'
+        ? !!driver.insurance_document_url
+        : !driver.insurance_document_url
     )
   }
 
@@ -227,7 +236,7 @@ function DriversContent() {
 
   const {
     verificationStatus, subscriptionStatus, onlineStatus, sortBy, licenseExpiry,
-    hasVehicle, licenseDoc, nationalIdDoc, tripsFilter,
+    hasVehicle, licenseDoc, nationalIdDoc, insuranceDoc, tripsFilter,
     searchInput, setSearchInput, debouncedSearch,
     page, pageSize, setPage, setPageSize, clampPage,
     setFilter, clearFilters: clearAllFilters,
@@ -258,6 +267,7 @@ function DriversContent() {
       hasVehicle,
       licenseDoc,
       nationalIdDoc,
+      insuranceDoc,
       tripsFilter,
     ],
     queryFn: () =>
@@ -271,6 +281,7 @@ function DriversContent() {
         hasVehicle,
         licenseDoc,
         nationalIdDoc,
+        insuranceDoc,
         tripsFilter,
       }),
   })
@@ -389,6 +400,18 @@ function DriversContent() {
               id={fid('national-id')}
               value={nationalIdDoc}
               onChange={(e) => setFilter('nid', e.target.value)}
+              className={SELECT_CLASS}
+            >
+              <option value="all">All</option>
+              <option value="uploaded">Uploaded</option>
+              <option value="missing">Missing</option>
+            </select>
+          </FilterField>
+          <FilterField id={fid('insurance-doc')} label="Insurance file">
+            <select
+              id={fid('insurance-doc')}
+              value={insuranceDoc}
+              onChange={(e) => setFilter('indoc', e.target.value)}
               className={SELECT_CLASS}
             >
               <option value="all">All</option>

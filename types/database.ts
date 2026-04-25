@@ -74,6 +74,7 @@ export interface Database {
           monthly_fee_amount: number
           national_id_url: string | null
           drivers_license_url: string | null
+          insurance_document_url: string | null
           drivers_license_number: string | null
           drivers_license_expiry: string | null
           is_online: boolean

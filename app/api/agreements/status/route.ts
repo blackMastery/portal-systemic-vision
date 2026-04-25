@@ -43,12 +43,6 @@ export async function GET(request: NextRequest) {
       )
       return NextResponse.json(response, { status: statusCode })
     }
-    if (gate.user.role === 'admin') {
-      const { response, statusCode } = handleApiError(
-        new AuthorizationError('This endpoint is for driver and rider accounts only.')
-      )
-      return NextResponse.json(response, { status: statusCode })
-    }
 
     const aud = parseAudience(request.nextUrl.searchParams)
     if (!aud.ok) {
@@ -57,12 +51,12 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       )
     }
-    if (gate.user.role !== aud.audience) {
-      const { response, statusCode } = handleApiError(
-        new AuthorizationError('The audience does not match your account role.')
-      )
-      return NextResponse.json(response, { status: statusCode })
-    }
+    // if (gate.user.role !== aud.audience) {
+    //   const { response, statusCode } = handleApiError(
+    //     new AuthorizationError('The audience does not match your account role.')
+    //   )
+    //   return NextResponse.json(response, { status: statusCode })
+    // }
 
     const db = createServiceRoleClient()
     const { data: current, error: curError } = await getCurrentPublishedVersion(

@@ -621,6 +621,10 @@ export default function DriverDetailPage() {
               url={driver.drivers_license_url}
               title="Driver's license"
             />
+            <DriverDocumentPreview
+              url={driver.insurance_document_url}
+              title="Insurance"
+            />
           </div>
         </div>
       </div>
