@@ -13,6 +13,8 @@ async function fetchRiders(filters: {
   searchQuery: string
   accountStatus: string
   verificationStatus: string
+  idCardStatus: string
+  profilePhotoStatus: string
 }) {
   const supabase = createClient()
 
@@ -58,6 +60,16 @@ async function fetchRiders(filters: {
       (rider) => rider.verification_status === (filters.verificationStatus as VerificationStatus)
     )
   }
+  if (filters.idCardStatus === 'has') {
+    results = results.filter((rider) => !!rider.id_card_storage_path?.trim())
+  } else if (filters.idCardStatus === 'missing') {
+    results = results.filter((rider) => !rider.id_card_storage_path?.trim())
+  }
+  if (filters.profilePhotoStatus === 'has') {
+    results = results.filter((rider) => !!rider.user?.profile_photo_url?.trim())
+  } else if (filters.profilePhotoStatus === 'missing') {
+    results = results.filter((rider) => !rider.user?.profile_photo_url?.trim())
+  }
 
   return { riders: results, pendingVerificationTotal }
 }
@@ -81,12 +93,29 @@ export default function RidersPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [accountStatus, setAccountStatus] = useState('all')
   const [verificationStatus, setVerificationStatus] = useState('all')
+  const [idCardStatus, setIdCardStatus] = useState('all')
+  const [profilePhotoStatus, setProfilePhotoStatus] = useState('all')
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table')
 
   const { data: ridersData, isLoading } = useQuery({
-    queryKey: ['riders', subscriptionStatus, searchQuery, accountStatus, verificationStatus],
+    queryKey: [
+      'riders',
+      subscriptionStatus,
+      searchQuery,
+      accountStatus,
+      verificationStatus,
+      idCardStatus,
+      profilePhotoStatus,
+    ],
     queryFn: () =>
-      fetchRiders({ subscriptionStatus, searchQuery, accountStatus, verificationStatus }),
+      fetchRiders({
+        subscriptionStatus,
+        searchQuery,
+        accountStatus,
+        verificationStatus,
+        idCardStatus,
+        profilePhotoStatus,
+      }),
   })
 
   const riders = ridersData?.riders
@@ -142,7 +171,7 @@ export default function RidersPage() {
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
           {/* Search */}
           <div className="lg:col-span-2">
             <div className="relative">
@@ -197,6 +226,32 @@ export default function RidersPage() {
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
               <option value="suspended">Suspended</option>
+            </select>
+          </div>
+
+          {/* ID Card Status */}
+          <div>
+            <select
+              value={idCardStatus}
+              onChange={(e) => setIdCardStatus(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All ID Card Status</option>
+              <option value="has">Has ID Card</option>
+              <option value="missing">Missing ID Card</option>
+            </select>
+          </div>
+
+          {/* Profile Photo Status */}
+          <div>
+            <select
+              value={profilePhotoStatus}
+              onChange={(e) => setProfilePhotoStatus(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Profile Photo Status</option>
+              <option value="has">Has Profile Photo</option>
+              <option value="missing">Missing Profile Photo</option>
             </select>
           </div>
         </div>
