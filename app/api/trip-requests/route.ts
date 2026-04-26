@@ -188,20 +188,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: statusCode })
     }
 
-    if (riderProfile.verification_status !== 'approved') {
-      logger.warn('Rider verification not approved', {
-        userId: user.id,
-        riderId: riderProfile.id,
-        verification_status: riderProfile.verification_status,
-      })
-      const { response, statusCode } = handleApiError(
-        new AuthorizationError(
-          'Account verification is required before you can request trips.',
-          'RIDER_VERIFICATION_REQUIRED'
-        )
-      )
-      return NextResponse.json(response, { status: statusCode })
-    }
+    // if (riderProfile.verification_status !== 'approved') {
+    //   logger.warn('Rider verification not approved', {
+    //     userId: user.id,
+    //     riderId: riderProfile.id,
+    //     verification_status: riderProfile.verification_status,
+    //   })
+    //   const { response, statusCode } = handleApiError(
+    //     new AuthorizationError(
+    //       'Account verification is required before you can request trips.',
+    //       'RIDER_VERIFICATION_REQUIRED'
+    //     )
+    //   )
+    //   return NextResponse.json(response, { status: statusCode })
+    // }
 
     // if (riderProfile.subscription_status === 'expired') {
     //   logger.warn('Expired rider subscription attempted trip request', {
