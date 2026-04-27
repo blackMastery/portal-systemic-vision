@@ -102,6 +102,7 @@ export default function TripsPage() {
   const pendingRequestsCount = trips?.filter(t => t.status === 'requested').length || 0
 
   const statusCounts: Record<string, number> = {
+    total: trips?.length ?? 0,
     requested: 0,
     accepted: 0,
     picked_up: 0,
@@ -113,7 +114,7 @@ export default function TripsPage() {
   }
 
   const statusStats = [
-    { key: 'requested', label: 'Requested', color: 'bg-yellow-50 border-yellow-200 text-yellow-800', dot: 'bg-yellow-400' },
+    { key: 'total', label: 'Total', color: 'bg-yellow-50 border-yellow-200 text-yellow-800', dot: 'bg-yellow-400' },
     { key: 'accepted', label: 'Accepted', color: 'bg-blue-50 border-blue-200 text-blue-800', dot: 'bg-blue-400' },
     { key: 'picked_up', label: 'Picked Up', color: 'bg-purple-50 border-purple-200 text-purple-800', dot: 'bg-purple-400' },
     { key: 'completed', label: 'Completed', color: 'bg-green-50 border-green-200 text-green-800', dot: 'bg-green-400' },
@@ -156,8 +157,8 @@ export default function TripsPage() {
         {statusStats.map(({ key, label, color, dot }) => (
           <button
             key={key}
-            onClick={() => setStatus(status === key ? 'all' : key)}
-            className={`border rounded-xl p-4 text-left transition-all hover:shadow-sm ${color} ${status === key ? 'ring-2 ring-offset-1 ring-current' : ''}`}
+            onClick={() => setStatus(key === 'total' ? 'all' : status === key ? 'all' : key)}
+            className={`border rounded-xl p-4 text-left transition-all hover:shadow-sm ${color} ${(key === 'total' ? status === 'all' : status === key) ? 'ring-2 ring-offset-1 ring-current' : ''}`}
           >
             <div className="flex items-center gap-2 mb-1">
               <span className={`h-2 w-2 rounded-full ${dot}`} />

@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Search, Clock, Users, Star, Route, List, LayoutGrid } from 'lucide-react'
 import Link from 'next/link'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import type { RiderWithDetails, VerificationStatus } from '@/types/database'
 import { format } from 'date-fns'
 
@@ -17,25 +18,31 @@ async function fetchRiders(filters: {
   profilePhotoStatus: string
 }) {
   const supabase = createClient()
+  const allRows: RiderWithDetails[] = []
+  const pageSize = 1000
+  let from = 0
 
-  const query = supabase
-    .from('rider_profiles')
-    .select(
+  // Supabase/PostgREST can cap response size; fetch riders in pages.
+  while (true) {
+    const { data, error } = await supabase
+      .from('rider_profiles')
+      .select(
+        `
+        *,
+        user:user_id (*)
       `
-      *,
-      user:user_id (*)
-    `
-    )
-    .order('created_at', { ascending: false })
+      )
+      .order('created_at', { ascending: false })
+      .range(from, from + pageSize - 1)
 
-  const { data, error } = await query
+    if (error) throw error
 
-  if (error) throw error
+    const batch = (data ?? []) as RiderWithDetails[]
+    allRows.push(...batch)
 
-  const allRows = data as RiderWithDetails[]
-  const pendingVerificationTotal = allRows.filter(
-    (r) => r.verification_status === 'pending'
-  ).length
+    if (batch.length < pageSize) break
+    from += pageSize
+  }
 
   let results = allRows
   if (filters.searchQuery) {
@@ -71,7 +78,7 @@ async function fetchRiders(filters: {
     results = results.filter((rider) => !rider.user?.profile_photo_url?.trim())
   }
 
-  return { riders: results, pendingVerificationTotal }
+  return results
 }
 
 const subscriptionBadgeColors = {
@@ -88,16 +95,57 @@ const verificationBadgeColors: Record<VerificationStatus, string> = {
   suspended: 'bg-gray-100 text-gray-800',
 }
 
-export default function RidersPage() {
-  const [subscriptionStatus, setSubscriptionStatus] = useState('all')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [accountStatus, setAccountStatus] = useState('all')
-  const [verificationStatus, setVerificationStatus] = useState('all')
-  const [idCardStatus, setIdCardStatus] = useState('all')
-  const [profilePhotoStatus, setProfilePhotoStatus] = useState('all')
-  const [viewMode, setViewMode] = useState<'table' | 'card'>('table')
+const subscriptionValues = ['all', 'active', 'trial', 'expired', 'cancelled'] as const
+const accountValues = ['all', 'active', 'inactive'] as const
+const verificationValues = ['all', 'pending', 'approved', 'rejected', 'suspended'] as const
+const idCardValues = ['all', 'has', 'missing'] as const
+const photoValues = ['all', 'has', 'missing'] as const
+const viewValues = ['table', 'card'] as const
 
-  const { data: ridersData, isLoading } = useQuery({
+function parseEnumParam<T extends readonly string[]>(
+  value: string | null,
+  allowed: T,
+  fallback: T[number]
+): T[number] {
+  if (!value) return fallback
+  return allowed.includes(value as T[number]) ? (value as T[number]) : fallback
+}
+
+function parsePageParam(value: string | null): number {
+  if (!value) return 1
+  const parsed = Number.parseInt(value, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1
+}
+
+export default function RidersPage() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const searchParamsString = searchParams.toString()
+
+  const [subscriptionStatus, setSubscriptionStatus] = useState(() =>
+    parseEnumParam(searchParams.get('subscription'), subscriptionValues, 'all')
+  )
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') ?? '')
+  const [accountStatus, setAccountStatus] = useState(() =>
+    parseEnumParam(searchParams.get('account'), accountValues, 'all')
+  )
+  const [verificationStatus, setVerificationStatus] = useState(() =>
+    parseEnumParam(searchParams.get('verification'), verificationValues, 'all')
+  )
+  const [idCardStatus, setIdCardStatus] = useState(() =>
+    parseEnumParam(searchParams.get('idCard'), idCardValues, 'all')
+  )
+  const [profilePhotoStatus, setProfilePhotoStatus] = useState(() =>
+    parseEnumParam(searchParams.get('photo'), photoValues, 'all')
+  )
+  const [viewMode, setViewMode] = useState<'table' | 'card'>(() =>
+    parseEnumParam(searchParams.get('view'), viewValues, 'table')
+  )
+  const [currentPage, setCurrentPage] = useState(() => parsePageParam(searchParams.get('page')))
+  const pageSize = 25
+
+  const { data: riders, isLoading } = useQuery({
     queryKey: [
       'riders',
       subscriptionStatus,
@@ -118,17 +166,90 @@ export default function RidersPage() {
       }),
   })
 
-  const riders = ridersData?.riders
-  const pendingVerificationCount = ridersData?.pendingVerificationTotal ?? 0
+  const verificationCounts: Record<string, number> = {
+    total: riders?.length ?? 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    suspended: 0,
+  }
+  for (const rider of riders ?? []) {
+    if (rider.verification_status in verificationCounts) {
+      verificationCounts[rider.verification_status]++
+    }
+  }
 
-  const expiredCount = riders?.filter((r) => r.subscription_status === 'expired').length || 0
-  const trialExpiringSoon = riders?.filter((r) => {
-    if (r.subscription_status !== 'trial' || !r.trial_end_date) return false
-    const trialEnd = new Date(r.trial_end_date)
-    const now = new Date()
-    const daysUntilExpiry = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-    return daysUntilExpiry <= 3 && daysUntilExpiry > 0
-  }).length || 0
+  const verificationStats = [
+    { key: 'total', label: 'Total', color: 'bg-yellow-50 border-yellow-200 text-yellow-800', dot: 'bg-yellow-400' },
+    { key: 'approved', label: 'Approved', color: 'bg-green-50 border-green-200 text-green-800', dot: 'bg-green-400' },
+    { key: 'pending', label: 'Pending', color: 'bg-blue-50 border-blue-200 text-blue-800', dot: 'bg-blue-400' },
+    { key: 'rejected', label: 'Rejected', color: 'bg-red-50 border-red-200 text-red-800', dot: 'bg-red-400' },
+    { key: 'suspended', label: 'Suspended', color: 'bg-gray-50 border-gray-300 text-gray-800', dot: 'bg-gray-400' },
+  ]
+
+  const totalRiders = riders?.length ?? 0
+  const totalPages = Math.max(1, Math.ceil(totalRiders / pageSize))
+  const pageStart = (currentPage - 1) * pageSize
+  const paginatedRiders = (riders ?? []).slice(pageStart, pageStart + pageSize)
+
+  useEffect(() => {
+    const nextSubscription = parseEnumParam(searchParams.get('subscription'), subscriptionValues, 'all')
+    const nextSearch = searchParams.get('q') ?? ''
+    const nextAccount = parseEnumParam(searchParams.get('account'), accountValues, 'all')
+    const nextVerification = parseEnumParam(
+      searchParams.get('verification'),
+      verificationValues,
+      'all'
+    )
+    const nextIdCard = parseEnumParam(searchParams.get('idCard'), idCardValues, 'all')
+    const nextPhoto = parseEnumParam(searchParams.get('photo'), photoValues, 'all')
+    const nextView = parseEnumParam(searchParams.get('view'), viewValues, 'table')
+    const nextPage = parsePageParam(searchParams.get('page'))
+
+    if (subscriptionStatus !== nextSubscription) setSubscriptionStatus(nextSubscription)
+    if (searchQuery !== nextSearch) setSearchQuery(nextSearch)
+    if (accountStatus !== nextAccount) setAccountStatus(nextAccount)
+    if (verificationStatus !== nextVerification) setVerificationStatus(nextVerification)
+    if (idCardStatus !== nextIdCard) setIdCardStatus(nextIdCard)
+    if (profilePhotoStatus !== nextPhoto) setProfilePhotoStatus(nextPhoto)
+    if (viewMode !== nextView) setViewMode(nextView)
+    if (currentPage !== nextPage) setCurrentPage(nextPage)
+  }, [searchParamsString])
+
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (searchQuery.trim()) params.set('q', searchQuery.trim())
+    if (subscriptionStatus !== 'all') params.set('subscription', subscriptionStatus)
+    if (accountStatus !== 'all') params.set('account', accountStatus)
+    if (verificationStatus !== 'all') params.set('verification', verificationStatus)
+    if (idCardStatus !== 'all') params.set('idCard', idCardStatus)
+    if (profilePhotoStatus !== 'all') params.set('photo', profilePhotoStatus)
+    if (viewMode !== 'table') params.set('view', viewMode)
+    if (currentPage > 1) params.set('page', String(currentPage))
+
+    const nextSearch = params.toString()
+    if (nextSearch !== searchParamsString) {
+      router.replace(nextSearch ? `${pathname}?${nextSearch}` : pathname, { scroll: false })
+    }
+  }, [
+    pathname,
+    router,
+    searchParamsString,
+    searchQuery,
+    subscriptionStatus,
+    accountStatus,
+    verificationStatus,
+    idCardStatus,
+    profilePhotoStatus,
+    viewMode,
+    currentPage,
+  ])
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
 
   return (
     <div className="space-y-6">
@@ -140,33 +261,31 @@ export default function RidersPage() {
             Manage rider accounts and subscriptions
           </p>
         </div>
-        {(expiredCount > 0 || trialExpiringSoon > 0 || pendingVerificationCount > 0) && (
-          <div className="flex flex-wrap gap-2">
-            {pendingVerificationCount > 0 && (
-              <span className="inline-flex items-center px-4 py-2 bg-amber-100 text-amber-900 rounded-lg">
-                {pendingVerificationCount} verification pending
-              </span>
-            )}
-            {expiredCount > 0 && (
-              <Link
-                href="/admin/riders?status=expired"
-                className="inline-flex items-center px-4 py-2 bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition-colors"
-              >
-                <Clock className="h-5 w-5 mr-2" />
-                {expiredCount} Expired
-              </Link>
-            )}
-            {trialExpiringSoon > 0 && (
-              <Link
-                href="/admin/riders?status=trial"
-                className="inline-flex items-center px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition-colors"
-              >
-                <Clock className="h-5 w-5 mr-2" />
-                {trialExpiringSoon} Trials Expiring Soon
-              </Link>
-            )}
-          </div>
-        )}
+      </div>
+
+      {/* Verification Status Count Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        {verificationStats.map(({ key, label, color, dot }) => (
+          <button
+            key={key}
+            onClick={() =>
+              {
+                const nextStatus = key === 'total' ? 'all' : verificationStatus === key ? 'all' : key
+                setVerificationStatus(
+                  parseEnumParam(nextStatus, verificationValues, 'all')
+                )
+                setCurrentPage(1)
+              }
+            }
+            className={`border rounded-xl p-4 text-left transition-all hover:shadow-sm ${color} ${(key === 'total' ? verificationStatus === 'all' : verificationStatus === key) ? 'ring-2 ring-offset-1 ring-current' : ''}`}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <span className={`h-2 w-2 rounded-full ${dot}`} />
+              <span className="text-xs font-medium uppercase tracking-wide">{label}</span>
+            </div>
+            <p className="text-2xl font-bold">{verificationCounts?.[key] ?? '—'}</p>
+          </button>
+        ))}
       </div>
 
       {/* Filters */}
@@ -180,7 +299,10 @@ export default function RidersPage() {
                 type="text"
                 placeholder="Search by name, phone, or email..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  setCurrentPage(1)
+                }}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
@@ -190,7 +312,12 @@ export default function RidersPage() {
           <div>
             <select
               value={subscriptionStatus}
-              onChange={(e) => setSubscriptionStatus(e.target.value)}
+              onChange={(e) => {
+                setSubscriptionStatus(
+                  parseEnumParam(e.target.value, subscriptionValues, 'all')
+                )
+                setCurrentPage(1)
+              }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">All Subscription Status</option>
@@ -205,7 +332,10 @@ export default function RidersPage() {
           <div>
             <select
               value={accountStatus}
-              onChange={(e) => setAccountStatus(e.target.value)}
+              onChange={(e) => {
+                setAccountStatus(parseEnumParam(e.target.value, accountValues, 'all'))
+                setCurrentPage(1)
+              }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">All Account Status</option>
@@ -218,7 +348,12 @@ export default function RidersPage() {
           <div>
             <select
               value={verificationStatus}
-              onChange={(e) => setVerificationStatus(e.target.value)}
+              onChange={(e) => {
+                setVerificationStatus(
+                  parseEnumParam(e.target.value, verificationValues, 'all')
+                )
+                setCurrentPage(1)
+              }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">All Verification</option>
@@ -233,7 +368,10 @@ export default function RidersPage() {
           <div>
             <select
               value={idCardStatus}
-              onChange={(e) => setIdCardStatus(e.target.value)}
+              onChange={(e) => {
+                setIdCardStatus(parseEnumParam(e.target.value, idCardValues, 'all'))
+                setCurrentPage(1)
+              }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">All ID Card Status</option>
@@ -246,7 +384,10 @@ export default function RidersPage() {
           <div>
             <select
               value={profilePhotoStatus}
-              onChange={(e) => setProfilePhotoStatus(e.target.value)}
+              onChange={(e) => {
+                setProfilePhotoStatus(parseEnumParam(e.target.value, photoValues, 'all'))
+                setCurrentPage(1)
+              }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">All Profile Photo Status</option>
@@ -259,7 +400,9 @@ export default function RidersPage() {
 
       {/* View Toggle */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">{riders?.length ?? 0} riders</p>
+        <p className="text-sm text-gray-500">
+          {totalRiders} riders {totalRiders > 0 ? `(Page ${currentPage} of ${totalPages})` : ''}
+        </p>
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
           <button
             onClick={() => setViewMode('table')}
@@ -286,7 +429,7 @@ export default function RidersPage() {
         ) : riders && riders.length > 0 ? (
           viewMode === 'card' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
-              {riders.map((rider) => {
+              {paginatedRiders.map((rider) => {
                 const isTrialExpiringSoon = rider.subscription_status === 'trial' &&
                   rider.trial_end_date &&
                   new Date(rider.trial_end_date) <= new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) &&
@@ -381,7 +524,7 @@ export default function RidersPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {riders.map((rider) => {
+                {paginatedRiders.map((rider) => {
                   const isTrialExpiringSoon = rider.subscription_status === 'trial' && 
                     rider.trial_end_date && 
                     new Date(rider.trial_end_date) <= new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) &&
@@ -496,6 +639,33 @@ export default function RidersPage() {
           </div>
         )}
       </div>
+
+      {totalRiders > 0 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-500">
+            Showing {pageStart + 1}-{Math.min(pageStart + pageSize, totalRiders)} of {totalRiders}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-gray-600">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
