@@ -352,9 +352,9 @@ export async function sendNotificationsToUsers(
   return aggregatedResult
 }
 
-const TRIP_REQUESTS_PAUSED_TITLE = 'Trips temporarily unavailable'
+const TRIP_REQUESTS_PAUSED_TITLE = 'Sending Trips Requests is temporarily unavailable'
 const TRIP_REQUESTS_PAUSED_BODY =
-  'New trip requests are paused. We will let you know when you can request trips again.'
+  'Sending trip requests is temporarily unavailable. will resume shortly.'
 
 const TRIP_REQUESTS_FCM_DATA: Record<string, string> = {
   trip_requests_enabled: 'false',
