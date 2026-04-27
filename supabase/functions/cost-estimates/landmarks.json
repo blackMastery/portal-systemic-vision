@@ -1,0 +1,2693 @@
+[
+  {
+    "name": "Stabroek Market",
+    "aliases": [
+      "stabroek",
+      "water street market"
+    ],
+    "lat": 6.8045,
+    "lng": -58.1553,
+    "area": "Stabroek",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Bourda Market",
+    "aliases": [
+      "bourda",
+      "bourda market"
+    ],
+    "lat": 6.809,
+    "lng": -58.151,
+    "area": "Bourda",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Kitty Market",
+    "aliases": [
+      "kitty market"
+    ],
+    "lat": 6.816,
+    "lng": -58.138,
+    "area": "Kitty",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "La Penitence Market",
+    "aliases": [
+      "la penitence",
+      "penitence market"
+    ],
+    "lat": 6.798,
+    "lng": -58.162,
+    "area": "La Penitence",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Parliament Building",
+    "aliases": [
+      "parliament",
+      "public buildings"
+    ],
+    "lat": 6.8038,
+    "lng": -58.1567,
+    "area": "Georgetown Centre",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "City Hall Georgetown",
+    "aliases": [
+      "city hall",
+      "city hall georgetown"
+    ],
+    "lat": 6.8057,
+    "lng": -58.1554,
+    "area": "Georgetown Centre",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Bank of Guyana",
+    "aliases": [
+      "bank of guyana",
+      "BOG",
+      "central bank"
+    ],
+    "lat": 6.805,
+    "lng": -58.1548,
+    "area": "Georgetown Centre",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "GPO Georgetown",
+    "aliases": [
+      "GPO",
+      "post office",
+      "general post office"
+    ],
+    "lat": 6.8048,
+    "lng": -58.1557,
+    "area": "Robb Street",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Brickdam Police Station",
+    "aliases": [
+      "brickdam",
+      "brickdam police"
+    ],
+    "lat": 6.806,
+    "lng": -58.1545,
+    "area": "Brickdam",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Eve Leary Police HQ",
+    "aliases": [
+      "eve leary",
+      "police headquarters"
+    ],
+    "lat": 6.8175,
+    "lng": -58.163,
+    "area": "Kingston",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Georgetown Public Hospital",
+    "aliases": [
+      "GPHC",
+      "public hospital",
+      "georgetown hospital",
+      "main hospital"
+    ],
+    "lat": 6.8074,
+    "lng": -58.1516,
+    "area": "East Street",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "St Joseph Mercy Hospital",
+    "aliases": [
+      "mercy hospital",
+      "st joseph",
+      "st joseph mercy"
+    ],
+    "lat": 6.8098,
+    "lng": -58.1503,
+    "area": "Parade Street",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Woodlands Hospital",
+    "aliases": [
+      "woodlands",
+      "woodlands hospital"
+    ],
+    "lat": 6.809,
+    "lng": -58.1455,
+    "area": "Queenstown",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Davis Memorial Hospital",
+    "aliases": [
+      "davis memorial",
+      "davis hospital"
+    ],
+    "lat": 6.8085,
+    "lng": -58.149,
+    "area": "Queenstown",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Balwant Singh Hospital",
+    "aliases": [
+      "balwant singh",
+      "bsh"
+    ],
+    "lat": 6.811,
+    "lng": -58.151,
+    "area": "East Street",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Medical Associates Hospital",
+    "aliases": [
+      "medical associates",
+      "medical arts"
+    ],
+    "lat": 6.812,
+    "lng": -58.15,
+    "area": "Thomas Street",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Marriott Hotel",
+    "aliases": [
+      "marriott",
+      "guyana marriott"
+    ],
+    "lat": 6.8182,
+    "lng": -58.1614,
+    "area": "Kingston",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Pegasus Hotel",
+    "aliases": [
+      "pegasus",
+      "hotel pegasus"
+    ],
+    "lat": 6.8175,
+    "lng": -58.1625,
+    "area": "Kingston",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Cara Lodge",
+    "aliases": [
+      "cara lodge"
+    ],
+    "lat": 6.81,
+    "lng": -58.156,
+    "area": "Quamina Street",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Herdmanston Lodge",
+    "aliases": [
+      "herdmanston",
+      "herdmanston lodge"
+    ],
+    "lat": 6.8115,
+    "lng": -58.1485,
+    "area": "Queenstown",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "King's Hotel",
+    "aliases": [
+      "kings hotel",
+      "king's hotel"
+    ],
+    "lat": 6.807,
+    "lng": -58.15,
+    "area": "Waterloo Street",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Brandsville Hotel",
+    "aliases": [
+      "brandsville",
+      "brandsville hotel"
+    ],
+    "lat": 6.812,
+    "lng": -58.1405,
+    "area": "Campbellville",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Signature Inn",
+    "aliases": [
+      "signature inn"
+    ],
+    "lat": 6.813,
+    "lng": -58.1445,
+    "area": "Laluni Street",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Grand Coastal Hotel",
+    "aliases": [
+      "grand coastal"
+    ],
+    "lat": 6.8175,
+    "lng": -58.11,
+    "area": "Le Ressouvenir",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "National Park",
+    "aliases": [
+      "national park",
+      "queen elizabeth park"
+    ],
+    "lat": 6.8115,
+    "lng": -58.1467,
+    "area": "Queenstown",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Promenade Gardens",
+    "aliases": [
+      "promenade",
+      "promenade gardens"
+    ],
+    "lat": 6.8068,
+    "lng": -58.1525,
+    "area": "Georgetown Centre",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Botanical Gardens",
+    "aliases": [
+      "botanical gardens",
+      "botanical"
+    ],
+    "lat": 6.8127,
+    "lng": -58.1443,
+    "area": "Vlissengen Road",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Guyana Zoo",
+    "aliases": [
+      "zoo",
+      "guyana zoo"
+    ],
+    "lat": 6.8128,
+    "lng": -58.1452,
+    "area": "Vlissengen Road",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Seawall Kingston",
+    "aliases": [
+      "sea wall",
+      "seawall",
+      "kingston seawall"
+    ],
+    "lat": 6.8235,
+    "lng": -58.1615,
+    "area": "Kingston",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "GDF Ground Camp Ayanganna",
+    "aliases": [
+      "gdf ground",
+      "camp ayanganna",
+      "gdf"
+    ],
+    "lat": 6.8135,
+    "lng": -58.1435,
+    "area": "Vlissengen Road",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Kingston",
+    "aliases": [
+      "kingston"
+    ],
+    "lat": 6.818,
+    "lng": -58.161,
+    "area": "Kingston",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Cummingsburg",
+    "aliases": [
+      "cummingsburg",
+      "cummings burg"
+    ],
+    "lat": 6.8125,
+    "lng": -58.155,
+    "area": "Cummingsburg",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Alberttown",
+    "aliases": [
+      "alberttown"
+    ],
+    "lat": 6.81,
+    "lng": -58.148,
+    "area": "Alberttown",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Queenstown",
+    "aliases": [
+      "queenstown"
+    ],
+    "lat": 6.8115,
+    "lng": -58.1467,
+    "area": "Queenstown",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Newtown",
+    "aliases": [
+      "newtown"
+    ],
+    "lat": 6.815,
+    "lng": -58.1433,
+    "area": "Newtown",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Campbellville",
+    "aliases": [
+      "campbellville"
+    ],
+    "lat": 6.8117,
+    "lng": -58.1417,
+    "area": "Campbellville",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Subryanville",
+    "aliases": [
+      "subryanville"
+    ],
+    "lat": 6.8133,
+    "lng": -58.1367,
+    "area": "Subryanville",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Bel Air Park",
+    "aliases": [
+      "bel air",
+      "bel air park"
+    ],
+    "lat": 6.8167,
+    "lng": -58.1283,
+    "area": "Bel Air",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Bel Air Gardens",
+    "aliases": [
+      "bel air gardens"
+    ],
+    "lat": 6.8185,
+    "lng": -58.127,
+    "area": "Bel Air Gardens",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Bel Air Springs",
+    "aliases": [
+      "bel air springs"
+    ],
+    "lat": 6.82,
+    "lng": -58.126,
+    "area": "Bel Air Springs",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Lamaha Gardens",
+    "aliases": [
+      "lamaha gardens",
+      "lamaha"
+    ],
+    "lat": 6.8133,
+    "lng": -58.1317,
+    "area": "Lamaha Gardens",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Lamaha Springs",
+    "aliases": [
+      "lamaha springs"
+    ],
+    "lat": 6.8155,
+    "lng": -58.145,
+    "area": "Lamaha Springs",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Prashad Nagar",
+    "aliases": [
+      "prashad nagar"
+    ],
+    "lat": 6.8133,
+    "lng": -58.145,
+    "area": "Prashad Nagar",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Kitty",
+    "aliases": [
+      "kitty"
+    ],
+    "lat": 6.816,
+    "lng": -58.135,
+    "area": "Kitty",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Newburg",
+    "aliases": [
+      "newburg"
+    ],
+    "lat": 6.805,
+    "lng": -58.1495,
+    "area": "Newburg",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Lacytown",
+    "aliases": [
+      "lacytown"
+    ],
+    "lat": 6.8072,
+    "lng": -58.1538,
+    "area": "Lacytown",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Robbstown",
+    "aliases": [
+      "robbstown",
+      "robb town"
+    ],
+    "lat": 6.8055,
+    "lng": -58.156,
+    "area": "Robbstown",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Werk-en-Rust",
+    "aliases": [
+      "werk en rust",
+      "werk-en-rust"
+    ],
+    "lat": 6.8,
+    "lng": -58.1595,
+    "area": "Werk-en-Rust",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Lodge",
+    "aliases": [
+      "lodge"
+    ],
+    "lat": 6.81,
+    "lng": -58.1567,
+    "area": "Lodge",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Tucville",
+    "aliases": [
+      "tucville"
+    ],
+    "lat": 6.8183,
+    "lng": -58.1567,
+    "area": "Tucville",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Charlestown",
+    "aliases": [
+      "charlestown"
+    ],
+    "lat": 6.8017,
+    "lng": -58.16,
+    "area": "Charlestown",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Wortmanville",
+    "aliases": [
+      "wortmanville"
+    ],
+    "lat": 6.8033,
+    "lng": -58.1583,
+    "area": "Wortmanville",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Stabroek",
+    "aliases": [
+      "stabroek"
+    ],
+    "lat": 6.8045,
+    "lng": -58.1553,
+    "area": "Stabroek",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Albouystown",
+    "aliases": [
+      "albouystown"
+    ],
+    "lat": 6.7983,
+    "lng": -58.1633,
+    "area": "Albouystown",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "La Penitence",
+    "aliases": [
+      "la penitence",
+      "penitence"
+    ],
+    "lat": 6.798,
+    "lng": -58.162,
+    "area": "La Penitence",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "South Ruimveldt",
+    "aliases": [
+      "south ruimveldt",
+      "south ruimveldt gardens"
+    ],
+    "lat": 6.785,
+    "lng": -58.168,
+    "area": "South Ruimveldt",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "North Ruimveldt",
+    "aliases": [
+      "north ruimveldt"
+    ],
+    "lat": 6.795,
+    "lng": -58.17,
+    "area": "North Ruimveldt",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Ruimveldt",
+    "aliases": [
+      "ruimveldt"
+    ],
+    "lat": 6.795,
+    "lng": -58.17,
+    "area": "Ruimveldt",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Sophia",
+    "aliases": [
+      "sophia"
+    ],
+    "lat": 6.8233,
+    "lng": -58.1317,
+    "area": "Sophia",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Festival City",
+    "aliases": [
+      "festival city"
+    ],
+    "lat": 6.822,
+    "lng": -58.1367,
+    "area": "Festival City",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Camp Street",
+    "aliases": [
+      "camp street",
+      "camp st"
+    ],
+    "lat": 6.8063,
+    "lng": -58.1589,
+    "area": "Georgetown Centre",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Church Street",
+    "aliases": [
+      "church street",
+      "church st"
+    ],
+    "lat": 6.808,
+    "lng": -58.157,
+    "area": "Georgetown Centre",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Main Street",
+    "aliases": [
+      "main street",
+      "main st"
+    ],
+    "lat": 6.81,
+    "lng": -58.158,
+    "area": "Georgetown Centre",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Regent Street",
+    "aliases": [
+      "regent street",
+      "regent st"
+    ],
+    "lat": 6.8078,
+    "lng": -58.153,
+    "area": "Bourda",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Water Street",
+    "aliases": [
+      "water street",
+      "water st"
+    ],
+    "lat": 6.805,
+    "lng": -58.1563,
+    "area": "Georgetown Centre",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Robb Street",
+    "aliases": [
+      "robb street",
+      "robb st"
+    ],
+    "lat": 6.8072,
+    "lng": -58.1538,
+    "area": "Lacytown",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Brickdam",
+    "aliases": [
+      "brickdam"
+    ],
+    "lat": 6.806,
+    "lng": -58.1545,
+    "area": "Brickdam",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "North Road",
+    "aliases": [
+      "north road"
+    ],
+    "lat": 6.8085,
+    "lng": -58.154,
+    "area": "Georgetown Centre",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "South Road",
+    "aliases": [
+      "south road"
+    ],
+    "lat": 6.8035,
+    "lng": -58.154,
+    "area": "Bourda",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Sheriff Street",
+    "aliases": [
+      "sheriff street",
+      "sheriff"
+    ],
+    "lat": 6.81,
+    "lng": -58.14,
+    "area": "Campbellville",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Vlissengen Road",
+    "aliases": [
+      "vlissengen",
+      "vlissengen road"
+    ],
+    "lat": 6.812,
+    "lng": -58.143,
+    "area": "Queenstown",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Mandela Avenue",
+    "aliases": [
+      "mandela",
+      "mandela avenue",
+      "mandela ave"
+    ],
+    "lat": 6.797,
+    "lng": -58.158,
+    "area": "Georgetown South",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "East Street",
+    "aliases": [
+      "east street",
+      "east st"
+    ],
+    "lat": 6.808,
+    "lng": -58.1517,
+    "area": "Georgetown Centre",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Cummings Street",
+    "aliases": [
+      "cummings street",
+      "cummings st"
+    ],
+    "lat": 6.81,
+    "lng": -58.153,
+    "area": "Cummingsburg",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Light Street",
+    "aliases": [
+      "light street",
+      "light st"
+    ],
+    "lat": 6.8085,
+    "lng": -58.149,
+    "area": "Alberttown",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Carmichael Street",
+    "aliases": [
+      "carmichael street"
+    ],
+    "lat": 6.8095,
+    "lng": -58.1555,
+    "area": "Cummingsburg",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Quamina Street",
+    "aliases": [
+      "quamina street"
+    ],
+    "lat": 6.8105,
+    "lng": -58.1555,
+    "area": "Cummingsburg",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "High Street",
+    "aliases": [
+      "high street"
+    ],
+    "lat": 6.81,
+    "lng": -58.165,
+    "area": "Kingston",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "New Market Street",
+    "aliases": [
+      "new market street"
+    ],
+    "lat": 6.814,
+    "lng": -58.159,
+    "area": "Cummingsburg",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Thomas Street",
+    "aliases": [
+      "thomas street"
+    ],
+    "lat": 6.813,
+    "lng": -58.1498,
+    "area": "Queenstown",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Middle Road La Penitence",
+    "aliases": [
+      "middle road"
+    ],
+    "lat": 6.7985,
+    "lng": -58.161,
+    "area": "La Penitence",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Queens College",
+    "aliases": [
+      "queens college",
+      "queen's college",
+      "qc"
+    ],
+    "lat": 6.8125,
+    "lng": -58.141,
+    "area": "Camp Road",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Bishops High School",
+    "aliases": [
+      "bishops",
+      "bishops high",
+      "bhs"
+    ],
+    "lat": 6.8125,
+    "lng": -58.1435,
+    "area": "Carifesta Avenue",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "St Joseph High",
+    "aliases": [
+      "st joseph high",
+      "sjhs"
+    ],
+    "lat": 6.81,
+    "lng": -58.1545,
+    "area": "Cummingsburg",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "St Stanislaus College",
+    "aliases": [
+      "st stanislaus",
+      "stanislaus"
+    ],
+    "lat": 6.8085,
+    "lng": -58.158,
+    "area": "Brickdam",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "School of the Nations",
+    "aliases": [
+      "school of nations",
+      "nations"
+    ],
+    "lat": 6.811,
+    "lng": -58.1425,
+    "area": "Camp Road",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Marian Academy",
+    "aliases": [
+      "marian academy"
+    ],
+    "lat": 6.814,
+    "lng": -58.1415,
+    "area": "Carifesta Avenue",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Central High",
+    "aliases": [
+      "central high"
+    ],
+    "lat": 6.809,
+    "lng": -58.15,
+    "area": "Waterloo Street",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Richard Ishmael Secondary",
+    "aliases": [
+      "richard ishmael",
+      "ris"
+    ],
+    "lat": 6.808,
+    "lng": -58.147,
+    "area": "Thomas Lands",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "North Ruimveldt Multilateral",
+    "aliases": [
+      "north ruimveldt multilateral",
+      "nrms"
+    ],
+    "lat": 6.797,
+    "lng": -58.169,
+    "area": "North Ruimveldt",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Christ Church Secondary",
+    "aliases": [
+      "christ church secondary",
+      "ccs"
+    ],
+    "lat": 6.808,
+    "lng": -58.152,
+    "area": "Waterloo Street",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Presidents College",
+    "aliases": [
+      "presidents college",
+      "pc"
+    ],
+    "lat": 6.82,
+    "lng": -58.085,
+    "area": "Golden Grove ECD",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "University of Guyana",
+    "aliases": [
+      "UG",
+      "u.g.",
+      "turkeyen campus",
+      "university"
+    ],
+    "lat": 6.819,
+    "lng": -58.1057,
+    "area": "Turkeyen",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Critchlow Labour College",
+    "aliases": [
+      "critchlow",
+      "labour college"
+    ],
+    "lat": 6.8105,
+    "lng": -58.1495,
+    "area": "Woolford Avenue",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "GTI Georgetown Technical",
+    "aliases": [
+      "GTI",
+      "technical institute"
+    ],
+    "lat": 6.809,
+    "lng": -58.1475,
+    "area": "Woolford Avenue",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Giftland Mall",
+    "aliases": [
+      "giftland",
+      "giftland ofx",
+      "turkeyen mall"
+    ],
+    "lat": 6.8201,
+    "lng": -58.1073,
+    "area": "Turkeyen",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "MovieTowne",
+    "aliases": [
+      "movie town",
+      "movietowne",
+      "cinema"
+    ],
+    "lat": 6.8195,
+    "lng": -58.1078,
+    "area": "Turkeyen",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Amazonia Mall",
+    "aliases": [
+      "amazonia",
+      "amazonia mall"
+    ],
+    "lat": 6.7795,
+    "lng": -58.173,
+    "area": "Providence",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Giftland Hypermarket Broad St",
+    "aliases": [
+      "giftland broad street",
+      "giftland downtown"
+    ],
+    "lat": 6.8052,
+    "lng": -58.154,
+    "area": "Stabroek",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Massy Supermarket Vlissengen",
+    "aliases": [
+      "massy vlissengen",
+      "massy queenstown"
+    ],
+    "lat": 6.8125,
+    "lng": -58.1425,
+    "area": "Vlissengen Road",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Massy Supermarket Providence",
+    "aliases": [
+      "massy providence"
+    ],
+    "lat": 6.78,
+    "lng": -58.1735,
+    "area": "Providence",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Massy Supermarket Turkeyen",
+    "aliases": [
+      "massy turkeyen",
+      "massy giftland"
+    ],
+    "lat": 6.8195,
+    "lng": -58.1085,
+    "area": "Turkeyen",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Nigel's Supermarket",
+    "aliases": [
+      "nigels",
+      "nigel's"
+    ],
+    "lat": 6.81,
+    "lng": -58.1545,
+    "area": "Robb Street",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Survival Supermarket",
+    "aliases": [
+      "survival"
+    ],
+    "lat": 6.807,
+    "lng": -58.147,
+    "area": "Vlissengen Road",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "DSL Supermarket Houston",
+    "aliases": [
+      "dsl houston",
+      "dsl"
+    ],
+    "lat": 6.795,
+    "lng": -58.175,
+    "area": "Houston",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Guyana Stores",
+    "aliases": [
+      "guyana stores"
+    ],
+    "lat": 6.8053,
+    "lng": -58.1555,
+    "area": "Water Street",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Bounty Supermarket",
+    "aliases": [
+      "bounty",
+      "bounty supermarket"
+    ],
+    "lat": 6.808,
+    "lng": -58.1465,
+    "area": "Vlissengen Road",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Gafoors Houston",
+    "aliases": [
+      "gafoors houston"
+    ],
+    "lat": 6.798,
+    "lng": -58.177,
+    "area": "Houston",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "MMC Supermarket",
+    "aliases": [
+      "mmc",
+      "mmc supermarket"
+    ],
+    "lat": 6.812,
+    "lng": -58.154,
+    "area": "Camp Street",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Republic Bank Camp Street",
+    "aliases": [
+      "republic bank camp",
+      "republic camp"
+    ],
+    "lat": 6.8055,
+    "lng": -58.158,
+    "area": "Camp Street",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Republic Bank Water Street",
+    "aliases": [
+      "republic bank water"
+    ],
+    "lat": 6.8053,
+    "lng": -58.156,
+    "area": "Water Street",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "GBTI Water Street",
+    "aliases": [
+      "gbti water",
+      "gbti main"
+    ],
+    "lat": 6.8058,
+    "lng": -58.1562,
+    "area": "Water Street",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Demerara Bank",
+    "aliases": [
+      "demerara bank",
+      "dbl"
+    ],
+    "lat": 6.8075,
+    "lng": -58.154,
+    "area": "Camp Street",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Scotiabank Robb Street",
+    "aliases": [
+      "scotia bank",
+      "scotiabank"
+    ],
+    "lat": 6.807,
+    "lng": -58.154,
+    "area": "Robb Street",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Bank of Baroda",
+    "aliases": [
+      "bank of baroda",
+      "bob"
+    ],
+    "lat": 6.805,
+    "lng": -58.156,
+    "area": "Robb Street",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "GT&T Headquarters",
+    "aliases": [
+      "gtt",
+      "gt&t",
+      "guyana telephone"
+    ],
+    "lat": 6.8055,
+    "lng": -58.1545,
+    "area": "Georgetown Centre",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Digicel Headquarters",
+    "aliases": [
+      "digicel",
+      "digicel hq"
+    ],
+    "lat": 6.8085,
+    "lng": -58.153,
+    "area": "Robb Street",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Cheddi Jagan Intl Airport",
+    "aliases": [
+      "airport",
+      "CJIA",
+      "timehri",
+      "cheddi jagan",
+      "international airport"
+    ],
+    "lat": 6.4986,
+    "lng": -58.2541,
+    "area": "Timehri",
+    "zone": "AIRPORT"
+  },
+  {
+    "name": "Ogle Airport",
+    "aliases": [
+      "ogle",
+      "eugene f correira",
+      "domestic airport",
+      "ogle airport"
+    ],
+    "lat": 6.8063,
+    "lng": -58.1063,
+    "area": "Ogle",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Arthur Chung Conference Centre",
+    "aliases": [
+      "ACCC",
+      "arthur chung",
+      "conference centre"
+    ],
+    "lat": 6.8198,
+    "lng": -58.1082,
+    "area": "Liliendaal",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Guyana National Stadium Providence",
+    "aliases": [
+      "providence stadium",
+      "national stadium",
+      "cricket stadium"
+    ],
+    "lat": 6.7722,
+    "lng": -58.1733,
+    "area": "Providence",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Turkeyen",
+    "aliases": [
+      "turkeyen"
+    ],
+    "lat": 6.819,
+    "lng": -58.1057,
+    "area": "Turkeyen",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Liliendaal",
+    "aliases": [
+      "liliendaal"
+    ],
+    "lat": 6.8183,
+    "lng": -58.12,
+    "area": "Liliendaal",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Pattensen",
+    "aliases": [
+      "pattensen"
+    ],
+    "lat": 6.822,
+    "lng": -58.109,
+    "area": "Pattensen",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Ogle",
+    "aliases": [
+      "ogle"
+    ],
+    "lat": 6.8063,
+    "lng": -58.1063,
+    "area": "Ogle",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Sparendaam",
+    "aliases": [
+      "sparendaam"
+    ],
+    "lat": 6.815,
+    "lng": -58.095,
+    "area": "Sparendaam",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Better Hope",
+    "aliases": [
+      "better hope"
+    ],
+    "lat": 6.8155,
+    "lng": -58.09,
+    "area": "Better Hope",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Le Ressouvenir",
+    "aliases": [
+      "le ressouvenir",
+      "ressouvenir"
+    ],
+    "lat": 6.816,
+    "lng": -58.087,
+    "area": "Le Ressouvenir",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Goedverwagting",
+    "aliases": [
+      "goedverwagting"
+    ],
+    "lat": 6.816,
+    "lng": -58.085,
+    "area": "Goedverwagting",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Chateau Margot",
+    "aliases": [
+      "chateau margot"
+    ],
+    "lat": 6.8165,
+    "lng": -58.082,
+    "area": "Chateau Margot",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Plaisance",
+    "aliases": [
+      "plaisance"
+    ],
+    "lat": 6.8167,
+    "lng": -58.0767,
+    "area": "Plaisance",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Industry",
+    "aliases": [
+      "industry"
+    ],
+    "lat": 6.8183,
+    "lng": -58.07,
+    "area": "Industry",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Vryheid's Lust",
+    "aliases": [
+      "vryheids lust",
+      "vryheid's lust"
+    ],
+    "lat": 6.818,
+    "lng": -58.062,
+    "area": "Vryheid's Lust",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Beterverwagting",
+    "aliases": [
+      "BV",
+      "beterverwagting",
+      "better verwagting"
+    ],
+    "lat": 6.8167,
+    "lng": -58.055,
+    "area": "Beterverwagting",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Triumph",
+    "aliases": [
+      "triumph"
+    ],
+    "lat": 6.8183,
+    "lng": -58.05,
+    "area": "Triumph",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Mon Repos",
+    "aliases": [
+      "mon repos"
+    ],
+    "lat": 6.818,
+    "lng": -58.045,
+    "area": "Mon Repos",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "La Bonne Intention",
+    "aliases": [
+      "LBI",
+      "la bonne intention",
+      "lusignan LBI"
+    ],
+    "lat": 6.817,
+    "lng": -58.07,
+    "area": "LBI, East Coast (between Chateau Margot and BV)",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Lusignan",
+    "aliases": [
+      "lusignan"
+    ],
+    "lat": 6.817,
+    "lng": -58.037,
+    "area": "Lusignan",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Good Hope ECD",
+    "aliases": [
+      "good hope east coast",
+      "good hope ecd"
+    ],
+    "lat": 6.817,
+    "lng": -58.033,
+    "area": "Good Hope",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Annandale",
+    "aliases": [
+      "annandale"
+    ],
+    "lat": 6.8175,
+    "lng": -58.028,
+    "area": "Annandale",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Vigilance",
+    "aliases": [
+      "vigilance"
+    ],
+    "lat": 6.8175,
+    "lng": -58.024,
+    "area": "Vigilance",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Buxton",
+    "aliases": [
+      "buxton"
+    ],
+    "lat": 6.8167,
+    "lng": -58.0167,
+    "area": "Buxton",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Friendship ECD",
+    "aliases": [
+      "friendship ecd",
+      "friendship east coast"
+    ],
+    "lat": 6.8165,
+    "lng": -58.013,
+    "area": "Friendship",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Strathspey",
+    "aliases": [
+      "strathspey"
+    ],
+    "lat": 6.8163,
+    "lng": -58.009,
+    "area": "Strathspey",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Bachelors Adventure",
+    "aliases": [
+      "bachelors adventure",
+      "bachelor's adventure"
+    ],
+    "lat": 6.816,
+    "lng": -58.005,
+    "area": "Bachelors Adventure",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Enterprise ECD",
+    "aliases": [
+      "enterprise",
+      "enterprise ecd"
+    ],
+    "lat": 6.8158,
+    "lng": -58.001,
+    "area": "Enterprise",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Non Pareil",
+    "aliases": [
+      "non pareil",
+      "non pariel"
+    ],
+    "lat": 6.817,
+    "lng": -58.01,
+    "area": "Non Pareil, East Coast",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Paradise ECD",
+    "aliases": [
+      "paradise",
+      "paradise ecd"
+    ],
+    "lat": 6.8158,
+    "lng": -57.99,
+    "area": "Paradise",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Enmore",
+    "aliases": [
+      "enmore"
+    ],
+    "lat": 6.8167,
+    "lng": -57.9833,
+    "area": "Enmore",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Hope ECD",
+    "aliases": [
+      "hope ecd"
+    ],
+    "lat": 6.8155,
+    "lng": -57.972,
+    "area": "Hope",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Foulis",
+    "aliases": [
+      "foulis"
+    ],
+    "lat": 6.815,
+    "lng": -57.967,
+    "area": "Foulis",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Haslington",
+    "aliases": [
+      "haslington"
+    ],
+    "lat": 6.8147,
+    "lng": -57.96,
+    "area": "Haslington",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Golden Grove ECD",
+    "aliases": [
+      "golden grove ecd",
+      "golden grove east coast"
+    ],
+    "lat": 6.82,
+    "lng": -57.9583,
+    "area": "Golden Grove",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Nabaclis",
+    "aliases": [
+      "nabaclis"
+    ],
+    "lat": 6.814,
+    "lng": -57.95,
+    "area": "Nabaclis",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Victoria",
+    "aliases": [
+      "victoria"
+    ],
+    "lat": 6.8133,
+    "lng": -57.9383,
+    "area": "Victoria",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Belfield",
+    "aliases": [
+      "belfield"
+    ],
+    "lat": 6.813,
+    "lng": -57.93,
+    "area": "Belfield",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Ann's Grove",
+    "aliases": [
+      "anns grove",
+      "ann's grove"
+    ],
+    "lat": 6.8125,
+    "lng": -57.922,
+    "area": "Ann's Grove",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Clonbrook",
+    "aliases": [
+      "clonbrook"
+    ],
+    "lat": 6.812,
+    "lng": -57.915,
+    "area": "Clonbrook",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Cove and John",
+    "aliases": [
+      "cove and john",
+      "cove & john"
+    ],
+    "lat": 6.75,
+    "lng": -57.97,
+    "area": "Cove and John",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Mahaica",
+    "aliases": [
+      "mahaica"
+    ],
+    "lat": 6.6833,
+    "lng": -57.8,
+    "area": "Mahaica",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Houston EBD",
+    "aliases": [
+      "houston ebd",
+      "houston"
+    ],
+    "lat": 6.8,
+    "lng": -58.1833,
+    "area": "Houston",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Rome EBD",
+    "aliases": [
+      "rome ebd",
+      "rome"
+    ],
+    "lat": 6.795,
+    "lng": -58.18,
+    "area": "Rome",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "McDoom Village",
+    "aliases": [
+      "mcdoom",
+      "mc doom"
+    ],
+    "lat": 6.793,
+    "lng": -58.178,
+    "area": "McDoom",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Agricola",
+    "aliases": [
+      "agricola"
+    ],
+    "lat": 6.7917,
+    "lng": -58.1767,
+    "area": "Agricola",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Eccles Industrial Estate",
+    "aliases": [
+      "eccles industrial",
+      "eccles"
+    ],
+    "lat": 6.767,
+    "lng": -58.184,
+    "area": "Eccles",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Eccles Housing Scheme",
+    "aliases": [
+      "eccles scheme",
+      "eccles housing"
+    ],
+    "lat": 6.77,
+    "lng": -58.182,
+    "area": "Eccles",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Eccleston Gardens",
+    "aliases": [
+      "eccleston gardens",
+      "eccleston"
+    ],
+    "lat": 6.768,
+    "lng": -58.181,
+    "area": "Eccleston Gardens",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Bagotstown",
+    "aliases": [
+      "bagotstown"
+    ],
+    "lat": 6.76,
+    "lng": -58.181,
+    "area": "Bagotstown",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Peter's Hall",
+    "aliases": [
+      "peters hall",
+      "peter's hall"
+    ],
+    "lat": 6.7583,
+    "lng": -58.1775,
+    "area": "Peter's Hall",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Nandy Park",
+    "aliases": [
+      "nandy park"
+    ],
+    "lat": 6.757,
+    "lng": -58.176,
+    "area": "Nandy Park",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Republic Park",
+    "aliases": [
+      "republic park"
+    ],
+    "lat": 6.756,
+    "lng": -58.174,
+    "area": "Republic Park",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Providence EBD",
+    "aliases": [
+      "providence ebd",
+      "providence"
+    ],
+    "lat": 6.78,
+    "lng": -58.1733,
+    "area": "Providence",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Greenfield Park",
+    "aliases": [
+      "greenfield park"
+    ],
+    "lat": 6.755,
+    "lng": -58.172,
+    "area": "Greenfield Park",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Ramsburg",
+    "aliases": [
+      "ramsburg"
+    ],
+    "lat": 6.753,
+    "lng": -58.17,
+    "area": "Ramsburg",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "New Providence",
+    "aliases": [
+      "new providence"
+    ],
+    "lat": 6.7525,
+    "lng": -58.1695,
+    "area": "New Providence",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Mocha",
+    "aliases": [
+      "mocha"
+    ],
+    "lat": 6.745,
+    "lng": -58.168,
+    "area": "Mocha",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Arcadia",
+    "aliases": [
+      "arcadia"
+    ],
+    "lat": 6.742,
+    "lng": -58.167,
+    "area": "Arcadia",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Herstelling",
+    "aliases": [
+      "herstelling"
+    ],
+    "lat": 6.7417,
+    "lng": -58.1667,
+    "area": "Herstelling",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Little Diamond",
+    "aliases": [
+      "little diamond"
+    ],
+    "lat": 6.725,
+    "lng": -58.168,
+    "area": "Little Diamond",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Diamond Housing Scheme",
+    "aliases": [
+      "diamond",
+      "diamond ebd",
+      "diamond scheme"
+    ],
+    "lat": 6.7167,
+    "lng": -58.1667,
+    "area": "Diamond",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Diamond First Bridge",
+    "aliases": [
+      "diamond first bridge",
+      "diamond bridge",
+      "first bridge"
+    ],
+    "lat": 6.7183,
+    "lng": -58.17,
+    "area": "Diamond",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Grove EBD",
+    "aliases": [
+      "grove",
+      "grove ebd"
+    ],
+    "lat": 6.69,
+    "lng": -58.17,
+    "area": "Grove",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Craig",
+    "aliases": [
+      "craig"
+    ],
+    "lat": 6.6667,
+    "lng": -58.1733,
+    "area": "Craig",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Land of Canaan",
+    "aliases": [
+      "land of canaan",
+      "canaan"
+    ],
+    "lat": 6.65,
+    "lng": -58.18,
+    "area": "Land of Canaan",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Soesdyke",
+    "aliases": [
+      "soesdyke",
+      "soesdyke junction"
+    ],
+    "lat": 6.6333,
+    "lng": -58.1833,
+    "area": "Soesdyke",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Timehri",
+    "aliases": [
+      "timehri"
+    ],
+    "lat": 6.4986,
+    "lng": -58.2541,
+    "area": "Timehri",
+    "zone": "AIRPORT"
+  },
+  {
+    "name": "Demerara Harbour Bridge",
+    "aliases": [
+      "harbour bridge",
+      "demerara bridge",
+      "dhb"
+    ],
+    "lat": 6.7853,
+    "lng": -58.1858,
+    "area": "Peter's Hall/VEH",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Vreed-en-Hoop",
+    "aliases": [
+      "vreed en hoop",
+      "vreeden hoop",
+      "VEH"
+    ],
+    "lat": 6.805,
+    "lng": -58.2017,
+    "area": "Vreed-en-Hoop",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Malgre Tout",
+    "aliases": [
+      "malgre tout"
+    ],
+    "lat": 6.806,
+    "lng": -58.208,
+    "area": "Malgre Tout",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "La Grange WBD",
+    "aliases": [
+      "la grange",
+      "lagrange"
+    ],
+    "lat": 6.805,
+    "lng": -58.213,
+    "area": "La Grange",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Best Village",
+    "aliases": [
+      "best village",
+      "best"
+    ],
+    "lat": 6.805,
+    "lng": -58.218,
+    "area": "Best",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Meer Zorgen",
+    "aliases": [
+      "meer zorgen"
+    ],
+    "lat": 6.81,
+    "lng": -58.225,
+    "area": "Meer Zorgen",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Meten-Meer-Zorg",
+    "aliases": [
+      "meten meer zorg",
+      "meten-meer-zorg",
+      "mmz"
+    ],
+    "lat": 6.8367,
+    "lng": -58.2667,
+    "area": "Meten-Meer-Zorg",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Fellowship",
+    "aliases": [
+      "fellowship"
+    ],
+    "lat": 6.82,
+    "lng": -58.25,
+    "area": "Fellowship",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Hague",
+    "aliases": [
+      "hague"
+    ],
+    "lat": 6.82,
+    "lng": -58.24,
+    "area": "Hague",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Blankenburg",
+    "aliases": [
+      "blankenburg"
+    ],
+    "lat": 6.815,
+    "lng": -58.233,
+    "area": "Blankenburg",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Den Amstel",
+    "aliases": [
+      "den amstel"
+    ],
+    "lat": 6.818,
+    "lng": -58.258,
+    "area": "Den Amstel",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Windsor Forest",
+    "aliases": [
+      "windsor forest"
+    ],
+    "lat": 6.817,
+    "lng": -58.255,
+    "area": "Windsor Forest",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Crane",
+    "aliases": [
+      "crane"
+    ],
+    "lat": 6.816,
+    "lng": -58.25,
+    "area": "Crane",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "La Jalousie",
+    "aliases": [
+      "la jalousie",
+      "la jealousie"
+    ],
+    "lat": 6.815,
+    "lng": -58.245,
+    "area": "La Jalousie",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Stewartville",
+    "aliases": [
+      "stewartville"
+    ],
+    "lat": 6.8167,
+    "lng": -58.2583,
+    "area": "Stewartville",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Leonora",
+    "aliases": [
+      "leonora"
+    ],
+    "lat": 6.7833,
+    "lng": -58.25,
+    "area": "Leonora",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Anna Catherina",
+    "aliases": [
+      "anna catherina"
+    ],
+    "lat": 6.85,
+    "lng": -58.27,
+    "area": "Anna Catherina",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Cornelia Ida",
+    "aliases": [
+      "cornelia ida"
+    ],
+    "lat": 6.85,
+    "lng": -58.278,
+    "area": "Cornelia Ida",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Zeeburg",
+    "aliases": [
+      "zeeburg"
+    ],
+    "lat": 6.855,
+    "lng": -58.28,
+    "area": "Zeeburg",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Uitvlugt",
+    "aliases": [
+      "uitvlugt"
+    ],
+    "lat": 6.858,
+    "lng": -58.283,
+    "area": "Uitvlugt",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Goed Fortuin",
+    "aliases": [
+      "goed fortuin"
+    ],
+    "lat": 6.85,
+    "lng": -58.32,
+    "area": "Goed Fortuin",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Ruby",
+    "aliases": [
+      "ruby"
+    ],
+    "lat": 6.84,
+    "lng": -58.34,
+    "area": "Ruby",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Tuschen",
+    "aliases": [
+      "tuschen",
+      "tuschen housing"
+    ],
+    "lat": 6.84,
+    "lng": -58.35,
+    "area": "Tuschen",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Parika",
+    "aliases": [
+      "parika"
+    ],
+    "lat": 6.856,
+    "lng": -58.423,
+    "area": "Parika",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Parika Stelling",
+    "aliases": [
+      "parika stelling",
+      "parika ferry"
+    ],
+    "lat": 6.8575,
+    "lng": -58.427,
+    "area": "Parika",
+    "zone": "WEST_COAST"
+  },
+  {
+    "name": "Pouderoyen",
+    "aliases": [
+      "pouderoyen"
+    ],
+    "lat": 6.785,
+    "lng": -58.2,
+    "area": "Pouderoyen",
+    "zone": "WEST_BANK"
+  },
+  {
+    "name": "Canal Number 1",
+    "aliases": [
+      "canal 1",
+      "canal number 1"
+    ],
+    "lat": 6.77,
+    "lng": -58.21,
+    "area": "Canal 1",
+    "zone": "WEST_BANK"
+  },
+  {
+    "name": "Canal Number 2",
+    "aliases": [
+      "canal 2",
+      "canal number 2"
+    ],
+    "lat": 6.76,
+    "lng": -58.22,
+    "area": "Canal 2",
+    "zone": "WEST_BANK"
+  },
+  {
+    "name": "Patentia",
+    "aliases": [
+      "patentia"
+    ],
+    "lat": 6.74,
+    "lng": -58.205,
+    "area": "Patentia",
+    "zone": "WEST_BANK"
+  },
+  {
+    "name": "Wales",
+    "aliases": [
+      "wales"
+    ],
+    "lat": 6.72,
+    "lng": -58.21,
+    "area": "Wales",
+    "zone": "WEST_BANK"
+  },
+  {
+    "name": "Linden",
+    "aliases": [
+      "linden"
+    ],
+    "lat": 6.0108,
+    "lng": -58.3034,
+    "area": "Linden",
+    "zone": "LINDEN"
+  },
+  {
+    "name": "Mackenzie",
+    "aliases": [
+      "mackenzie"
+    ],
+    "lat": 6.0108,
+    "lng": -58.3034,
+    "area": "Mackenzie, Linden",
+    "zone": "LINDEN"
+  },
+  {
+    "name": "Wismar",
+    "aliases": [
+      "wismar"
+    ],
+    "lat": 6.005,
+    "lng": -58.308,
+    "area": "Wismar, Linden",
+    "zone": "LINDEN"
+  },
+  {
+    "name": "Kwakwani",
+    "aliases": [
+      "kwakwani"
+    ],
+    "lat": 5.2933,
+    "lng": -57.9,
+    "area": "Kwakwani",
+    "zone": "INTERIOR"
+  },
+  {
+    "name": "Long Creek",
+    "aliases": [
+      "long creek"
+    ],
+    "lat": 6.35,
+    "lng": -58.25,
+    "area": "Long Creek",
+    "zone": "LINDEN"
+  },
+  {
+    "name": "Yarrowkabra",
+    "aliases": [
+      "yarrowkabra"
+    ],
+    "lat": 6.45,
+    "lng": -58.24,
+    "area": "Yarrowkabra",
+    "zone": "LINDEN"
+  },
+  {
+    "name": "Rosignol",
+    "aliases": [
+      "rosignol"
+    ],
+    "lat": 6.2833,
+    "lng": -57.55,
+    "area": "Rosignol",
+    "zone": "BERBICE"
+  },
+  {
+    "name": "Berbice Bridge",
+    "aliases": [
+      "berbice bridge"
+    ],
+    "lat": 6.3,
+    "lng": -57.5333,
+    "area": "Rosignol/Blairmont",
+    "zone": "BERBICE"
+  },
+  {
+    "name": "Blairmont",
+    "aliases": [
+      "blairmont"
+    ],
+    "lat": 6.25,
+    "lng": -57.525,
+    "area": "Blairmont",
+    "zone": "BERBICE"
+  },
+  {
+    "name": "New Amsterdam",
+    "aliases": [
+      "new amsterdam"
+    ],
+    "lat": 6.25,
+    "lng": -57.5167,
+    "area": "New Amsterdam",
+    "zone": "BERBICE"
+  },
+  {
+    "name": "Port Mourant",
+    "aliases": [
+      "port mourant"
+    ],
+    "lat": 6.2333,
+    "lng": -57.3333,
+    "area": "Port Mourant",
+    "zone": "BERBICE"
+  },
+  {
+    "name": "Rose Hall Berbice",
+    "aliases": [
+      "rose hall",
+      "rose hall berbice"
+    ],
+    "lat": 6.275,
+    "lng": -57.3583,
+    "area": "Rose Hall",
+    "zone": "BERBICE"
+  },
+  {
+    "name": "Corriverton",
+    "aliases": [
+      "corriverton",
+      "springlands"
+    ],
+    "lat": 5.9167,
+    "lng": -57.15,
+    "area": "Corriverton",
+    "zone": "BERBICE"
+  },
+  {
+    "name": "Whim",
+    "aliases": [
+      "whim"
+    ],
+    "lat": 6.27,
+    "lng": -57.35,
+    "area": "Whim",
+    "zone": "BERBICE"
+  },
+  {
+    "name": "Skeldon",
+    "aliases": [
+      "skeldon"
+    ],
+    "lat": 5.8833,
+    "lng": -57.15,
+    "area": "Skeldon",
+    "zone": "BERBICE"
+  },
+  {
+    "name": "Crabwood Creek",
+    "aliases": [
+      "crabwood creek"
+    ],
+    "lat": 5.95,
+    "lng": -57.1667,
+    "area": "Crabwood Creek",
+    "zone": "BERBICE"
+  },
+  {
+    "name": "Supenaam",
+    "aliases": [
+      "supenaam"
+    ],
+    "lat": 7.0333,
+    "lng": -58.55,
+    "area": "Supenaam",
+    "zone": "ESSEQUIBO"
+  },
+  {
+    "name": "Anna Regina",
+    "aliases": [
+      "anna regina"
+    ],
+    "lat": 7.2667,
+    "lng": -58.5,
+    "area": "Anna Regina",
+    "zone": "ESSEQUIBO"
+  },
+  {
+    "name": "Charity",
+    "aliases": [
+      "charity"
+    ],
+    "lat": 7.4,
+    "lng": -58.5667,
+    "area": "Charity",
+    "zone": "ESSEQUIBO"
+  },
+  {
+    "name": "Suddie",
+    "aliases": [
+      "suddie"
+    ],
+    "lat": 7.1167,
+    "lng": -58.5167,
+    "area": "Suddie",
+    "zone": "ESSEQUIBO"
+  },
+  {
+    "name": "Bartica",
+    "aliases": [
+      "bartica"
+    ],
+    "lat": 6.4,
+    "lng": -58.6167,
+    "area": "Bartica",
+    "zone": "INTERIOR"
+  },
+  {
+    "name": "Mahdia",
+    "aliases": [
+      "mahdia"
+    ],
+    "lat": 5.2833,
+    "lng": -59.15,
+    "area": "Mahdia",
+    "zone": "INTERIOR"
+  },
+  {
+    "name": "Lethem",
+    "aliases": [
+      "lethem"
+    ],
+    "lat": 3.3833,
+    "lng": -59.8,
+    "area": "Lethem",
+    "zone": "INTERIOR"
+  },
+  {
+    "name": "Waterloo East Coast",
+    "aliases": [
+      "waterloo ecd",
+      "waterloo east coast"
+    ],
+    "lat": 6.8,
+    "lng": -57.97,
+    "area": "Waterloo, East Coast Demerara",
+    "zone": "EAST_COAST"
+  },
+  {
+    "name": "Waterloo Berbice",
+    "aliases": [
+      "waterloo region 5",
+      "waterloo berbice",
+      "waterloo opt2"
+    ],
+    "lat": 6.3,
+    "lng": -57.55,
+    "area": "Waterloo, Berbice",
+    "zone": "BERBICE"
+  },
+  {
+    "name": "Stone Avenue Eastern Highway",
+    "aliases": [
+      "stone ave",
+      "stone avenue",
+      "stone ave eastern hwy",
+      "eastern highway"
+    ],
+    "lat": 6.8105,
+    "lng": -58.139,
+    "area": "Campbellville",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Republic Gardens",
+    "aliases": [
+      "republic gardens"
+    ],
+    "lat": 6.776,
+    "lng": -58.174,
+    "area": "Republic Gardens, East Bank",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Ramada Princess Hotel",
+    "aliases": [
+      "ramada",
+      "ramada princess",
+      "princess hotel",
+      "princess casino"
+    ],
+    "lat": 6.749,
+    "lng": -58.168,
+    "area": "Providence, East Bank",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Den Heuvel",
+    "aliases": [
+      "den heuvel"
+    ],
+    "lat": 6.65,
+    "lng": -58.177,
+    "area": "Den Heuvel, East Bank Demerara",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "DeHoop",
+    "aliases": [
+      "de hoop",
+      "dehoop",
+      "dehoop mahaica"
+    ],
+    "lat": 6.6333,
+    "lng": -57.8,
+    "area": "DeHoop, Mahaica Creek, Region 5",
+    "zone": "BERBICE"
+  },
+  {
+    "name": "Century Palm Gardens",
+    "aliases": [
+      "century palm",
+      "century palms",
+      "durban backlands"
+    ],
+    "lat": 6.795,
+    "lng": -58.154,
+    "area": "Durban Backlands, Georgetown",
+    "zone": "CENTRAL"
+  },
+  {
+    "name": "Carlton Hall",
+    "aliases": [
+      "carlton hall"
+    ],
+    "lat": 6.335,
+    "lng": -57.605,
+    "area": "Carlton Hall, West Berbice",
+    "zone": "BERBICE"
+  },
+  {
+    "name": "Brickery",
+    "aliases": [
+      "brickery",
+      "brickery village"
+    ],
+    "lat": 6.69,
+    "lng": -58.165,
+    "area": "Brickery, East Bank Demerara",
+    "zone": "EAST_BANK"
+  },
+  {
+    "name": "Number 3 Village",
+    "aliases": [
+      "no 3 village",
+      "no. 3",
+      "#3 village",
+      "number 3",
+      "village 3 wcb"
+    ],
+    "lat": 6.42,
+    "lng": -57.68,
+    "area": "No. 3 Village, West Coast Berbice",
+    "zone": "BERBICE"
+  },
+  {
+    "name": "Number 8 Village",
+    "aliases": [
+      "no 8 village",
+      "no. 8",
+      "#8 village",
+      "number 8",
+      "village 8 wcb"
+    ],
+    "lat": 6.4,
+    "lng": -57.665,
+    "area": "No. 8 Village, West Coast Berbice",
+    "zone": "BERBICE"
+  },
+  {
+    "name": "Number 27 Village",
+    "aliases": [
+      "no 27 village",
+      "no. 27",
+      "#27 village",
+      "number 27",
+      "village 27 wcb"
+    ],
+    "lat": 6.35,
+    "lng": -57.62,
+    "area": "No. 27 Village, West Coast Berbice",
+    "zone": "BERBICE"
+  }
+]
