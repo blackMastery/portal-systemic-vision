@@ -63,7 +63,7 @@ export async function priceTrip({
       fare: {
         status: "NEGOTIATE",
         total: null,
-        message: "Could not resolve coordinates for the dropoff location.",
+        message: "Could not resolve the dropoff location. Please confirm the fare with your driver before the ride.",
       },
     };
   }
