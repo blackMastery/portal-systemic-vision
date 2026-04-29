@@ -1,15 +1,4 @@
-import landmarks from "./landmarks.json" with { type: "json" };
-
-type Landmark = {
-  name: string;
-  aliases: string[];
-  lat: number;
-  lng: number;
-  area: string;
-  zone: string;
-};
-
-const landmarkList = landmarks as Landmark[];
+import { fetchLandmarksCached, type Landmark } from "./landmarksDb.ts";
 
 const LOCATION_PARSER_PROMPT =
   `You are a location parser for Links 592, a ride-hailing app in Guyana. Your ONLY job is to extract a geocodable address from a passenger's freeform location description.
@@ -52,7 +41,7 @@ export function splitTrip(text: string): { pickup: string; dropoff: string } {
   return { pickup, dropoff };
 }
 
-export function matchLandmark(query: string) {
+export function matchLandmark(query: string, landmarkList: Landmark[]) {
   const q = normalize(query);
   const qTokens = q.split(/\s+/);
 
@@ -157,7 +146,10 @@ export type ResolvedLocation = {
 };
 
 export async function resolveLocation(rawText: string): Promise<ResolvedLocation> {
-  const landmark = matchLandmark(rawText);
+  const landmarkList = await fetchLandmarksCached();
+  console.log("🚀 ~ resolveLocation ~ landmarkList:", landmarkList)
+  const landmark = matchLandmark(rawText, landmarkList);
+  console.log("🚀 ~ resolveLocation ~ landmark:", landmark)
   let address: string | null | undefined;
   let source: string;
 

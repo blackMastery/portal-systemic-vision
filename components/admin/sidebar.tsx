@@ -17,6 +17,7 @@ import {
   MessageSquare,
   ClipboardList,
   FileCheck,
+  MapPin,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -32,6 +33,7 @@ const navigation = [
   { name: 'Message Logs', href: '/admin/message-logs', icon: MessageSquare },
   { name: 'Audit Log', href: '/admin/audit-log', icon: FileText },
   { name: 'Agreement Acceptances', href: '/admin/agreement-acceptances', icon: FileCheck },
+  { name: 'Cost landmarks', href: '/admin/cost-estimate-landmarks', icon: MapPin },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ]
 

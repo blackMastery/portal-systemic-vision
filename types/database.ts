@@ -405,6 +405,70 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['agreement_acceptances']['Insert']>
         Relationships: []
       }
+      cost_estimate_zones: {
+        Row: {
+          code: string
+          label: string
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          label?: string
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cost_estimate_landmarks: {
+        Row: {
+          id: string
+          name: string
+          aliases: string[]
+          lat: number
+          lng: number
+          area: string
+          zone_code: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          aliases?: string[]
+          lat: number
+          lng: number
+          area: string
+          zone_code: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          name?: string
+          aliases?: string[]
+          lat?: number
+          lng?: number
+          area?: string
+          zone_code?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'cost_estimate_landmarks_zone_code_fkey'
+            columns: ['zone_code']
+            isOneToOne: false
+            referencedRelation: 'cost_estimate_zones'
+            referencedColumns: ['code']
+          },
+        ]
+      }
     }
     Views: {}
     Functions: {}

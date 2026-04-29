@@ -24,17 +24,17 @@
   {
     "name": "Kitty Market",
     "aliases": [
-      "kitty market"
-    ],
-    "lat": 6.816,
-    "lng": -58.138,
-    "area": "Kitty",
-    "zone": "CENTRAL"
-  },
-  {
-    "name": "La Penitence Market",
-    "aliases": [
-      "la penitence",
+        "kitty market"
+      ],
+      "lat": 6.816,
+      "lng": -58.138,
+      "area": "Kitty",
+      "zone": "CENTRAL"
+    },
+    {
+      "name": "La Penitence Market",
+      "aliases": [
+        "la penitence",
       "penitence market"
     ],
     "lat": 6.798,

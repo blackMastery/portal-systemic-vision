@@ -28,6 +28,39 @@ export async function distanceKm(
 
 export type PickupCoords = { lat: number; lng: number };
 
+async function reverseGeocode(
+  coords: PickupCoords,
+): Promise<{ address: string | null; formatted: string | null; placeId: string | null }> {
+  const apiKey = Deno.env.get("GOOGLE_MAPS_API_KEY");
+  if (!apiKey) throw new Error("GOOGLE_MAPS_API_KEY environment variable is not set");
+
+  const url =
+    `https://maps.googleapis.com/maps/api/geocode/json?latlng=${coords.lat},${coords.lng}` +
+    `&region=gy&key=${apiKey}`;
+
+  const response = await fetch(url);
+  if (!response.ok) return { address: null, formatted: null, placeId: null };
+
+  const data = (await response.json()) as {
+    status: string;
+    results?: Array<{
+      formatted_address: string;
+      place_id: string;
+    }>;
+  };
+
+  if (data.status !== "OK" || !data.results?.length) {
+    return { address: null, formatted: null, placeId: null };
+  }
+
+  const top = data.results[0];
+  return {
+    address: top.formatted_address,
+    formatted: top.formatted_address,
+    placeId: top.place_id,
+  };
+}
+
 export async function priceTrip({
   pickup,
   dropoff,
@@ -42,13 +75,15 @@ export async function priceTrip({
     throw new Error("priceTrip: dropoff must be a non-empty string");
   }
 
+  const pickupAddress = await reverseGeocode(pickup);
+
   const pickupResolved: ResolvedLocation = {
     raw: null,
-    address: null,
-    formatted: null,
+    address: pickupAddress.address,
+    formatted: pickupAddress.formatted,
     lat: pickup.lat,
     lng: pickup.lng,
-    placeId: null,
+    placeId: pickupAddress.placeId,
     source: "gps",
   };
 
