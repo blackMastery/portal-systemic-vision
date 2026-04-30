@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, Suspense } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useState, useEffect, Suspense } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { Search, MessageSquare, List, LayoutGrid, X } from 'lucide-react'
+import { Search, MessageSquare, List, LayoutGrid, X, RefreshCw } from 'lucide-react'
 import { format } from 'date-fns'
+import { resendMessageLog } from './actions'
 
 type MessageLog = {
   id: string
@@ -94,6 +95,32 @@ function MessageLogsContent() {
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table')
   const [selectedLog, setSelectedLog] = useState<MessageLog | null>(null)
+  const [resendFeedback, setResendFeedback] = useState<
+    { type: 'success' | 'error'; text: string } | null
+  >(null)
+
+  const queryClient = useQueryClient()
+
+  const resendMutation = useMutation({
+    // Wrap so React Query never forwards extra args (e.g. meta/signal) into the Server Action —
+    // Next.js only accepts serializable plain arguments.
+    mutationFn: (messageLogId: string) => resendMessageLog(messageLogId),
+    onSuccess: (data) => {
+      if (data.ok) {
+        queryClient.invalidateQueries({ queryKey: ['message_logs'] })
+        setResendFeedback({ type: 'success', text: 'Message resent successfully.' })
+      } else {
+        setResendFeedback({ type: 'error', text: data.error })
+      }
+    },
+    onError: (err: Error) => {
+      setResendFeedback({ type: 'error', text: err.message || 'Resend failed.' })
+    },
+  })
+
+  useEffect(() => {
+    setResendFeedback(null)
+  }, [selectedLog?.id])
 
   const { data: logs, isLoading } = useQuery({
     queryKey: ['message_logs', channel, status, dateRange, searchQuery],
@@ -465,6 +492,32 @@ function MessageLogsContent() {
                 <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg overflow-x-auto text-xs max-h-64 overflow-y-auto">
                   {selectedLog.metadata ? JSON.stringify(selectedLog.metadata, null, 2) : 'No metadata'}
                 </pre>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-gray-50/80">
+              {resendFeedback && (
+                <p
+                  className={`text-sm ${
+                    resendFeedback.type === 'success' ? 'text-green-700' : 'text-red-600'
+                  }`}
+                >
+                  {resendFeedback.text}
+                </p>
+              )}
+              <div className="flex justify-end gap-2 sm:ml-auto">
+                <button
+                  type="button"
+                  onClick={() => selectedLog && resendMutation.mutate(selectedLog.id)}
+                  disabled={resendMutation.isPending}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 shrink-0 ${resendMutation.isPending ? 'animate-spin' : ''}`}
+                    aria-hidden
+                  />
+                  Resend message
+                </button>
               </div>
             </div>
           </div>

@@ -17,6 +17,7 @@ import {
   List,
   LayoutGrid,
   X,
+  ExternalLink,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Database } from '@/types/database'
@@ -67,6 +68,29 @@ async function fetchTripRequests(filters: {
     )
   }
   return results
+}
+
+function googleMapsDirectionsUrl(
+  pickupLat: number | null,
+  pickupLng: number | null,
+  destLat: number | null,
+  destLng: number | null
+): string | null {
+  if (
+    pickupLat == null ||
+    pickupLng == null ||
+    destLat == null ||
+    destLng == null ||
+    Number.isNaN(pickupLat) ||
+    Number.isNaN(pickupLng) ||
+    Number.isNaN(destLat) ||
+    Number.isNaN(destLng)
+  ) {
+    return null
+  }
+  const origin = `${pickupLat},${pickupLng}`
+  const destination = `${destLat},${destLng}`
+  return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`
 }
 
 const statusColors: Record<string, string> = {
@@ -127,6 +151,15 @@ export default function TripRequestsPage() {
       setCancellingId(null)
     }
   }
+
+  const directionsMapsUrl = selectedRequest
+    ? googleMapsDirectionsUrl(
+        selectedRequest.pickup_latitude,
+        selectedRequest.pickup_longitude,
+        selectedRequest.destination_latitude,
+        selectedRequest.destination_longitude
+      )
+    : null
 
   return (
     <div className="space-y-6">
@@ -536,7 +569,20 @@ export default function TripRequestsPage() {
               </div>
 
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-900">Route</h3>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <h3 className="text-sm font-semibold text-gray-900">Route</h3>
+                  {directionsMapsUrl ? (
+                    <a
+                      href={directionsMapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50"
+                    >
+                      <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+                      Directions in Google Maps
+                    </a>
+                  ) : null}
+                </div>
                 <div className="rounded-lg border border-gray-200 p-3 space-y-3 text-sm">
                   <div>
                     <p className="text-xs text-gray-500 uppercase tracking-wide">Pickup</p>

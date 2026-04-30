@@ -205,6 +205,7 @@ export async function setAgreementVersionPublishedState(
 export type ListAcceptancesInput = {
   audience: AgreementAudience | 'all'
   search?: string
+  userId?: string
   fromDate?: string
   toDate?: string
   page: number
@@ -296,6 +297,9 @@ export async function listAgreementAcceptances(
     }
     if (userFilter) {
       q = q.in('user_id', userFilter)
+    }
+    if (input.userId) {
+      q = q.eq('user_id', input.userId)
     }
     if (input.fromDate) {
       q = q.gte('accepted_at', `${input.fromDate}T00:00:00.000Z`)

@@ -9,13 +9,17 @@ import type { AgreementAudience } from '@/types/database'
 type Props = {
   title?: string
   description?: string
+  initialAudience?: AgreementAudience | 'all'
+  initialUserId?: string
 }
 
 export function AgreementAcceptancesLog({
   title = 'Acceptance log',
   description = 'Each acceptance stores timestamp, IP, user agent, device (from the app), content hash, and a generated PDF in storage. Filter by role, name/phone, or date.',
+  initialAudience = 'all',
+  initialUserId,
 }: Props) {
-  const [logAudience, setLogAudience] = useState<AgreementAudience | 'all'>('all')
+  const [logAudience, setLogAudience] = useState<AgreementAudience | 'all'>(initialAudience)
   const [logSearch, setLogSearch] = useState('')
   const [logFrom, setLogFrom] = useState('')
   const [logTo, setLogTo] = useState('')
@@ -38,6 +42,7 @@ export function AgreementAcceptancesLog({
       const res = await listAgreementAcceptances({
         audience: logAudience,
         search: appliedSearch || undefined,
+        userId: initialUserId || undefined,
         fromDate: appliedFrom || undefined,
         toDate: appliedTo || undefined,
         page,
@@ -53,7 +58,7 @@ export function AgreementAcceptancesLog({
       }
       setLogLoading(false)
     },
-    [logAudience, appliedSearch, appliedFrom, appliedTo]
+    [logAudience, appliedSearch, appliedFrom, appliedTo, initialUserId]
   )
 
   useEffect(() => {

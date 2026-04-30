@@ -537,13 +537,24 @@ export default function DriverDetailPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Driver Details</h2>
-          <button
-            onClick={() => setShowSubscriptionModal(true)}
-            className="inline-flex items-center px-3 py-1.5 text-sm bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors"
-          >
-            <Edit className="h-3.5 w-3.5 mr-1.5" />
-            Edit Subscription
-          </button>
+          <div className="flex items-center gap-2">
+            {driver.user_id && (
+              <Link
+                href={`/admin/agreement-acceptances?audience=driver&userId=${encodeURIComponent(driver.user_id)}`}
+                className="inline-flex items-center px-3 py-1.5 text-sm bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                <FileText className="h-3.5 w-3.5 mr-1.5" />
+                Agreement Acceptances
+              </Link>
+            )}
+            <button
+              onClick={() => setShowSubscriptionModal(true)}
+              className="inline-flex items-center px-3 py-1.5 text-sm bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors"
+            >
+              <Edit className="h-3.5 w-3.5 mr-1.5" />
+              Edit Subscription
+            </button>
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>

@@ -198,6 +198,7 @@ export function ActiveDriversMap() {
             </div>
           </div>
         )}
+        driversWithLocation.length{ driversWithLocation.length}
         {isLoaded && (
           <GoogleMap
             mapContainerStyle={mapContainerStyle}
