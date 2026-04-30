@@ -148,21 +148,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: statusCode })
     }
 
-    const agree = await assertCurrentAgreementAccepted(
-      createServiceRoleClient(),
-      user.id,
-      user.role
-    )
-    if (!agree.ok) {
-      logger.warn('Trip request blocked: agreement not accepted', { userId: user.id })
-      const { response, statusCode } = handleApiError(
-        new AuthorizationError(
-          'You must accept the current terms of use before requesting a trip.',
-          agree.code
-        )
-      )
-      return NextResponse.json(response, { status: statusCode })
-    }
+    // const agree = await assertCurrentAgreementAccepted(
+    //   createServiceRoleClient(),
+    //   user.id,
+    //   user.role
+    // )
+    // if (!agree.ok) {
+    //   logger.warn('Trip request blocked: agreement not accepted', { userId: user.id })
+    //   const { response, statusCode } = handleApiError(
+    //     new AuthorizationError(
+    //       'You must accept the current terms of use before requesting a trip.',
+    //       agree.code
+    //     )
+    //   )
+    //   return NextResponse.json(response, { status: statusCode })
+    // }
 
     const tripRequestsEnabled = await isTripRequestCreationEnabled()
     if (!tripRequestsEnabled) {
