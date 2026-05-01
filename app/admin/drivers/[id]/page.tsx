@@ -40,7 +40,7 @@ import type {
   Database
 } from '@/types/database'
 import { TripRouteMap } from '@/components/drivers/trip-route-map'
-import type { TripRoutePoint } from '@/components/drivers/trip-route-map'
+import { fetchTripRoute } from '@/lib/admin/fetch-trip-route'
 
 type DriverDetailData = {
   driver: DriverWithDetails & {
@@ -264,21 +264,6 @@ const statusColors = {
   picked_up: 'bg-purple-100 text-purple-800',
   completed: 'bg-green-100 text-green-800',
   cancelled: 'bg-red-100 text-red-800',
-}
-
-async function fetchTripRoute(tripId: string): Promise<TripRoutePoint[]> {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from('location_history')
-    .select('latitude, longitude, recorded_at')
-    .eq('trip_id', tripId)
-    .order('recorded_at', { ascending: true })
-  if (error) throw error
-  return ((data || []) as Array<{ latitude: unknown; longitude: unknown; recorded_at: string }>).map((p) => ({
-    latitude: Number(p.latitude),
-    longitude: Number(p.longitude),
-    recorded_at: p.recorded_at,
-  }))
 }
 
 async function fetchNextPendingDriver(currentCreatedAt: string): Promise<string | null> {

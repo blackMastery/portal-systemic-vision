@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { sendRiderPushNotification } from './actions'
+import { manuallyFlagTrip } from '../../review-queue/actions'
 import Image from 'next/image'
 import {
   ArrowLeft,
@@ -26,10 +27,11 @@ import {
   Ban,
   ChevronRight,
   FileText,
+  Flag,
 } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useTransition } from 'react'
 import type { RiderWithDetails, Database, VerificationStatus } from '@/types/database'
 
 type RiderDetailData = {
@@ -307,6 +309,32 @@ export default function RiderDetailPage() {
   const [isTogglingActive, setIsTogglingActive] = useState(false)
   const [toggleError, setToggleError] = useState<string | null>(null)
   const [showVerificationModal, setShowVerificationModal] = useState(false)
+  const [flaggingTripId, setFlaggingTripId] = useState<string | null>(null)
+  const [flagOutcome, setFlagOutcome] = useState<
+    Record<string, 'flagged' | 'already' | 'error'>
+  >({})
+  const [, startFlagTransition] = useTransition()
+
+  const handleManualFlag = useCallback(
+    (tripId: string) => {
+      setFlaggingTripId(tripId)
+      startFlagTransition(async () => {
+        const result = await manuallyFlagTrip(tripId)
+        setFlaggingTripId(null)
+        if (result.success) {
+          setFlagOutcome((prev) => ({ ...prev, [tripId]: 'flagged' }))
+          await queryClient.invalidateQueries({
+            queryKey: ['review-queue-open-count'],
+          })
+        } else if (result.alreadyFlagged) {
+          setFlagOutcome((prev) => ({ ...prev, [tripId]: 'already' }))
+        } else {
+          setFlagOutcome((prev) => ({ ...prev, [tripId]: 'error' }))
+        }
+      })
+    },
+    [queryClient],
+  )
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['rider-detail', riderId],
@@ -885,6 +913,126 @@ export default function RiderDetailPage() {
         ) : (
           <p className="text-gray-500 text-center py-8">No trips found</p>
         )}
+      </div>
+
+      {/* Ratings & Feedback */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-1">Ratings &amp; Feedback</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Most recent ratings drivers have left for this rider.
+        </p>
+        {(() => {
+          const ratedTrips = trips
+            .filter((t) => (t as { rider_rating: number | null }).rider_rating != null)
+            .slice(0, 10)
+          if (ratedTrips.length === 0) {
+            return (
+              <p className="text-gray-500 text-center py-8">
+                No driver-submitted ratings yet
+              </p>
+            )
+          }
+          return (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Driver</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rating</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Feedback</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {ratedTrips.map((trip) => {
+                    const t = trip as typeof trip & {
+                      rider_rating: number | null
+                      rider_feedback: string | null
+                    }
+                    const outcome = flagOutcome[t.id]
+                    const flagging = flaggingTripId === t.id
+                    return (
+                      <tr key={t.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          {format(
+                            new Date(t.completed_at ?? t.requested_at),
+                            'MMM dd, yyyy',
+                          )}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm">
+                          {t.driver?.user ? (
+                            <span className="text-gray-900">
+                              {t.driver.user.full_name}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">N/A</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span
+                            className="inline-flex items-center gap-0.5"
+                            aria-label={`${t.rider_rating} out of 5`}
+                          >
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`h-4 w-4 ${
+                                  i < (t.rider_rating ?? 0)
+                                    ? 'fill-amber-400 text-amber-400'
+                                    : 'text-gray-300'
+                                }`}
+                                aria-hidden
+                              />
+                            ))}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700 max-w-md">
+                          <div
+                            className="truncate"
+                            title={t.rider_feedback ?? ''}
+                          >
+                            {t.rider_feedback || (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm">
+                          {outcome === 'flagged' ? (
+                            <span className="inline-flex items-center text-xs text-green-700">
+                              <Flag className="h-3.5 w-3.5 mr-1" />
+                              Flagged
+                            </span>
+                          ) : outcome === 'already' ? (
+                            <span className="inline-flex items-center text-xs text-gray-500">
+                              <Flag className="h-3.5 w-3.5 mr-1" />
+                              Already in queue
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleManualFlag(t.id)}
+                              disabled={flagging}
+                              className="inline-flex items-center px-2.5 py-1 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-60"
+                            >
+                              <Flag className="h-3.5 w-3.5 mr-1" />
+                              {flagging ? 'Flagging…' : 'Flag for follow-up'}
+                            </button>
+                          )}
+                          {outcome === 'error' && (
+                            <p className="mt-1 text-xs text-red-600">
+                              Failed to flag. Try again.
+                            </p>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
+        })()}
       </div>
 
       {/* Payment History */}

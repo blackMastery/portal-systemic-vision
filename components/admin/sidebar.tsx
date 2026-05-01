@@ -18,14 +18,20 @@ import {
   ClipboardList,
   FileCheck,
   MapPin,
+  Flag,
 } from 'lucide-react'
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
+
+const REVIEW_QUEUE_HREF = '/admin/review-queue'
 
 const navigation = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Drivers', href: '/admin/drivers', icon: Car },
   { name: 'Riders', href: '/admin/riders', icon: Users },
   { name: 'Trips', href: '/admin/trips', icon: Route },
+  { name: 'Review Queue', href: REVIEW_QUEUE_HREF, icon: Flag },
   { name: 'Trip Requests', href: '/admin/trip-requests', icon: ClipboardList },
   { name: 'Payments', href: '/admin/payments', icon: CreditCard },
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
@@ -37,9 +43,26 @@ const navigation = [
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ]
 
+async function fetchOpenReviewCount(): Promise<number> {
+  const supabase = createClient()
+  const { count, error } = await supabase
+    .from('rating_review_queue')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'open')
+  if (error) return 0
+  return count ?? 0
+}
+
 export function AdminSidebar() {
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const { data: openReviewCount } = useQuery({
+    queryKey: ['review-queue-open-count'],
+    queryFn: fetchOpenReviewCount,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  })
 
   return (
     <>
@@ -74,6 +97,8 @@ export function AdminSidebar() {
               const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
               const Icon = item.icon
               
+              const showBadge =
+                item.href === REVIEW_QUEUE_HREF && (openReviewCount ?? 0) > 0
               return (
                 <Link
                   key={item.name}
@@ -86,7 +111,15 @@ export function AdminSidebar() {
                   }`}
                 >
                   <Icon className={`mr-3 h-5 w-5 ${isActive ? 'text-blue-700' : 'text-gray-400'}`} />
-                  {item.name}
+                  <span className="flex-1">{item.name}</span>
+                  {showBadge && (
+                    <span
+                      className="ml-2 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-semibold"
+                      aria-label={`${openReviewCount} open review items`}
+                    >
+                      {openReviewCount! > 99 ? '99+' : openReviewCount}
+                    </span>
+                  )}
                 </Link>
               )
             })}

@@ -120,6 +120,30 @@ export type BroadcastNotificationRequest = z.infer<
 >
 
 /**
+ * Targeted push to a specific list of driver user IDs (admin-only).
+ */
+export const targetedDriverNotificationSchema = z.object({
+  user_ids: z
+    .array(z.string().uuid('user_ids must contain valid UUIDs'))
+    .min(1, 'At least one user_id is required')
+    .max(5000, 'user_ids cannot exceed 5000 entries'),
+  title: z
+    .string()
+    .min(1, 'Title is required')
+    .max(100, 'Title must be less than 100 characters'),
+  body: z
+    .string()
+    .min(1, 'Body is required')
+    .max(500, 'Body must be less than 500 characters'),
+  data: z.record(z.string()).optional(),
+  notification_type: z.string().optional(),
+})
+
+export type TargetedDriverNotificationRequest = z.infer<
+  typeof targetedDriverNotificationSchema
+>
+
+/**
  * Update trip status schema
  */
 export const updateTripStatusSchema = z.object({
@@ -130,6 +154,23 @@ export const updateTripStatusSchema = z.object({
 })
 
 export type UpdateTripStatusRequest = z.infer<typeof updateTripStatusSchema>
+
+/**
+ * Driver-submitted rating of a rider after a completed trip.
+ */
+export const rateRiderSchema = z.object({
+  rating: z
+    .number({ required_error: 'rating is required', invalid_type_error: 'rating must be a number' })
+    .int('rating must be an integer')
+    .min(1, 'rating must be between 1 and 5')
+    .max(5, 'rating must be between 1 and 5'),
+  feedback: z
+    .string()
+    .max(1000, 'feedback must be less than 1000 characters')
+    .optional(),
+})
+
+export type RateRiderRequest = z.infer<typeof rateRiderSchema>
 
 /**
  * Query param for /api/agreements/current and /api/agreements/status

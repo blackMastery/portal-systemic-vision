@@ -2,6 +2,7 @@
 
 import { useParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
+import { useInvalidateTripRouteOnLocationInsert } from '@/hooks/use-trip-route-location-realtime'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { formatInTimeZone } from 'date-fns-tz'
@@ -35,7 +36,7 @@ import {
 } from 'lucide-react'
 import type { Database, TripType, TripStatus } from '@/types/database'
 import { TripRouteMap } from '@/components/drivers/trip-route-map'
-import type { TripRoutePoint } from '@/components/drivers/trip-route-map'
+import { fetchTripRoute } from '@/lib/admin/fetch-trip-route'
 
 // Extended row types to cover DB columns not yet in the TS type
 type TripRow = Database['public']['Tables']['trips']['Row'] & {
@@ -62,21 +63,6 @@ type TripDetailData = {
     trip_request: Database['public']['Tables']['trip_requests']['Row'] | null
     cancelled_by_user: Database['public']['Tables']['users']['Row'] | null
   }
-}
-
-async function fetchTripRoute(tripId: string): Promise<TripRoutePoint[]> {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from('location_history')
-    .select('latitude, longitude, recorded_at')
-    .eq('trip_id', tripId)
-    .order('recorded_at', { ascending: true })
-  if (error) throw error
-  return ((data || []) as Array<{ latitude: unknown; longitude: unknown; recorded_at: string }>).map((p) => ({
-    latitude: Number(p.latitude),
-    longitude: Number(p.longitude),
-    recorded_at: p.recorded_at,
-  }))
 }
 
 async function fetchTripDetail(tripId: string): Promise<TripDetailData> {
@@ -187,6 +173,16 @@ export default function TripDetailPage() {
     queryFn: () => fetchTripRoute(tripId),
     enabled: !!tripId,
     staleTime: 5 * 60 * 1000,
+  })
+
+  const routeRealtimeEnabled =
+    !!tripId &&
+    !!data?.trip?.status &&
+    (data.trip.status === 'accepted' || data.trip.status === 'picked_up')
+
+  useInvalidateTripRouteOnLocationInsert({
+    tripId,
+    enabled: routeRealtimeEnabled,
   })
 
   if (isLoading) {

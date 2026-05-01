@@ -17,9 +17,11 @@ import {
   FileText,
   List,
   LayoutGrid,
+  Megaphone,
 } from 'lucide-react'
 import Link from 'next/link'
 import type { DriverWithDetails } from '@/types/database'
+import { SendNotificationModal } from './send-notification-modal'
 
 const SELECT_CLASS =
   'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
@@ -245,7 +247,8 @@ function DriversContent() {
 
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [advancedFiltersExpanded, setAdvancedFiltersExpanded] = useState(true)
-  const [viewMode, setViewMode] = useState<'table' | 'card'>('table')
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('card')
+  const [notificationModalOpen, setNotificationModalOpen] = useState(false)
 
   useEffect(() => {
     if (!filtersOpen) return
@@ -461,23 +464,57 @@ function DriversContent() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Drivers</h1>
           <p className="mt-1 text-sm text-gray-600">
             Manage driver applications and accounts
           </p>
         </div>
-        {pendingCount > 0 && (
-          <Link
-            href="/admin/drivers?status=pending"
-            className="inline-flex items-center px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition-colors"
+        <div className="flex flex-wrap items-center gap-2">
+          {pendingCount > 0 && (
+            <Link
+              href="/admin/drivers?status=pending"
+              className="inline-flex items-center px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition-colors"
+            >
+              <Clock className="h-5 w-5 mr-2" />
+              {pendingCount} Pending Verification
+            </Link>
+          )}
+          <button
+            type="button"
+            onClick={() => setNotificationModalOpen(true)}
+            disabled={isLoading || totalCount === 0}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+            title={
+              totalCount === 0
+                ? 'No drivers match the current filters'
+                : `Send a push to the ${totalCount} filtered ${
+                    totalCount === 1 ? 'driver' : 'drivers'
+                  }`
+            }
           >
-            <Clock className="h-5 w-5 mr-2" />
-            {pendingCount} Pending Verification
-          </Link>
-        )}
+            <Megaphone className="h-5 w-5" />
+            Send notification
+            {totalCount > 0 && (
+              <span className="min-w-[1.5rem] h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-white/20 text-xs font-semibold">
+                {totalCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
+
+      <SendNotificationModal
+        open={notificationModalOpen}
+        onClose={() => setNotificationModalOpen(false)}
+        recipientUserIds={
+          drivers
+            ?.map((d) => d.user_id)
+            .filter((id): id is string => typeof id === 'string') ?? []
+        }
+        totalDriversShown={totalCount}
+      />
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-4">

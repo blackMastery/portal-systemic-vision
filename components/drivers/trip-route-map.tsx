@@ -4,14 +4,11 @@ import { GoogleMap, useLoadScript, Marker, Polyline } from '@react-google-maps/a
 import { useEffect, useMemo, useState } from 'react'
 import { MapPin } from 'lucide-react'
 import { format } from 'date-fns'
+import type { TripRoutePoint } from '@/types/trip-route-point'
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
-export type TripRoutePoint = {
-  latitude: number
-  longitude: number
-  recorded_at: string
-}
+export type { TripRoutePoint }
 
 export type TripForMap = {
   id: string
@@ -58,15 +55,6 @@ const statusColors: Record<string, string> = {
   cancelled: 'bg-red-100 text-red-800',
 }
 
-/** ~120 m at this latitude: first GPS sample “in pickup area” (deg², planar approx). */
-const PICKUP_PROXIMITY_DEG_SQ = 0.0011 * 0.0011
-
-function latLngDistSq(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
-  const dLat = a.lat - b.lat
-  const dLng = a.lng - b.lng
-  return dLat * dLat + dLng * dLng
-}
-
 function formatCoord(lat: number, lng: number) {
   return `${lat.toFixed(6)}, ${lng.toFixed(6)}`
 }
@@ -93,36 +81,6 @@ export function TripRouteMap({ trip, routePoints, isLoadingRoute, showTripInfo =
     () => routePoints.map((p) => ({ lat: p.latitude, lng: p.longitude })),
     [routePoints]
   )
-
-  const pickupToEndPath = useMemo(() => {
-    if (polylinePath.length < 1) return null
-    const pickup = { lat: Number(trip.pickup_latitude), lng: Number(trip.pickup_longitude) }
-
-    let startIdx: number | null = null
-    for (let i = 0; i < polylinePath.length; i++) {
-      if (latLngDistSq(pickup, polylinePath[i]) < PICKUP_PROXIMITY_DEG_SQ) {
-        startIdx = i
-        break
-      }
-    }
-    if (startIdx === null) {
-      startIdx = 0
-      let best = latLngDistSq(pickup, polylinePath[0])
-      for (let i = 1; i < polylinePath.length; i++) {
-        const d = latLngDistSq(pickup, polylinePath[i])
-        if (d < best) {
-          best = d
-          startIdx = i
-        }
-      }
-    }
-
-    const tail = polylinePath.slice(startIdx)
-    if (latLngDistSq(pickup, tail[0]) < 1e-10) {
-      return tail
-    }
-    return [pickup, ...tail]
-  }, [polylinePath, trip.pickup_latitude, trip.pickup_longitude])
 
   const pickupIcon = useMemo(() => {
     if (typeof window === 'undefined' || typeof (window as any).google === 'undefined') return undefined
@@ -265,17 +223,6 @@ export function TripRouteMap({ trip, routePoints, isLoadingRoute, showTripInfo =
                   strokeColor: '#2563EB',
                   strokeOpacity: 0.9,
                   strokeWeight: 4,
-                }}
-              />
-            )}
-
-            {pickupToEndPath && (
-              <Polyline
-                path={pickupToEndPath}
-                options={{
-                  strokeColor: '#22c55e',
-                  strokeOpacity: 0.9,
-                  strokeWeight: 3,
                 }}
               />
             )}

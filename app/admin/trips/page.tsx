@@ -91,7 +91,7 @@ export default function TripsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const [viewMode, setViewMode] = useState<'table' | 'card'>('table')
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('card')
 
   const { data: trips, isLoading } = useQuery({
     queryKey: ['trips', status, tripType, searchQuery, startDate, endDate],
