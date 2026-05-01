@@ -61,18 +61,34 @@ async function reverseGeocode(
   };
 }
 
+function isFiniteCoordPair(lat: unknown, lng: unknown): boolean {
+  return typeof lat === "number" && typeof lng === "number" &&
+    Number.isFinite(lat) && Number.isFinite(lng);
+}
+
 export async function priceTrip({
   pickup,
   dropoff,
+  dropOffLat,
+  dropOffLng,
 }: {
   pickup: PickupCoords;
   dropoff: string;
+  dropOffLat?: number;
+  dropOffLng?: number;
 }) {
   if (!pickup || pickup.lat == null || pickup.lng == null) {
     throw new Error("priceTrip: pickup.lat and pickup.lng are required");
   }
   if (typeof dropoff !== "string" || !dropoff.trim()) {
     throw new Error("priceTrip: dropoff must be a non-empty string");
+  }
+
+  const usingDropOffGps = dropOffLat !== undefined || dropOffLng !== undefined;
+  if (usingDropOffGps && !isFiniteCoordPair(dropOffLat, dropOffLng)) {
+    throw new Error(
+      "priceTrip: dropOffLat and dropOffLng must both be finite numbers when either is provided",
+    );
   }
 
   const pickupAddress = await reverseGeocode(pickup);
@@ -89,12 +105,24 @@ export async function priceTrip({
 
   const dropoffResolved = await resolveLocation(dropoff);
 
-  const dropLat = dropoffResolved.lat;
-  const dropLng = dropoffResolved.lng;
+  const dropLat = usingDropOffGps ? dropOffLat! : dropoffResolved.lat;
+  const dropLng = usingDropOffGps ? dropOffLng! : dropoffResolved.lng;
+
+  const dropoffForResponse: ResolvedLocation = usingDropOffGps
+    ? {
+      ...dropoffResolved,
+      lat: dropLat,
+      lng: dropLng,
+      source: dropoffResolved.lat != null && dropoffResolved.lng != null
+        ? `${dropoffResolved.source}+gps`
+        : "gps",
+    }
+    : dropoffResolved;
+
   if (dropLat == null || dropLng == null) {
     return {
       pickup: pickupResolved,
-      dropoff: dropoffResolved,
+      dropoff: dropoffForResponse,
       fare: {
         status: "NEGOTIATE",
         total: null,
@@ -114,7 +142,7 @@ export async function priceTrip({
 
   return {
     pickup: pickupResolved,
-    dropoff: dropoffResolved,
+    dropoff: dropoffForResponse,
     distanceKm: km,
     pickupZone,
     dropoffZone,

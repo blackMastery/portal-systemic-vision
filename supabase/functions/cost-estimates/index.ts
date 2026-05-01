@@ -19,7 +19,7 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-/** POST JSON: `{ pickup: { lat, lng }, dropoff: string }` */
+/** POST JSON: `{ pickup: { lat, lng }, dropoff: string, dropOffLat?, dropOffLng? }` */
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -40,7 +40,7 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "Expected JSON object" }, 400);
   }
 
-  const { pickup, dropoff } = body as Record<string, unknown>;
+  const { pickup, dropoff, dropOffLat, dropOffLng } = body as Record<string, unknown>;
 
   if (!pickup || typeof pickup !== "object") {
     return jsonResponse({ error: "pickup is required (object with lat, lng)" }, 400);
@@ -61,6 +61,8 @@ Deno.serve(async (req: Request) => {
     const result = await priceTrip({
       pickup: { lat, lng },
       dropoff,
+      dropOffLat: dropOffLat !== undefined ? Number(dropOffLat) : undefined,
+      dropOffLng: dropOffLng !== undefined ? Number(dropOffLng) : undefined,
     });
     return jsonResponse(result);
   } catch (e) {
