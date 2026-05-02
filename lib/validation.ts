@@ -144,6 +144,30 @@ export type TargetedDriverNotificationRequest = z.infer<
 >
 
 /**
+ * Targeted push to a specific list of rider user IDs (admin-only).
+ */
+export const targetedRiderNotificationSchema = z.object({
+  user_ids: z
+    .array(z.string().uuid('user_ids must contain valid UUIDs'))
+    .min(1, 'At least one user_id is required')
+    .max(5000, 'user_ids cannot exceed 5000 entries'),
+  title: z
+    .string()
+    .min(1, 'Title is required')
+    .max(100, 'Title must be less than 100 characters'),
+  body: z
+    .string()
+    .min(1, 'Body is required')
+    .max(500, 'Body must be less than 500 characters'),
+  data: z.record(z.string()).optional(),
+  notification_type: z.string().optional(),
+})
+
+export type TargetedRiderNotificationRequest = z.infer<
+  typeof targetedRiderNotificationSchema
+>
+
+/**
  * Update trip status schema
  */
 export const updateTripStatusSchema = z.object({

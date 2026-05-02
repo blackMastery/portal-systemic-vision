@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { Search, Clock, Users, Star, Route, List, LayoutGrid } from 'lucide-react'
+import { Search, Clock, Users, Star, Route, List, LayoutGrid, Megaphone } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import type { RiderWithDetails, VerificationStatus } from '@/types/database'
 import { format } from 'date-fns'
+import { SendNotificationModal } from './send-notification-modal'
 
 async function fetchRiders(filters: {
   subscriptionStatus: string
@@ -143,6 +144,7 @@ export default function RidersPage() {
     parseEnumParam(searchParams.get('view'), viewValues, 'table')
   )
   const [currentPage, setCurrentPage] = useState(() => parsePageParam(searchParams.get('page')))
+  const [notificationModalOpen, setNotificationModalOpen] = useState(false)
   const pageSize = 25
 
   const { data: riders, isLoading } = useQuery({
@@ -254,14 +256,46 @@ export default function RidersPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Riders</h1>
           <p className="mt-1 text-sm text-gray-600">
             Manage rider accounts and subscriptions
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setNotificationModalOpen(true)}
+          disabled={isLoading || totalRiders === 0}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+          title={
+            totalRiders === 0
+              ? 'No riders match the current filters'
+              : `Send a push to the ${totalRiders} filtered ${
+                  totalRiders === 1 ? 'rider' : 'riders'
+                }`
+          }
+        >
+          <Megaphone className="h-5 w-5" />
+          Send notification
+          {totalRiders > 0 && (
+            <span className="min-w-[1.5rem] h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-white/20 text-xs font-semibold">
+              {totalRiders}
+            </span>
+          )}
+        </button>
       </div>
+
+      <SendNotificationModal
+        open={notificationModalOpen}
+        onClose={() => setNotificationModalOpen(false)}
+        recipientUserIds={
+          (riders ?? [])
+            .map((r) => r.user_id)
+            .filter((id): id is string => typeof id === 'string')
+        }
+        totalRidersShown={totalRiders}
+      />
 
       {/* Verification Status Count Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
