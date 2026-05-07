@@ -19,12 +19,14 @@ import {
   FileCheck,
   MapPin,
   Flag,
+  ShieldAlert,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 
 const REVIEW_QUEUE_HREF = '/admin/review-queue'
+const INCIDENTS_HREF = '/admin/incidents'
 
 const navigation = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
@@ -32,6 +34,7 @@ const navigation = [
   { name: 'Riders', href: '/admin/riders', icon: Users },
   { name: 'Trips', href: '/admin/trips', icon: Route },
   { name: 'Review Queue', href: REVIEW_QUEUE_HREF, icon: Flag },
+  { name: 'Incidents', href: INCIDENTS_HREF, icon: ShieldAlert },
   { name: 'Trip Requests', href: '/admin/trip-requests', icon: ClipboardList },
   { name: 'Payments', href: '/admin/payments', icon: CreditCard },
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
@@ -53,6 +56,16 @@ async function fetchOpenReviewCount(): Promise<number> {
   return count ?? 0
 }
 
+async function fetchOpenIncidentCount(): Promise<number> {
+  const supabase = createClient()
+  const { count, error } = await supabase
+    .from('incidents')
+    .select('id', { count: 'exact', head: true })
+    .in('status', ['open', 'under_review'])
+  if (error) return 0
+  return count ?? 0
+}
+
 export function AdminSidebar() {
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -60,6 +73,13 @@ export function AdminSidebar() {
   const { data: openReviewCount } = useQuery({
     queryKey: ['review-queue-open-count'],
     queryFn: fetchOpenReviewCount,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  })
+
+  const { data: openIncidentCount } = useQuery({
+    queryKey: ['incidents-open-count'],
+    queryFn: fetchOpenIncidentCount,
     refetchInterval: 60_000,
     refetchOnWindowFocus: true,
   })
@@ -98,7 +118,14 @@ export function AdminSidebar() {
               const Icon = item.icon
               
               const showBadge =
-                item.href === REVIEW_QUEUE_HREF && (openReviewCount ?? 0) > 0
+                (item.href === REVIEW_QUEUE_HREF && (openReviewCount ?? 0) > 0) ||
+                (item.href === INCIDENTS_HREF && (openIncidentCount ?? 0) > 0)
+              const badgeCount =
+                item.href === REVIEW_QUEUE_HREF
+                  ? openReviewCount
+                  : item.href === INCIDENTS_HREF
+                    ? openIncidentCount
+                    : 0
               return (
                 <Link
                   key={item.name}
@@ -115,9 +142,9 @@ export function AdminSidebar() {
                   {showBadge && (
                     <span
                       className="ml-2 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-semibold"
-                      aria-label={`${openReviewCount} open review items`}
+                      aria-label={`${badgeCount} open items`}
                     >
-                      {openReviewCount! > 99 ? '99+' : openReviewCount}
+                      {(badgeCount ?? 0) > 99 ? '99+' : badgeCount}
                     </span>
                   )}
                 </Link>

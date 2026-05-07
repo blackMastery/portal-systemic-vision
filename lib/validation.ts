@@ -204,6 +204,56 @@ export const agreementAudienceParamSchema = z.enum(['driver', 'rider'], {
   invalid_type_error: 'audience must be "driver" or "rider"',
 })
 
+/** Incident report category (matches DB enum `incident_category`). */
+export const incidentCategorySchema = z.enum([
+  'safety_concern',
+  'harassment',
+  'assault',
+  'robbery',
+  'accident',
+  'payment_dispute',
+  'driver_conduct',
+  'passenger_conduct',
+  'other',
+])
+
+export type IncidentCategory = z.infer<typeof incidentCategorySchema>
+
+/** Incident workflow status (matches DB enum `incident_status`). */
+export const incidentStatusSchema = z.enum(['open', 'under_review', 'resolved', 'escalated'])
+
+export type IncidentStatus = z.infer<typeof incidentStatusSchema>
+
+const optionalUuidFromForm = z
+  .union([z.string().uuid(), z.literal(''), z.null(), z.undefined()])
+  .transform((v) => (v === '' || v === null || v === undefined ? undefined : v))
+
+/**
+ * Non-file fields for multipart `POST /api/incidents` (parsed from FormData strings).
+ */
+export const createIncidentFieldsSchema = z.object({
+  category: incidentCategorySchema,
+  trip_id: optionalUuidFromForm,
+  description: z
+    .string()
+    .min(10, 'description must be at least 10 characters')
+    .max(5000, 'description must be at most 5000 characters'),
+  subject_user_id: optionalUuidFromForm,
+})
+
+export type CreateIncidentFields = z.infer<typeof createIncidentFieldsSchema>
+
+/** Admin PATCH body for `/api/admin/incidents/[id]`. */
+export const adminUpdateIncidentSchema = z
+  .object({
+    status: incidentStatusSchema.optional(),
+    admin_notes: z.string().max(2000, 'admin_notes must be at most 2000 characters').optional(),
+    assigned_admin_id: z.union([z.string().uuid(), z.null()]).optional(),
+  })
+  .strict()
+
+export type AdminUpdateIncidentRequest = z.infer<typeof adminUpdateIncidentSchema>
+
 /**
  * Mobile client records acceptance (checkbox + I Agree on client)
  */

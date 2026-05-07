@@ -16,6 +16,23 @@ export type AppVersionAppType = 'driver' | 'rider'
 export type AppVersionPlatform = 'ios' | 'android'
 export type AgreementAudience = 'driver' | 'rider'
 
+export type IncidentCategory =
+  | 'safety_concern'
+  | 'harassment'
+  | 'assault'
+  | 'robbery'
+  | 'accident'
+  | 'payment_dispute'
+  | 'driver_conduct'
+  | 'passenger_conduct'
+  | 'other'
+
+export type IncidentStatus = 'open' | 'under_review' | 'resolved' | 'escalated'
+
+export type IncidentReporterRole = 'driver' | 'rider'
+
+export type DashcamRequestStatus = 'pending' | 'submitted' | 'expired' | 'cancelled'
+
 export interface Database {
   public: {
     Tables: {
@@ -468,6 +485,113 @@ export interface Database {
             referencedColumns: ['code']
           },
         ]
+      }
+      incidents: {
+        Row: {
+          id: string
+          trip_id: string | null
+          reporter_user_id: string
+          reporter_role: IncidentReporterRole
+          subject_user_id: string | null
+          category: IncidentCategory
+          description: string
+          status: IncidentStatus
+          evidence_paths: string[]
+          trip_snapshot: Json | null
+          location_history_snapshot: Json | null
+          admin_notes: string | null
+          assigned_admin_id: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          trip_id?: string | null
+          reporter_user_id: string
+          reporter_role: IncidentReporterRole
+          subject_user_id?: string | null
+          category: IncidentCategory
+          description: string
+          status?: IncidentStatus
+          evidence_paths?: string[]
+          trip_snapshot?: Json | null
+          location_history_snapshot?: Json | null
+          admin_notes?: string | null
+          assigned_admin_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          trip_id?: string | null
+          reporter_user_id?: string
+          reporter_role?: IncidentReporterRole
+          subject_user_id?: string | null
+          category?: IncidentCategory
+          description?: string
+          status?: IncidentStatus
+          evidence_paths?: string[]
+          trip_snapshot?: Json | null
+          location_history_snapshot?: Json | null
+          admin_notes?: string | null
+          assigned_admin_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      incident_status_history: {
+        Row: {
+          id: string
+          incident_id: string
+          from_status: IncidentStatus | null
+          to_status: IncidentStatus
+          changed_by: string | null
+          note: string | null
+          changed_at: string
+        }
+        Insert: {
+          id?: string
+          incident_id: string
+          from_status?: IncidentStatus | null
+          to_status: IncidentStatus
+          changed_by?: string | null
+          note?: string | null
+          changed_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['incident_status_history']['Insert']>
+        Relationships: []
+      }
+      dashcam_requests: {
+        Row: {
+          id: string
+          incident_id: string
+          trip_id: string
+          driver_id: string
+          status: DashcamRequestStatus
+          requested_at: string
+          deadline_at: string
+          submitted_at: string | null
+          notified_at: string | null
+        }
+        Insert: {
+          id?: string
+          incident_id: string
+          trip_id: string
+          driver_id: string
+          status?: DashcamRequestStatus
+          requested_at?: string
+          deadline_at?: string
+          submitted_at?: string | null
+          notified_at?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['dashcam_requests']['Insert']>
+        Relationships: []
       }
     }
     Views: {}
