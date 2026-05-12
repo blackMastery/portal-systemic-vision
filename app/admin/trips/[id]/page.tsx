@@ -1,19 +1,12 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { useInvalidateTripRouteOnLocationInsert } from '@/hooks/use-trip-route-location-realtime'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { formatInTimeZone } from 'date-fns-tz'
-
-/** All trip timestamps display in Guyana local time (UTC−4, no DST). */
-const GUYANA_TIMEZONE = 'America/Guyana'
-
-function formatGuyana(date: string | Date, formatStr: string) {
-  const d = typeof date === 'string' ? new Date(date) : date
-  return formatInTimeZone(d, GUYANA_TIMEZONE, formatStr)
-}
+import { formatGuyana, formatLocationHistoryGuyana } from '@/lib/guyana-time'
 import {
   ArrowLeft,
   MapPin,
@@ -37,6 +30,7 @@ import {
 import type { Database, TripType, TripStatus } from '@/types/database'
 import { TripRouteMap } from '@/components/drivers/trip-route-map'
 import { fetchTripRoute } from '@/lib/admin/fetch-trip-route'
+import type { TripRoutePoint } from '@/types/trip-route-point'
 
 // Extended row types to cover DB columns not yet in the TS type
 type TripRow = Database['public']['Tables']['trips']['Row'] & {
@@ -185,6 +179,19 @@ export default function TripDetailPage() {
     enabled: routeRealtimeEnabled,
   })
 
+  /** One row per DB sample time (snapped polyline repeats `recorded_at` across interpolated points). */
+  const locationHistoryRows = useMemo(() => {
+    let prevAt: string | null = null
+    const out: TripRoutePoint[] = []
+    for (const p of routePoints) {
+      if (p.recorded_at !== prevAt) {
+        out.push(p)
+        prevAt = p.recorded_at
+      }
+    }
+    return out
+  }, [routePoints])
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -320,6 +327,40 @@ export default function TripDetailPage() {
           isLoadingRoute={isLoadingRoute}
           showTripInfo={true}
         />
+
+        {!isLoadingRoute && locationHistoryRows.length > 0 && (
+          <div className="mt-6 border-t border-gray-200 pt-6">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Location history</h3>
+            <div className="max-h-72 overflow-auto rounded-lg border border-gray-200">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wide sticky top-0">
+                  <tr>
+                    <th className="px-3 py-2">Recorded (Guyana)</th>
+                    <th className="px-3 py-2 text-right">Speed (km/h)</th>
+                    <th className="px-3 py-2 font-mono text-xs">Coordinates</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  {locationHistoryRows.map((row, idx) => (
+                    <tr key={`${row.recorded_at}-${idx}`} className="text-gray-700">
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {formatLocationHistoryGuyana(row.recorded_at, 'MMM d, yyyy • h:mm:ss a')}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {row.speed_kmh != null && Number.isFinite(row.speed_kmh)
+                          ? `${Number(row.speed_kmh).toFixed(1)}`
+                          : '—'}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">
+                        {row.latitude.toFixed(5)}, {row.longitude.toFixed(5)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Participants */}

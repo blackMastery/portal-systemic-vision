@@ -2,9 +2,10 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { MapPin, Navigation } from 'lucide-react'
+import { ArrowRight, Eye, MapPin, Navigation } from 'lucide-react'
 import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api'
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
@@ -30,11 +31,100 @@ type DriverQueryRow = {
   vehicles: Array<{ make: string; model: string; license_plate: string }> | null
 }
 
+/**
+ * Decode driver_profiles.current_location from Supabase/PostgREST.
+ * Geography is often returned as hex EWKB; it may also be GeoJSON or WKT depending on client/API.
+ */
+function latLngFromCurrentLocation(value: unknown): { latitude: number; longitude: number } | null {
+  if (value == null) return null
+
+  if (typeof value === 'object') {
+    const g = (value as { type?: string; coordinates?: unknown; geometry?: unknown }).geometry
+    if (g != null) return latLngFromCurrentLocation(g)
+
+    const coords = (value as { coordinates?: unknown }).coordinates
+    if (Array.isArray(coords) && coords.length >= 2) {
+      const longitude = Number(coords[0])
+      const latitude = Number(coords[1])
+      if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+        return { latitude, longitude }
+      }
+    }
+    return null
+  }
+
+  if (typeof value === 'string') {
+    const s = value.trim()
+    if (/^POINT\s*\(/i.test(s) || /^SRID=\d+;\s*POINT\s*\(/i.test(s)) {
+      const m = s.match(
+        /POINT\s*\(\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s+([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)/i,
+      )
+      if (m) {
+        const longitude = Number(m[1])
+        const latitude = Number(m[2])
+        if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+          return { latitude, longitude }
+        }
+      }
+      return null
+    }
+    return latLngFromEwkbHex(s)
+  }
+
+  return null
+}
+
+/** PostGIS EWKB as hex (default JSON shape for geography columns). */
+function latLngFromEwkbHex(hex: string): { latitude: number; longitude: number } | null {
+  const clean = hex.replace(/\s/g, '')
+  if (clean.length < 18 || clean.length % 2 !== 0 || !/^[0-9a-fA-F]+$/.test(clean)) {
+    return null
+  }
+
+  const bytes = new Uint8Array(clean.length / 2)
+  for (let i = 0; i < clean.length; i += 2) {
+    bytes[i / 2] = parseInt(clean.slice(i, i + 2), 16)
+  }
+
+  if (bytes.length < 21) return null
+
+  const endianByte = bytes[0]
+  if (endianByte !== 0 && endianByte !== 1) return null
+  const le = endianByte === 1
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+  let o = 1
+
+  const readU32 = () => {
+    const v = le ? dv.getUint32(o, true) : dv.getUint32(o, false)
+    o += 4
+    return v >>> 0
+  }
+
+  const readF64 = () => {
+    const v = le ? dv.getFloat64(o, true) : dv.getFloat64(o, false)
+    o += 8
+    return v
+  }
+
+  const wkbType = readU32()
+  const WKBSRID = 0x20000000
+  if (wkbType & WKBSRID) {
+    o += 4
+  }
+
+  const baseType = wkbType & 0xff
+  if (baseType !== 1) return null
+
+  const longitude = readF64()
+  const latitude = readF64()
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
+
+  return { latitude, longitude }
+}
+
 async function fetchActiveDrivers(): Promise<ActiveDriverData[]> {
   const supabase = createClient()
-  
-  // Get active drivers with their latest location in a single query
-  // Using a more efficient approach: get drivers and their latest locations
+
   const { data: drivers, error: driversError } = await supabase
     .from('driver_profiles')
     .select(`
@@ -45,59 +135,29 @@ async function fetchActiveDrivers(): Promise<ActiveDriverData[]> {
       vehicles:vehicles (make, model, license_plate)
     `)
     .eq('is_available', true)
-    // .limit(20)
+    .eq('is_online', true)
+    .eq('verification_status', 'approved')
+    .eq('subscription_status', 'active')
+    // .eq('current_location', null)
 
   if (driversError) throw driversError
   if (!drivers || drivers.length === 0) return []
 
   const rows = drivers as DriverQueryRow[]
 
-  // Get all driver IDs
-  const driverIds = rows.map(d => d.id)
-
-  // Fetch latest locations for all drivers in a single query using IN clause
-  // This avoids N+1 query problem
-  const { data: locationsData, error: locationsError } = await supabase
-    .from('location_history')
-    .select('driver_id, latitude, longitude')
-    .in('driver_id', driverIds)
-    .order('recorded_at', { ascending: false })
-
-  if (locationsError) {
-    // If location fetch fails, return drivers without locations
-    console.error('Error fetching driver locations:', locationsError)
-  }
-
-  // Create a map of driver_id to latest location
-  const locationMap = new Map<string, { latitude: number; longitude: number }>()
-  if (locationsData) {
-    // Get the latest location for each driver (data is already ordered by recorded_at desc)
-    locationsData.forEach((location: { driver_id: string; latitude: number; longitude: number }) => {
-      if (!locationMap.has(location.driver_id)) {
-        locationMap.set(location.driver_id, {
-          latitude: location.latitude,
-          longitude: location.longitude,
-        })
-      }
-    })
-  }
-
-  // Combine driver data with locations
-  const driversWithLocations = rows.map((driver): ActiveDriverData => {
-    const location = locationMap.get(driver.id)
+  return rows.map((driver): ActiveDriverData => {
+    const coords = latLngFromCurrentLocation(driver.current_location)
     const user = driver.user?.[0] ?? null
 
     return {
       id: driver.id,
       is_available: driver.is_available,
-      latitude: location?.latitude ? Number(location.latitude) : null,
-      longitude: location?.longitude ? Number(location.longitude) : null,
+      latitude: coords?.latitude ?? null,
+      longitude: coords?.longitude ?? null,
       user,
       vehicles: driver.vehicles,
     }
   })
-
-  return driversWithLocations
 }
 
 const mapContainerStyle = {
@@ -198,7 +258,7 @@ export function ActiveDriversMap() {
             </div>
           </div>
         )}
-        driversWithLocation.length{ driversWithLocation.length}
+
         {isLoaded && (
           <GoogleMap
             mapContainerStyle={mapContainerStyle}
@@ -242,15 +302,25 @@ export function ActiveDriversMap() {
                 onCloseClick={() => setSelectedDriver(null)}
               >
                 <div className="p-2">
+
                   <h3 className="font-semibold text-sm text-gray-900">
                     {selectedDriver.user?.full_name || 'Unknown Driver'}
                   </h3>
+                  <div className="flex items-center space-x-2">
+                    <Link href={`/admin/drivers/${selectedDriver.id}`} className="text-xs text-gray-500 hover:text-gray-700">
+                      View Profile <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
                   <p className="text-xs text-gray-600 mt-1">
                     {selectedDriver.vehicles?.[0]?.make} {selectedDriver.vehicles?.[0]?.model}
                   </p>
                   <p className="text-xs text-gray-500">
                     {selectedDriver.vehicles?.[0]?.license_plate}
                   </p>
+                  <p className="text-xs text-gray-500">
+                    {selectedDriver.user?.phone_number}
+                  </p>
+                
                   <p className="text-xs mt-1">
                     <span
                       className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${

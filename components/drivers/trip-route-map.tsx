@@ -3,8 +3,8 @@
 import { GoogleMap, useLoadScript, Marker, Polyline } from '@react-google-maps/api'
 import { useEffect, useMemo, useState } from 'react'
 import { MapPin } from 'lucide-react'
-import { format } from 'date-fns'
 import type { TripRoutePoint } from '@/types/trip-route-point'
+import { formatGuyana } from '@/lib/guyana-time'
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
@@ -163,7 +163,7 @@ export function TripRouteMap({ trip, routePoints, isLoadingRoute, showTripInfo =
         <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <p className="text-sm text-gray-500">
-              {format(new Date(trip.requested_at), 'MMM dd, yyyy HH:mm')}
+              {formatGuyana(trip.requested_at, 'MMM d, yyyy • HH:mm')}
             </p>
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[trip.status] ?? 'bg-gray-100 text-gray-800'}`}>
               {trip.status.replace('_', ' ')}
