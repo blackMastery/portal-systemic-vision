@@ -165,9 +165,9 @@ export async function PATCH(
       if (validatedBody.actual_distance_km !== undefined) {
         updates.actual_distance_km = validatedBody.actual_distance_km;
       }
-      if (validatedBody.actual_fare !== undefined) {
-        updates.actual_fare = validatedBody.actual_fare;
-      }
+      // if (validatedBody.actual_fare !== undefined) {
+      //   updates.actual_fare = validatedBody.actual_fare;
+      // }
     } else if (status === "cancelled") {
       updates.cancelled_at = new Date().toISOString();
       if (validatedBody.cancellation_reason !== undefined) {
