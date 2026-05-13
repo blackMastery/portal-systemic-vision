@@ -187,6 +187,20 @@ export async function POST(request: NextRequest) {
       )
       return NextResponse.json(response, { status: statusCode })
     }
+    
+
+
+    if (riderProfile.verification_status === 'rejected') {
+      logger.warn('Rider verification rejected', {
+        userId: user.id,
+        riderId: riderProfile.id,
+        verification_status: riderProfile.verification_status,
+      })
+      const { response, statusCode } = handleApiError(
+        new AuthorizationError('Account verification is required before you can request trips.')
+      )
+      return NextResponse.json(response, { status: statusCode })
+    }
 
     // if (riderProfile.verification_status !== 'approved') {
     //   logger.warn('Rider verification not approved', {
