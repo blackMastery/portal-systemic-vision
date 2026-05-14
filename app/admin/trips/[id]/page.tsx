@@ -223,7 +223,6 @@ export default function TripDetailPage() {
 
   const { trip } = data
 
-  const fare = trip.actual_fare ?? trip.estimated_fare
   const distance = trip.actual_distance_km ?? trip.estimated_distance_km
   const duration = trip.actual_duration_minutes ?? trip.estimated_duration_minutes
 
@@ -269,16 +268,28 @@ export default function TripDetailPage() {
       {/* Overview Stats */}
       <div className="grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 lg:grid-cols-4">
         <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
-          <div className="flex items-center gap-3 mb-1">
+          <div className="flex items-center gap-3 mb-2">
             <DollarSign className="h-5 w-5 text-green-600" />
             <span className="text-sm text-gray-500">Fare</span>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-gray-900 break-words">
-            {fare ? `${trip.currency ?? 'GYD'} ${Number(fare).toFixed(2)}` : 'N/A'}
-          </p>
-          {!trip.actual_fare && trip.estimated_fare && (
-            <p className="text-xs text-gray-400 mt-1">Estimated</p>
-          )}
+          <div className="space-y-2">
+            <div>
+              <p className="text-xs font-medium text-gray-500">Estimated</p>
+              <p className="text-lg sm:text-xl font-bold tabular-nums text-gray-900 break-words">
+                {trip.estimated_fare != null
+                  ? `${trip.currency ?? 'GYD'} ${Number(trip.estimated_fare).toFixed(2)}`
+                  : 'N/A'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500">Actual</p>
+              <p className="text-lg sm:text-xl font-bold tabular-nums text-green-700 break-words">
+                {trip.actual_fare != null
+                  ? `${trip.currency ?? 'GYD'} ${Number(trip.actual_fare).toFixed(2)}`
+                  : 'N/A'}
+              </p>
+            </div>
+          </div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
           <div className="flex items-center gap-3 mb-1">

@@ -271,8 +271,6 @@ export default function TripsPage() {
           viewMode === 'card' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
               {trips.map((trip) => {
-                const fare = trip.actual_fare ?? trip.estimated_fare
-                const fareIsEstimated = !trip.actual_fare && trip.estimated_fare
                 const distance = trip.actual_distance_km ?? trip.estimated_distance_km
                 const distanceIsEstimated = !trip.actual_distance_km && trip.estimated_distance_km
 
@@ -328,14 +326,27 @@ export default function TripsPage() {
 
                     {/* Fare + distance + actions */}
                     <div className="flex items-center justify-between pt-1 border-t border-gray-100">
-                      <div className="flex items-center gap-3 text-sm text-gray-600">
-                        {fare ? (
-                          <span className="flex items-center font-medium text-gray-900">
-                            <DollarSign className="h-3.5 w-3.5 text-green-600 mr-0.5" />
-                            {fare.toFixed(2)}
-                            {fareIsEstimated && <span className="ml-0.5 text-xs text-gray-400">(est.)</span>}
-                          </span>
-                        ) : null}
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">
+                        <div className="flex flex-col gap-0.5 text-xs">
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-500">Estimated</span>
+                            <span className="flex items-center font-medium text-gray-900 tabular-nums">
+                              <DollarSign className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                              {trip.estimated_fare != null
+                                ? Number(trip.estimated_fare).toFixed(2)
+                                : '—'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-500">Actual</span>
+                            <span className="flex items-center font-medium text-green-700 tabular-nums">
+                              <DollarSign className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                              {trip.actual_fare != null
+                                ? Number(trip.actual_fare).toFixed(2)
+                                : '—'}
+                            </span>
+                          </div>
+                        </div>
                         {distance ? (
                           <span className="text-xs text-gray-500">
                             {distance.toFixed(2)} km{distanceIsEstimated && ' (est.)'}
@@ -362,6 +373,9 @@ export default function TripsPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -385,20 +399,23 @@ export default function TripsPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Requested
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {trips.map((trip) => {
-                  const fare = trip.actual_fare ?? trip.estimated_fare
-                  const fareIsEstimated = !trip.actual_fare && trip.estimated_fare
                   const distance = trip.actual_distance_km ?? trip.estimated_distance_km
                   const distanceIsEstimated = !trip.actual_distance_km && trip.estimated_distance_km
 
                   return (
                     <tr key={trip.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <Link
+                          href={`/admin/trips/${trip.id}`}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          View Details
+                        </Link>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col gap-1">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -470,20 +487,27 @@ export default function TripsPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {fare ? (
-                          <div className="flex items-center text-sm">
-                            <DollarSign className="h-4 w-4 text-green-600 mr-1" />
-                            <span className="font-medium text-gray-900">
-                              {fare.toFixed(2)}
+                      <td className="px-6 py-4 align-top whitespace-normal">
+                        <div className="flex flex-col gap-1 text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-16 shrink-0 text-gray-500">Estimated</span>
+                            <span className="flex items-center text-sm font-medium text-gray-900 tabular-nums">
+                              <DollarSign className="h-3.5 w-3.5 shrink-0 text-green-600" />
+                              {trip.estimated_fare != null
+                                ? Number(trip.estimated_fare).toFixed(2)
+                                : '—'}
                             </span>
-                            {fareIsEstimated && (
-                              <span className="ml-1 text-xs text-gray-500">(est.)</span>
-                            )}
                           </div>
-                        ) : (
-                          <span className="text-sm text-gray-400">N/A</span>
-                        )}
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-16 shrink-0 text-gray-500">Actual</span>
+                            <span className="flex items-center text-sm font-medium text-green-700 tabular-nums">
+                              <DollarSign className="h-3.5 w-3.5 shrink-0 text-green-600" />
+                              {trip.actual_fare != null
+                                ? Number(trip.actual_fare).toFixed(2)
+                                : '—'}
+                            </span>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {distance ? (
@@ -532,14 +556,6 @@ export default function TripsPage() {
                             </span>
                           )}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <Link
-                          href={`/admin/trips/${trip.id}`}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          View Details
-                        </Link>
                       </td>
                     </tr>
                   )
