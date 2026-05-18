@@ -175,6 +175,15 @@ export const updateTripStatusSchema = z.object({
   actual_distance_km: z.number().positive().optional(),
   actual_fare: z.number().nonnegative().optional(),
   cancellation_reason: z.string().max(500).optional(),
+  completed_latitude: latitudeSchema.optional(),
+  completed_longitude: longitudeSchema.optional(),
+  completed_at: z
+    .string()
+    .optional()
+    .refine(
+      (val) => val === undefined || !Number.isNaN(Date.parse(val)),
+      'completed_at must be a valid ISO date string',
+    ),
 })
 
 export type UpdateTripStatusRequest = z.infer<typeof updateTripStatusSchema>

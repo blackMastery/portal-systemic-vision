@@ -161,7 +161,15 @@ export async function PATCH(
     if (status === "picked_up") {
       updates.picked_up_at = new Date().toISOString();
     } else if (status === "completed") {
-      updates.completed_at = new Date().toISOString();
+      updates.completed_at = validatedBody.completed_at
+        ? new Date(validatedBody.completed_at).toISOString()
+        : new Date().toISOString();
+      if (validatedBody.completed_latitude !== undefined) {
+        updates.completed_latitude = validatedBody.completed_latitude;
+      }
+      if (validatedBody.completed_longitude !== undefined) {
+        updates.completed_longitude = validatedBody.completed_longitude;
+      }
       if (validatedBody.actual_distance_km !== undefined) {
         updates.actual_distance_km = validatedBody.actual_distance_km;
       }
