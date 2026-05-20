@@ -168,19 +168,33 @@ export function calculateFare({
     };
   }
 
-  // ── Both Central — original confirmed formula ──────────
-  if (pickupZone === "CENTRAL" && dropoffZone === "CENTRAL") {
-    const total = roundFare(Math.max(MINIMUM_FARE, 1050 + (distanceKm - 3) * 100));
+
+
+  if (pickupZone === "CENTRAL" || dropoffZone === "CENTRAL") {
     return {
       status: "PRICED",
-      total,
+      total: roundFare(1500),
       message: null,
-      breakdown:
-        `$1,050 base + ${(distanceKm - 3).toFixed(2)}km × $100 = $${total.toLocaleString()}`,
+      breakdown: "Airport flat rate $1,500",
       zones: { pickup: pickupZone, dropoff: dropoffZone },
       distanceKm,
     };
   }
+
+
+  // ── Both Central — original confirmed formula ──────────
+  // if (pickupZone === "CENTRAL" && dropoffZone === "CENTRAL") {
+  //   const total = roundFare(Math.max(MINIMUM_FARE, 1050 + (distanceKm - 3) * 100));
+  //   return {
+  //     status: "PRICED",
+  //     total,
+  //     message: null,
+  //     breakdown:
+  //       `$1,050 base + ${(distanceKm - 3).toFixed(2)}km × $100 = $${total.toLocaleString()}`,
+  //     zones: { pickup: pickupZone, dropoff: dropoffZone },
+  //     distanceKm,
+  //   };
+  // }
 
   // ── West side internal — Matrix calibrated ────────────
   const bothWest = ["WEST_COAST", "WEST_BANK"].includes(pickupZone) &&
