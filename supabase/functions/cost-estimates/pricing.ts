@@ -29,17 +29,33 @@ export function roundFare(amount: number): number {
   return Math.round(rounded / 100) * 100;
 }
 
+// // ── Zone classification from coordinates (fallback) ──
+// export function classifyZoneFromCoords(lat: number, lng: number): string {
+//   if (Math.abs(lat - 6.4986) < 0.05 && Math.abs(lng + 58.2541) < 0.05) return "AIRPORT";
+//   if (lng > -57.9) return "BERBICE";
+//   if (lng < -58.45 && lat > 6.9) return "ESSEQUIBO";
+//   if (lat < 5.5) return "INTERIOR";
+//   if (lat < 6.55) return "LINDEN";
+//   if (lat >= 6.795 && lat <= 6.828 && lng >= -58.17 && lng <= -58.13) return "CENTRAL";
+//   if (lng < -58.185) return lat >= 6.78 ? "WEST_COAST" : "WEST_BANK";
+//   if (lat < 6.795) return "EAST_BANK";
+//   return "EAST_COAST";
+// }
+
 // ── Zone classification from coordinates (fallback) ──
 export function classifyZoneFromCoords(lat: number, lng: number): string {
-  if (Math.abs(lat - 6.4986) < 0.05 && Math.abs(lng + 58.2541) < 0.05) return "AIRPORT";
-  if (lng > -57.9) return "BERBICE";
-  if (lng < -58.45 && lat > 6.9) return "ESSEQUIBO";
-  if (lat < 5.5) return "INTERIOR";
-  if (lat < 6.55) return "LINDEN";
-  if (lat >= 6.795 && lat <= 6.828 && lng >= -58.17 && lng <= -58.13) return "CENTRAL";
-  if (lng < -58.185) return lat >= 6.78 ? "WEST_COAST" : "WEST_BANK";
-  if (lat < 6.795) return "EAST_BANK";
-  return "EAST_COAST";
+  if (Math.abs(lat - 6.4986) < 0.05 && Math.abs(lng + 58.2541) < 0.05) return 'AIRPORT';
+  if (lng > -57.9) return 'BERBICE';
+  if (lng < -58.45 && lat > 6.9) return 'ESSEQUIBO';
+  if (lat < 5.5) return 'INTERIOR';
+  if (lat < 6.55) return 'LINDEN';
+  if (lat >= 6.785 && lat <= 6.828 && lng >= -58.175 && lng <= -58.125) return 'CENTRAL';
+  if (lng < -58.185) return lat >= 6.78 ? 'WEST_COAST' : 'WEST_BANK';
+  // East Bank corridor: anywhere west of central polygon (lng < -58.175) AND on east side of river (lng > -58.185)
+  // This catches Houston, McDoom, Agricola which sit between central GT and the river
+  if (lng < -58.175 && lat < 6.795) return 'EAST_BANK';
+  if (lat < 6.785) return 'EAST_BANK';
+  return 'EAST_COAST';
 }
 
 export function crossesDemeraraRiver(zoneA: string, zoneB: string): boolean {
@@ -52,7 +68,7 @@ export function crossesDemeraraRiver(zoneA: string, zoneB: string): boolean {
 function eastBankBrackets(distanceKm: number): number {
   const brackets = [
     { upToKm: 4, rate: 350 }, // first 4km
-    { upToKm: 9, rate: 300 }, // km 5-9
+    { upToKm: 9,        rate: 300 },  // km 5-9
     { upToKm: 20, rate: 120 }, // km 10-20 (highway entry)
     { upToKm: 30, rate: 200 }, // km 21-30 (climbing)
     { upToKm: Infinity, rate: 380 }, // km 31+
@@ -170,31 +186,31 @@ export function calculateFare({
 
 
 
-  if (pickupZone === "CENTRAL" || dropoffZone === "CENTRAL") {
-    return {
-      status: "PRICED",
-      total: roundFare(1500),
-      message: null,
-      breakdown: "Airport flat rate $1,500",
-      zones: { pickup: pickupZone, dropoff: dropoffZone },
-      distanceKm,
-    };
-  }
-
-
-  // ── Both Central — original confirmed formula ──────────
-  // if (pickupZone === "CENTRAL" && dropoffZone === "CENTRAL") {
-  //   const total = roundFare(Math.max(MINIMUM_FARE, 1050 + (distanceKm - 3) * 100));
+  // if (pickupZone === "CENTRAL" || dropoffZone === "CENTRAL") {
   //   return {
   //     status: "PRICED",
-  //     total,
+  //     total: roundFare(1500),
   //     message: null,
-  //     breakdown:
-  //       `$1,050 base + ${(distanceKm - 3).toFixed(2)}km × $100 = $${total.toLocaleString()}`,
+  //     breakdown: "Airport flat rate $1,500",
   //     zones: { pickup: pickupZone, dropoff: dropoffZone },
   //     distanceKm,
   //   };
   // }
+
+
+  // ── Both Central — original confirmed formula ──────────
+  if (pickupZone === "CENTRAL" && dropoffZone === "CENTRAL") {
+    const total = roundFare(Math.max(MINIMUM_FARE, 1050 + (distanceKm - 3) * 100));
+    return {
+      status: "PRICED",
+      total,
+      message: null,
+      breakdown:
+        `$1,050 base + ${(distanceKm - 3).toFixed(2)}km × $100 = $${total.toLocaleString()}`,
+      zones: { pickup: pickupZone, dropoff: dropoffZone },
+      distanceKm,
+    };
+  }
 
   // ── West side internal — Matrix calibrated ────────────
   const bothWest = ["WEST_COAST", "WEST_BANK"].includes(pickupZone) &&
