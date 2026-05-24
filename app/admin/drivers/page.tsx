@@ -61,46 +61,57 @@ async function fetchDrivers(filters: {
   tripsFilter: string
 }) {
   const supabase = createClient()
+  const allRows: DriverWithDetails[] = []
+  const batchSize = 1000
+  let from = 0
 
-  let query = supabase
-    .from('driver_profiles')
-    .select(`
+  // Supabase/PostgREST caps response size; fetch drivers in pages.
+  while (true) {
+    let query = supabase
+      .from('driver_profiles')
+      .select(`
       *,
       user:user_id (full_name, email, phone_number),
       vehicles (id)
     `)
 
-  if (filters.verificationStatus !== 'all') {
-    query = query.eq('verification_status', filters.verificationStatus)
-  }
+    if (filters.verificationStatus !== 'all') {
+      query = query.eq('verification_status', filters.verificationStatus)
+    }
 
-  if (filters.subscriptionStatus !== 'all') {
-    query = query.eq('subscription_status', filters.subscriptionStatus)
-  }
+    if (filters.subscriptionStatus !== 'all') {
+      query = query.eq('subscription_status', filters.subscriptionStatus)
+    }
 
-  if (filters.onlineStatus !== 'all') {
-    query = query.eq('is_online', filters.onlineStatus === 'online')
-  }
+    if (filters.onlineStatus !== 'all') {
+      query = query.eq('is_online', filters.onlineStatus === 'online')
+    }
 
-  // Server-side sort
-  if (filters.sortBy === 'oldest') {
-    query = query.order('created_at', { ascending: true })
-  } else if (filters.sortBy === 'rating') {
-    query = query.order('rating_average', { ascending: false })
-  } else if (filters.sortBy === 'trips') {
-    query = query.order('total_trips', { ascending: false })
-  } else {
-    query = query.order('created_at', { ascending: false })
-  }
+    if (filters.sortBy === 'oldest') {
+      query = query.order('created_at', { ascending: true })
+    } else if (filters.sortBy === 'rating') {
+      query = query.order('rating_average', { ascending: false })
+    } else if (filters.sortBy === 'trips') {
+      query = query.order('total_trips', { ascending: false })
+    } else {
+      query = query.order('created_at', { ascending: false })
+    }
 
-  const { data, error } = await query
+    const { data, error } = await query.range(from, from + batchSize - 1)
 
-  if (error) {
-    throw error
+    if (error) {
+      throw error
+    }
+
+    const batch = (data ?? []) as DriverWithDetails[]
+    allRows.push(...batch)
+
+    if (batch.length < batchSize) break
+    from += batchSize
   }
 
   // Client-side filtering
-  let results = data as DriverWithDetails[]
+  let results = allRows
 
   if (filters.searchQuery) {
     const searchLower = filters.searchQuery.toLowerCase()
