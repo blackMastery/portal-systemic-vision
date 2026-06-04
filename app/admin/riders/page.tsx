@@ -9,6 +9,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import type { RiderWithDetails, VerificationStatus } from '@/types/database'
 import { format } from 'date-fns'
 import { SendNotificationModal } from './send-notification-modal'
+import { formatStatus } from '@/lib/format'
 
 async function fetchRiders(filters: {
   subscriptionStatus: string
@@ -493,10 +494,10 @@ export default function RidersPage() {
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${verificationBadgeColors[rider.verification_status]}`}
                       >
-                        {rider.verification_status}
+                        {formatStatus(rider.verification_status)}
                       </span>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${subscriptionBadgeColors[rider.subscription_status]}`}>
-                        {rider.subscription_status}
+                        {formatStatus(rider.subscription_status)}
                       </span>
                       {isTrialExpiringSoon && rider.trial_end_date && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
@@ -603,14 +604,14 @@ export default function RidersPage() {
                             verificationBadgeColors[rider.verification_status]
                           }`}
                         >
-                          {rider.verification_status}
+                          {formatStatus(rider.verification_status)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           subscriptionBadgeColors[rider.subscription_status]
                         }`}>
-                          {rider.subscription_status}
+                          {formatStatus(rider.subscription_status)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

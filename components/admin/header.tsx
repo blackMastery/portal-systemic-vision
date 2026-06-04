@@ -1,6 +1,7 @@
 'use client'
 
 import { Bell, LogOut, User } from 'lucide-react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useState, useEffect } from 'react'
@@ -44,10 +45,13 @@ export function AdminHeader() {
 
       <div className="flex items-center space-x-4">
         {/* Notifications */}
-        <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors relative">
+        <Link
+          href="/admin/notifications"
+          aria-label="Notifications"
+          className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+        >
           <Bell className="h-5 w-5" />
-          <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-        </button>
+        </Link>
 
         {/* Profile menu */}
         <div className="relative">
@@ -58,7 +62,7 @@ export function AdminHeader() {
             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
               <User className="h-5 w-5 text-blue-600" />
             </div>
-            <span className="text-sm font-medium text-gray-700 hidden md:block">
+            <span className="text-sm font-medium text-gray-700 capitalize hidden md:block">
               {adminName}
             </span>
           </button>

@@ -22,6 +22,7 @@ import {
 import Link from 'next/link'
 import type { DriverWithDetails } from '@/types/database'
 import { SendNotificationModal } from './send-notification-modal'
+import { formatStatus } from '@/lib/format'
 
 const SELECT_CLASS =
   'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
@@ -795,7 +796,7 @@ function DriversContent() {
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             verificationBadgeColors[driver.verification_status]
                           }`}>
-                            {driver.verification_status}
+                            {formatStatus(driver.verification_status)}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -807,7 +808,7 @@ function DriversContent() {
                                   ? 'bg-blue-100 text-blue-800'
                                   : 'bg-red-100 text-red-800'
                             }`}>
-                              {driver.subscription_status}
+                              {formatStatus(driver.subscription_status)}
                             </span>
                             <p className="text-xs text-gray-500">
                               Ends:{' '}
@@ -860,7 +861,7 @@ function DriversContent() {
                       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                         verificationBadgeColors[driver.verification_status]
                       }`}>
-                        {driver.verification_status}
+                        {formatStatus(driver.verification_status)}
                       </span>
                     </div>
 

@@ -108,8 +108,6 @@ export default function DashboardPage() {
           title="Active Drivers"
           value={metrics?.activeDrivers || 0}
           icon={Car}
-          trend="+12%"
-          trendUp={true}
           color="blue"
           href="/admin/drivers"
         />
@@ -131,8 +129,6 @@ export default function DashboardPage() {
           title="Active Riders"
           value={metrics?.activeRiders || 0}
           icon={Users}
-          trend="+8%"
-          trendUp={true}
           color="green"
           href="/admin/riders"
         />
@@ -154,8 +150,6 @@ export default function DashboardPage() {
           title="Today's Trips"
           value={metrics?.todayTripsCount || 0}
           icon={TrendingUp}
-          trend="+23%"
-          trendUp={true}
           color="indigo"
           href="/admin/trips"
         />
@@ -163,8 +157,6 @@ export default function DashboardPage() {
           title="Today's Revenue"
           value={`$${metrics?.todayRevenue?.toFixed(2) || '0.00'}`}
           icon={DollarSign}
-          trend="+15%"
-          trendUp={true}
           color="emerald"
           href="/admin/payments"
         />

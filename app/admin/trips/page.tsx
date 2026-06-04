@@ -22,6 +22,7 @@ import Link from 'next/link'
 import type { TripWithDetails } from '@/types/database'
 import { format } from 'date-fns'
 import { PAGE_SIZE_OPTIONS, useTripFilters } from './use-trip-filters'
+import { formatStatus } from '@/lib/format'
 
 async function fetchTrips(filters: {
   status: string
@@ -335,7 +336,7 @@ function TripsContent() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[trip.status]}`}>
-                          {trip.status}
+                          {formatStatus(trip.status)}
                         </span>
                         {trip.is_night_trip && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
@@ -344,7 +345,7 @@ function TripsContent() {
                           </span>
                         )}
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${tripTypeColors[trip.trip_type]}`}>
-                          {trip.trip_type.replace('_', ' ')}
+                          {formatStatus(trip.trip_type)}
                         </span>
                       </div>
                       <span className="text-xs text-gray-400">{format(new Date(trip.requested_at), 'MMM d, yyyy')}</span>
@@ -476,7 +477,7 @@ function TripsContent() {
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             statusColors[trip.status]
                           }`}>
-                            {trip.status}
+                            {formatStatus(trip.status)}
                           </span>
                           {trip.is_night_trip && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
@@ -580,7 +581,7 @@ function TripsContent() {
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           tripTypeColors[trip.trip_type]
                         }`}>
-                          {trip.trip_type.replace('_', ' ')}
+                          {formatStatus(trip.trip_type)}
                         </span>
                         {(trip.rider_rating || trip.driver_rating) && (
                           <div className="flex items-center mt-1 text-xs text-gray-500">

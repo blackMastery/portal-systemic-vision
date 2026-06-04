@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { MapPin, Clock, DollarSign, User, Car, Route } from "lucide-react";
 import type { TripWithDetails } from "@/types/database";
+import { formatStatus } from "@/lib/format";
 import Link from "next/link";
 
 async function fetchRecentTrips() {
@@ -84,7 +85,7 @@ export function RecentTrips() {
                         statusColors[trip.status]
                       }`}
                     >
-                      {trip.status}
+                      {formatStatus(trip.status)}
                     </span>
                     {trip.is_night_trip && (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">

@@ -24,6 +24,7 @@ import {
 import { format } from 'date-fns'
 import type { Database } from '@/types/database'
 import { PAGE_SIZE_OPTIONS, useTripRequestFilters } from './use-trip-request-filters'
+import { formatStatus } from '@/lib/format'
 
 type TripRequestRow = Database['public']['Tables']['trip_requests']['Row'] & {
   rider: {
@@ -358,14 +359,14 @@ function TripRequestsContent() {
                             statusColors[r.status] ?? 'bg-gray-100 text-gray-800'
                           }`}
                         >
-                          {r.status.replace('_', ' ')}
+                          {formatStatus(r.status)}
                         </span>
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             tripTypeColors[r.trip_type] ?? 'bg-gray-100 text-gray-800'
                           }`}
                         >
-                          {r.trip_type.replace('_', ' ')}
+                          {formatStatus(r.trip_type)}
                         </span>
                         {isExpired && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
@@ -464,12 +465,12 @@ function TripRequestsContent() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tripTypeColors[r.trip_type] ?? 'bg-gray-100 text-gray-800'}`}>
-                            {r.trip_type.replace('_', ' ')}
+                            {formatStatus(r.trip_type)}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[r.status] ?? 'bg-gray-100 text-gray-800'}`}>
-                            {r.status.replace('_', ' ')}
+                            {formatStatus(r.status)}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -616,13 +617,13 @@ function TripRequestsContent() {
                 <div className="rounded-lg border border-gray-200 p-3">
                   <p className="text-xs uppercase tracking-wide text-gray-500">Status</p>
                   <span className={`mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[selectedRequest.status] ?? 'bg-gray-100 text-gray-800'}`}>
-                    {selectedRequest.status.replace('_', ' ')}
+                    {formatStatus(selectedRequest.status)}
                   </span>
                 </div>
                 <div className="rounded-lg border border-gray-200 p-3">
                   <p className="text-xs uppercase tracking-wide text-gray-500">Trip Type</p>
                   <span className={`mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tripTypeColors[selectedRequest.trip_type] ?? 'bg-gray-100 text-gray-800'}`}>
-                    {selectedRequest.trip_type.replace('_', ' ')}
+                    {formatStatus(selectedRequest.trip_type)}
                   </span>
                 </div>
                 <div className="rounded-lg border border-gray-200 p-3">
