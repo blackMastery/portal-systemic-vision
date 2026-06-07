@@ -125,12 +125,13 @@ export async function PATCH(
     }
 
     const validatedBody = validate(updateTripStatusSchema, body);
-    const { status } = validatedBody;
+    let { status } = validatedBody;
+    const completeStopIndex = validatedBody.complete_stop_index;
 
     // 5. Fetch trip and verify driver ownership
     const { data: trip, error: tripError } = await serviceClient
       .from("trips")
-      .select("id, rider_id, driver_id")
+      .select("id, rider_id, driver_id, status, current_stop_index")
       .eq("id", tripId)
       .single();
 
@@ -155,10 +156,108 @@ export async function PATCH(
       return NextResponse.json(response, { status: statusCode });
     }
 
-    // 6. Build updates object
+    // 6. Handle multi-dropoff stop completion
+    let stopCompletionMeta: {
+      completedSequence: number;
+      totalStops: number;
+      tripFullyCompleted: boolean;
+    } | null = null;
+
+    if (
+      completeStopIndex !== undefined &&
+      status === "picked_up"
+    ) {
+      const stopSequence = completeStopIndex + 1;
+
+      const { data: stopRow, error: stopFetchError } = await serviceClient
+        .from("trip_stops")
+        .select("id, sequence, status")
+        .eq("trip_id", tripId)
+        .eq("sequence", stopSequence)
+        .maybeSingle();
+
+      if (stopFetchError || !stopRow) {
+        const { response, statusCode } = handleApiError(
+          new NotFoundError(`Stop ${stopSequence} not found for this trip.`),
+        );
+        return NextResponse.json(response, { status: statusCode });
+      }
+
+      if (stopRow.status === "completed") {
+        const { response, statusCode } = handleApiError(
+          new Error(`Stop ${stopSequence} is already completed.`),
+        );
+        return NextResponse.json(response, { status: statusCode });
+      }
+
+      const completedAt = validatedBody.completed_at
+        ? new Date(validatedBody.completed_at).toISOString()
+        : new Date().toISOString();
+
+      const stopUpdate: Record<string, unknown> = {
+        status: "completed",
+        completed_at: completedAt,
+      };
+      if (validatedBody.completed_latitude !== undefined) {
+        stopUpdate.completed_latitude = validatedBody.completed_latitude;
+      }
+      if (validatedBody.completed_longitude !== undefined) {
+        stopUpdate.completed_longitude = validatedBody.completed_longitude;
+      }
+
+      const { error: stopUpdateError } = await serviceClient
+        .from("trip_stops")
+        .update(stopUpdate)
+        .eq("id", stopRow.id);
+
+      if (stopUpdateError) {
+        logger.error("Failed to complete trip stop", stopUpdateError, {
+          tripId,
+          stopSequence,
+        });
+        const { response, statusCode } = handleApiError(stopUpdateError);
+        return NextResponse.json(response, { status: statusCode });
+      }
+
+      const { count: totalStops } = await serviceClient
+        .from("trip_stops")
+        .select("id", { count: "exact", head: true })
+        .eq("trip_id", tripId);
+
+      const { count: remainingPending } = await serviceClient
+        .from("trip_stops")
+        .select("id", { count: "exact", head: true })
+        .eq("trip_id", tripId)
+        .eq("status", "pending");
+
+      const total = totalStops ?? 0;
+      const isLastStop = (remainingPending ?? 0) === 0;
+
+      stopCompletionMeta = {
+        completedSequence: stopSequence,
+        totalStops: total,
+        tripFullyCompleted: isLastStop,
+      };
+
+      if (isLastStop) {
+        status = "completed";
+      }
+    }
+
+    // 7. Build updates object
     const updates: Record<string, unknown> = { status };
 
-    if (status === "picked_up") {
+    if (completeStopIndex !== undefined) {
+      const { count: completedStops } = await serviceClient
+        .from("trip_stops")
+        .select("id", { count: "exact", head: true })
+        .eq("trip_id", tripId)
+        .eq("status", "completed");
+
+      updates.current_stop_index = completedStops ?? 0;
+    }
+
+    if (status === "picked_up" && completeStopIndex === undefined) {
       updates.picked_up_at = new Date().toISOString();
     } else if (status === "completed") {
       updates.completed_at = validatedBody.completed_at
@@ -185,7 +284,7 @@ export async function PATCH(
       }
     }
 
-    // 7. Update the trip
+    // 8. Update the trip
     const { error: updateError } = await serviceClient
       .from("trips")
       .update(updates)
@@ -202,7 +301,7 @@ export async function PATCH(
 
     logger.info("Trip status updated", { tripId, status });
 
-    // 8. On cancellation, reset linked trip_request to 'requested' (fire-and-forget)
+    // 9. On cancellation, reset linked trip_request to 'requested' (fire-and-forget)
     if (status === "cancelled") {
       try {
         const { data: tripRow } = await serviceClient
@@ -257,13 +356,16 @@ export async function PATCH(
       }
     }
 
-    // 9. Send push notification to rider (fire-and-forget)
+    // 10. Send push notification to rider (fire-and-forget)
     const riderId = trip.rider_id;
     if (riderId) {
       let title: string;
       let notificationBody: string;
 
-      if (status === "picked_up") {
+      if (stopCompletionMeta && !stopCompletionMeta.tripFullyCompleted) {
+        title = "Stop Completed";
+        notificationBody = `Stop ${stopCompletionMeta.completedSequence} of ${stopCompletionMeta.totalStops} completed.`;
+      } else if (status === "picked_up") {
         title = "Driver Arrived";
         notificationBody = "Your driver has arrived at the pickup location";
       } else if (status === "completed") {

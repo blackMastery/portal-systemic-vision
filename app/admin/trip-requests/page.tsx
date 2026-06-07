@@ -25,12 +25,18 @@ import { format } from 'date-fns'
 import type { Database } from '@/types/database'
 import { PAGE_SIZE_OPTIONS, useTripRequestFilters } from './use-trip-request-filters'
 import { formatStatus } from '@/lib/format'
+import {
+  googleMapsMultiStopDirectionsUrl,
+  sortTripStops,
+  type TripStopRow,
+} from '@/lib/admin/trip-stops'
 
 type TripRequestRow = Database['public']['Tables']['trip_requests']['Row'] & {
   rider: {
     id: string
     user: Pick<Database['public']['Tables']['users']['Row'], 'full_name' | 'phone_number' | 'email'>
   } | null
+  trip_stops?: TripStopRow[]
 }
 
 async function fetchTripRequests(filters: {
@@ -49,7 +55,8 @@ async function fetchTripRequests(filters: {
       rider:rider_id (
         id,
         user:user_id (full_name, phone_number, email)
-      )
+      ),
+      trip_stops (*)
     `)
     .order('created_at', { ascending: false })
 
@@ -189,13 +196,16 @@ function TripRequestsContent() {
   }
 
   const directionsMapsUrl = selectedRequest
-    ? googleMapsDirectionsUrl(
+    ? googleMapsMultiStopDirectionsUrl(
         selectedRequest.pickup_latitude,
         selectedRequest.pickup_longitude,
-        selectedRequest.destination_latitude,
-        selectedRequest.destination_longitude
+        selectedRequest.trip_stops ?? [],
       )
     : null
+
+  const selectedStops = selectedRequest
+    ? sortTripStops(selectedRequest.trip_stops ?? [])
+    : []
 
   return (
     <div className="space-y-6">
@@ -685,13 +695,36 @@ function TripRequestsContent() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide">Destination</p>
-                    <p className="text-gray-900">{selectedRequest.destination_address || 'N/A'}</p>
-                    <p className="text-xs text-gray-500">
-                      {selectedRequest.destination_latitude != null && selectedRequest.destination_longitude != null
-                        ? `${selectedRequest.destination_latitude}, ${selectedRequest.destination_longitude}`
-                        : 'N/A'}
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">
+                      {selectedStops.length > 1 ? 'Drop-offs' : 'Destination'}
                     </p>
+                    {selectedStops.length > 0 ? (
+                      <ul className="mt-1 space-y-2">
+                        {selectedStops.map((stop) => (
+                          <li key={stop.id}>
+                            <p className="text-gray-900">
+                              {selectedStops.length > 1 ? `${stop.sequence}. ` : ''}
+                              {stop.address}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {stop.latitude != null && stop.longitude != null
+                                ? `${stop.latitude}, ${stop.longitude}`
+                                : 'No coordinates'}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <>
+                        <p className="text-gray-900">{selectedRequest.destination_address || 'N/A'}</p>
+                        <p className="text-xs text-gray-500">
+                          {selectedRequest.destination_latitude != null &&
+                          selectedRequest.destination_longitude != null
+                            ? `${selectedRequest.destination_latitude}, ${selectedRequest.destination_longitude}`
+                            : 'N/A'}
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

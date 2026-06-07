@@ -11,6 +11,7 @@ export type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'suspende
 export type SubscriptionStatus = 'active' | 'expired' | 'cancelled' | 'trial'
 export type TripStatus = 'requested' | 'accepted' | 'picked_up' | 'completed' | 'cancelled'
 export type TripType = 'airport' | 'short_drop' | 'market' | 'other'
+export type TripStopStatus = 'pending' | 'completed'
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded'
 export type AppVersionAppType = 'driver' | 'rider'
 export type AppVersionPlatform = 'ios' | 'android'
@@ -165,6 +166,9 @@ export interface Database {
           driver_rating: number | null
           created_at: string
           updated_at: string
+          current_stop_index: number
+          route_waypoints: Json | null
+          route_polyline: string | null
         }
         Insert: Omit<Database['public']['Tables']['trips']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['trips']['Insert']>
@@ -271,6 +275,26 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['trip_requests']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['trip_requests']['Insert']>
+        Relationships: []
+      }
+      trip_stops: {
+        Row: {
+          id: string
+          trip_request_id: string | null
+          trip_id: string | null
+          sequence: number
+          address: string
+          latitude: number | null
+          longitude: number | null
+          location: unknown | null
+          status: TripStopStatus
+          completed_at: string | null
+          completed_latitude: number | null
+          completed_longitude: number | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['trip_stops']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['trip_stops']['Insert']>
         Relationships: []
       }
       audit_logs: {

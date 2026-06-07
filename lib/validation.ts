@@ -51,28 +51,81 @@ export const longitudeSchema = z
   .max(180, 'Longitude must be between -180 and 180')
 
 /**
- * Trip request schema
+ * Single drop-off stop in a trip request payload
  */
-export const tripRequestSchema = z.object({
-  pickup_latitude: latitudeSchema,
-  pickup_longitude: longitudeSchema,
-  pickup_address: z
-    .string()
-    .min(5, 'Pickup address must be at least 5 characters')
-    .max(500, 'Pickup address must be less than 500 characters'),
-  destination_latitude: latitudeSchema.optional(),
-  destination_longitude: longitudeSchema.optional(),
-  destination_address: z
-    .string()
-    .min(5, 'Destination address must be at least 5 characters')
-    .max(500, 'Destination address must be less than 500 characters'),
-  trip_type: tripTypeSchema,
-  estimated_distance_km: z.number().positive().optional(),
-  estimated_duration_minutes: z.number().int().positive().optional(),
-  estimated_fare: z.number().nonnegative().optional(),
-  notes: z.string().max(1000, 'Notes must be less than 1000 characters').optional(),
-  passenger_count: z.number().int().positive().min(1).max(10).optional(),
-})
+export const tripStopInputSchema = z
+  .object({
+    address: z
+      .string()
+      .min(5, 'Stop address must be at least 5 characters')
+      .max(500, 'Stop address must be less than 500 characters'),
+    latitude: latitudeSchema.optional(),
+    longitude: longitudeSchema.optional(),
+  })
+  .refine(
+    (data) => {
+      const hasLat = data.latitude !== undefined
+      const hasLng = data.longitude !== undefined
+      return hasLat === hasLng
+    },
+    { message: 'latitude and longitude must be provided together for each stop' },
+  )
+
+export type TripStopInput = z.infer<typeof tripStopInputSchema>
+
+/**
+ * Trip request schema — supports legacy single destination or ordered dropoffs[]
+ */
+export const tripRequestSchema = z
+  .object({
+    pickup_latitude: latitudeSchema,
+    pickup_longitude: longitudeSchema,
+    pickup_address: z
+      .string()
+      .min(5, 'Pickup address must be at least 5 characters')
+      .max(500, 'Pickup address must be less than 500 characters'),
+    destination_latitude: latitudeSchema.optional(),
+    destination_longitude: longitudeSchema.optional(),
+    destination_address: z
+      .string()
+      .min(5, 'Destination address must be at least 5 characters')
+      .max(500, 'Destination address must be less than 500 characters')
+      .optional(),
+    dropoffs: z
+      .array(tripStopInputSchema)
+      .min(1, 'At least one drop-off is required')
+      .max(20, 'Cannot exceed 20 drop-offs per request')
+      .optional(),
+    trip_type: tripTypeSchema,
+    estimated_distance_km: z.number().positive().optional(),
+    estimated_duration_minutes: z.number().int().positive().optional(),
+    estimated_fare: z.number().nonnegative().optional(),
+    notes: z.string().max(1000, 'Notes must be less than 1000 characters').optional(),
+    passenger_count: z.number().int().positive().min(1).max(10).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const hasDropoffs = data.dropoffs != null && data.dropoffs.length > 0
+    const hasDestination =
+      data.destination_address != null && data.destination_address.trim().length >= 5
+
+    if (!hasDropoffs && !hasDestination) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Either dropoffs or destination_address is required',
+        path: ['destination_address'],
+      })
+    }
+
+    const hasDestLat = data.destination_latitude !== undefined
+    const hasDestLng = data.destination_longitude !== undefined
+    if (hasDestLat !== hasDestLng) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'destination_latitude and destination_longitude must be provided together',
+        path: ['destination_latitude'],
+      })
+    }
+  })
 
 export type TripRequest = z.infer<typeof tripRequestSchema>
 
@@ -184,6 +237,8 @@ export const updateTripStatusSchema = z.object({
       (val) => val === undefined || !Number.isNaN(Date.parse(val)),
       'completed_at must be a valid ISO date string',
     ),
+  /** 0-based sequence index of the stop being completed (any order allowed) */
+  complete_stop_index: z.number().int().min(0).optional(),
 })
 
 export type UpdateTripStatusRequest = z.infer<typeof updateTripStatusSchema>

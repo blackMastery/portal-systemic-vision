@@ -31,6 +31,11 @@ import type { Database, TripType, TripStatus } from '@/types/database'
 import { TripRouteMap } from '@/components/drivers/trip-route-map'
 import { fetchTripRoute } from '@/lib/admin/fetch-trip-route'
 import type { TripRoutePoint } from '@/types/trip-route-point'
+import {
+  sortTripStops,
+  tripStopsToPlannedMapStops,
+  type TripStopRow,
+} from '@/lib/admin/trip-stops'
 
 // Extended row types to cover DB columns not yet in the TS type
 type TripRow = Database['public']['Tables']['trips']['Row'] & {
@@ -56,6 +61,7 @@ type TripDetailData = {
     vehicle: Database['public']['Tables']['vehicles']['Row'] | null
     trip_request: Database['public']['Tables']['trip_requests']['Row'] | null
     cancelled_by_user: Database['public']['Tables']['users']['Row'] | null
+    trip_stops?: TripStopRow[]
   }
 }
 
@@ -76,7 +82,8 @@ async function fetchTripDetail(tripId: string): Promise<TripDetailData> {
       ),
       vehicle:vehicle_id (*),
       trip_request:request_id (*),
-      cancelled_by_user:cancelled_by_user_id (*)
+      cancelled_by_user:cancelled_by_user_id (*),
+      trip_stops (*)
     `)
     .eq('id', tripId)
     .single()
@@ -337,7 +344,32 @@ export default function TripDetailPage() {
           routePoints={routePoints}
           isLoadingRoute={isLoadingRoute}
           showTripInfo={true}
+          plannedStops={tripStopsToPlannedMapStops(trip.trip_stops ?? [])}
         />
+
+        {(trip.trip_stops?.length ?? 0) > 0 && (
+          <div className="mt-4 rounded-lg border border-gray-200 p-4">
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">Planned stops</h3>
+            <ol className="space-y-2 text-sm">
+              {sortTripStops(trip.trip_stops ?? []).map((stop) => (
+                <li key={stop.id} className="flex flex-wrap items-baseline gap-2">
+                  <span className="font-medium text-gray-700">Stop {stop.sequence}</span>
+                  <span className="text-gray-900">{stop.address}</span>
+                  <span
+                    className={`text-xs uppercase tracking-wide ${
+                      stop.status === 'completed' ? 'text-green-700' : 'text-gray-500'
+                    }`}
+                  >
+                    {stop.status}
+                    {stop.completed_at
+                      ? ` · ${formatGuyana(stop.completed_at, 'MMM d, h:mm a')}`
+                      : ''}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
 
         {!isLoadingRoute && locationHistoryRows.length > 0 && (
           <div className="mt-6 border-t border-gray-200 pt-6">

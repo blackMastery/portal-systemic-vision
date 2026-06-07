@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { MapPin } from 'lucide-react'
 import type { TripRoutePoint } from '@/types/trip-route-point'
 import { formatGuyana } from '@/lib/guyana-time'
+import type { PlannedMapStop } from '@/lib/admin/trip-stops'
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
@@ -28,6 +29,7 @@ interface TripRouteMapProps {
   routePoints: TripRoutePoint[]
   isLoadingRoute: boolean
   showTripInfo?: boolean
+  plannedStops?: PlannedMapStop[]
 }
 
 const mapContainerStyle = {
@@ -59,7 +61,7 @@ function formatCoord(lat: number, lng: number) {
   return `${lat.toFixed(6)}, ${lng.toFixed(6)}`
 }
 
-export function TripRouteMap({ trip, routePoints, isLoadingRoute, showTripInfo = false }: TripRouteMapProps) {
+export function TripRouteMap({ trip, routePoints, isLoadingRoute, showTripInfo = false, plannedStops = [] }: TripRouteMapProps) {
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY || '',
     id: 'google-map-script',
@@ -240,12 +242,25 @@ export function TripRouteMap({ trip, routePoints, isLoadingRoute, showTripInfo =
               />
             )}
 
-            {trip.destination_latitude != null && trip.destination_longitude != null && (
+            {trip.destination_latitude != null && trip.destination_longitude != null && plannedStops.length === 0 && (
               <Marker
                 position={{ lat: Number(trip.destination_latitude), lng: Number(trip.destination_longitude) }}
                 icon={destIcon}
               />
             )}
+
+            {plannedStops.map((stop) => (
+              <Marker
+                key={`planned-${stop.sequence}`}
+                position={{ lat: stop.latitude, lng: stop.longitude }}
+                label={{
+                  text: String(stop.sequence),
+                  color: '#ffffff',
+                  fontWeight: '700',
+                }}
+                title={`Stop ${stop.sequence}: ${stop.address}`}
+              />
+            ))}
           </GoogleMap>
         )}
 

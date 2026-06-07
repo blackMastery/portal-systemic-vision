@@ -243,6 +243,31 @@ export async function POST(request: NextRequest) {
     // 8. Validate request body with Zod schema
     const validatedBody = validate(tripRequestSchema, body)
 
+    // Resolve ordered drop-offs (multi-stop or legacy single destination)
+    type ResolvedStop = {
+      address: string
+      latitude?: number
+      longitude?: number
+    }
+    let resolvedStops: ResolvedStop[]
+    if (validatedBody.dropoffs != null && validatedBody.dropoffs.length > 0) {
+      resolvedStops = validatedBody.dropoffs.map((s) => ({
+        address: s.address.trim(),
+        latitude: s.latitude,
+        longitude: s.longitude,
+      }))
+    } else {
+      resolvedStops = [
+        {
+          address: validatedBody.destination_address!.trim(),
+          latitude: validatedBody.destination_latitude,
+          longitude: validatedBody.destination_longitude,
+        },
+      ]
+    }
+
+    const lastStop = resolvedStops[resolvedStops.length - 1]
+
     // 9. Prepare data for insertion
     const expiresAt = new Date()
     expiresAt.setMinutes(expiresAt.getMinutes() + 10) // 10 minutes from now
@@ -259,17 +284,13 @@ export async function POST(request: NextRequest) {
       passenger_count: validatedBody.passenger_count || 1,
     }
 
-    // Add destination address (always required)
-    insertData.destination_address = validatedBody.destination_address.trim()
+    // Last stop denormalized into destination_* (backward compat)
+    insertData.destination_address = lastStop.address
 
-    // Add destination coordinates and location point if provided
-    if (
-      validatedBody.destination_latitude !== undefined &&
-      validatedBody.destination_longitude !== undefined
-    ) {
-      insertData.destination_latitude = validatedBody.destination_latitude
-      insertData.destination_longitude = validatedBody.destination_longitude
-      insertData.destination_location = `POINT(${validatedBody.destination_longitude} ${validatedBody.destination_latitude})`
+    if (lastStop.latitude !== undefined && lastStop.longitude !== undefined) {
+      insertData.destination_latitude = lastStop.latitude
+      insertData.destination_longitude = lastStop.longitude
+      insertData.destination_location = `POINT(${lastStop.longitude} ${lastStop.latitude})`
     }
 
     // Add optional fields
@@ -290,6 +311,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 10. Insert trip request
+      console.log("🚀 ~ POST ~ insertData:", insertData)
     const { data: tripRequest, error: insertError } = await supabase
       .from('trip_requests')
       .insert(insertData)
@@ -302,9 +324,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: statusCode })
     }
 
-    // 11. Return success response
-    logger.info('Trip request created successfully', { tripRequestId: tripRequest.id, riderId: riderProfile.id })
-    return NextResponse.json(tripRequest, { status: 201 })
+    // 11. Insert ordered trip_stops (service role — no rider INSERT policy)
+    const serviceClient = createSupabaseServiceClient()
+    const stopRows = resolvedStops.map((stop, index) => {
+      const row: Database['public']['Tables']['trip_stops']['Insert'] = {
+        trip_request_id: tripRequest.id,
+        trip_id: null,
+        sequence: index + 1,
+        address: stop.address,
+        latitude: null,
+        longitude: null,
+        status: 'pending',
+        completed_at: null,
+        completed_latitude: null,
+        completed_longitude: null,
+        location: null,
+      }
+      if (stop.latitude !== undefined && stop.longitude !== undefined) {
+        row.latitude = stop.latitude
+        row.longitude = stop.longitude
+        row.location = `POINT(${stop.longitude} ${stop.latitude})`
+      }
+      return row
+    })
+
+    const { data: stops, error: stopsError } = await serviceClient
+      .from('trip_stops')
+      .insert(stopRows)
+      .select()
+
+    if (stopsError) {
+      logger.error('Error inserting trip stops', stopsError, { tripRequestId: tripRequest.id })
+      // Roll back the request if stops fail
+      await serviceClient.from('trip_requests').delete().eq('id', tripRequest.id)
+      const { response, statusCode } = handleApiError(stopsError)
+      return NextResponse.json(response, { status: statusCode })
+    }
+
+    // 12. Return success response with stops embedded
+    logger.info('Trip request created successfully', { tripRequestId: tripRequest.id, riderId: riderProfile.id, stopCount: stops?.length ?? 0 })
+    return NextResponse.json({ ...tripRequest, stops: stops ?? [] }, { status: 201 })
   } catch (error) {
     logger.error('Unexpected error creating trip request', error)
     const { response, statusCode } = handleApiError(error)

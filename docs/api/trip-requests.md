@@ -52,6 +52,35 @@ Content-Type: application/json
 | `estimated_fare` | number | Estimated fare amount | - | `800` |
 | `notes` | string | Additional notes for the driver | - | `"Please call when you arrive"` |
 | `passenger_count` | integer | Number of passengers (minimum 1) | `1` | `2` |
+| `dropoffs` | array | Ordered drop-off stops (alternative to single `destination_address`) | - | See below |
+
+### Drop-offs array (`dropoffs`)
+
+When creating a multi-stop trip, send an ordered `dropoffs` array instead of (or in addition to) `destination_address`. Each stop:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `address` | string | Yes | Stop address (5–500 chars) |
+| `latitude` | number | No | Must be paired with `longitude` |
+| `longitude` | number | No | Must be paired with `latitude` |
+
+The **last** stop in `dropoffs` is copied to `destination_address` / `destination_*` for backward compatibility. Maximum 20 stops per request.
+
+```json
+{
+  "pickup_latitude": 6.8013,
+  "pickup_longitude": -58.1551,
+  "pickup_address": "Georgetown City Mall",
+  "trip_type": "short_drop",
+  "dropoffs": [
+    { "address": "Bourda Market", "latitude": 6.805, "longitude": -58.158 },
+    { "address": "Sheriff Street, Georgetown", "latitude": 6.81, "longitude": -58.16 }
+  ],
+  "estimated_fare": 1200
+}
+```
+
+Legacy single-destination requests continue to use `destination_address` only.
 
 ### Important Notes
 
