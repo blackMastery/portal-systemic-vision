@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Database } from '@/types/database'
+import { formatCurrency } from '@/lib/format'
 
 type Subscription = Database['public']['Tables']['subscriptions']['Row'] & {
   user: Database['public']['Tables']['users']['Row']
@@ -116,10 +117,6 @@ function calculateDaysRemaining(endDate: string): number {
   return Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
 }
 
-function formatCurrency(amount: number, currency: string = 'GYD'): string {
-  return `${currency} ${amount.toFixed(2)}`
-}
-
 // ── View toggle ──────────────────────────────────────────────────────────────
 
 function ViewToggle({ view, onChange }: { view: 'table' | 'card'; onChange: (v: 'table' | 'card') => void }) {
@@ -200,7 +197,7 @@ function SubscriptionDialog({ subscription, onClose }: { subscription: Subscript
             </div>
             <div>
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Amount</p>
-              <p className="text-sm font-semibold text-gray-900">{formatCurrency(subscription.amount, subscription.currency)}</p>
+              <p className="text-sm font-semibold text-gray-900">{formatCurrency(subscription.amount)}</p>
             </div>
             <div>
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Days Remaining</p>
@@ -322,7 +319,7 @@ function TransactionDialog({ transaction, onClose }: { transaction: PaymentTrans
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Amount</p>
-              <p className="text-sm font-semibold text-gray-900">{formatCurrency(transaction.amount, transaction.currency)}</p>
+              <p className="text-sm font-semibold text-gray-900">{formatCurrency(transaction.amount)}</p>
             </div>
             <div>
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Status</p>
@@ -605,7 +602,7 @@ export default function PaymentsPage() {
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {formatCurrency(subscription.amount, subscription.currency)}
+                              {formatCurrency(subscription.amount)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               <div>Start: {format(new Date(subscription.start_date), 'MMM d, yyyy')}</div>
@@ -676,7 +673,7 @@ export default function PaymentsPage() {
                         </div>
 
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-semibold text-gray-900">{formatCurrency(subscription.amount, subscription.currency)}</p>
+                          <p className="text-sm font-semibold text-gray-900">{formatCurrency(subscription.amount)}</p>
                           {daysRemaining !== null && (
                             <span className={`text-xs font-medium ${daysRemaining <= 7 ? 'text-red-600' : 'text-gray-500'}`}>
                               {daysRemaining}d left
@@ -843,7 +840,7 @@ export default function PaymentsPage() {
                             )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {formatCurrency(transaction.amount, transaction.currency)}
+                            {formatCurrency(transaction.amount)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
@@ -897,7 +894,7 @@ export default function PaymentsPage() {
                       </div>
 
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-semibold text-gray-900">{formatCurrency(transaction.amount, transaction.currency)}</p>
+                        <p className="text-sm font-semibold text-gray-900">{formatCurrency(transaction.amount)}</p>
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                           {transaction.payment_method}
                         </span>

@@ -3,8 +3,10 @@
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { formatCurrency } from '@/lib/format'
 import { sendDriverPushNotification } from './actions'
 import Image from 'next/image'
+import { ImageLightbox } from '@/components/ui/image-lightbox'
 import {
   ArrowLeft,
   ChevronRight,
@@ -197,6 +199,7 @@ function DriverDocumentPreview({
   title: string
 }) {
   const [imgError, setImgError] = useState(false)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
 
   useEffect(() => {
     setImgError(false)
@@ -236,11 +239,11 @@ function DriverDocumentPreview({
             View file
           </a>
         ) : (
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="relative mx-auto block aspect-[4/3] max-h-72 w-full max-w-lg overflow-hidden rounded-lg border border-gray-200 bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          <button
+            type="button"
+            onClick={() => setLightboxOpen(true)}
+            className="relative mx-auto block aspect-[4/3] max-h-72 w-full max-w-lg cursor-zoom-in overflow-hidden rounded-lg border border-gray-200 bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            aria-label={`View ${title} full size`}
           >
             <Image
               src={url}
@@ -251,9 +254,15 @@ function DriverDocumentPreview({
               unoptimized
               onError={() => setImgError(true)}
             />
-          </a>
+          </button>
         )}
       </div>
+      <ImageLightbox
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        src={url}
+        title={title}
+      />
     </div>
   )
 }
@@ -583,7 +592,7 @@ export default function DriverDetailPage() {
           <div>
             <p className="text-sm text-gray-500 mb-1">Monthly Fee</p>
             <p className="text-base font-medium text-gray-900">
-              GYD {Number(driver.monthly_fee_amount).toFixed(2)}
+              {formatCurrency(driver.monthly_fee_amount)}
             </p>
           </div>
           <div>
@@ -693,7 +702,7 @@ export default function DriverDetailPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {trip.actual_fare ? `GYD ${trip.actual_fare.toFixed(2)}` : 'N/A'}
+                      {trip.actual_fare ? formatCurrency(trip.actual_fare) : 'N/A'}
                     </td>
                   </tr>
                 ))}
@@ -751,7 +760,7 @@ export default function DriverDetailPage() {
                   </div>
                   <div className="text-left sm:text-right">
                     <p className="font-semibold text-gray-900">
-                      {subscription.currency} {Number(subscription.amount).toFixed(2)}
+                      {formatCurrency(subscription.amount)}
                     </p>
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
@@ -802,7 +811,7 @@ export default function DriverDetailPage() {
                         : '—'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {payment.currency} {Number(payment.amount).toFixed(2)}
+                      {formatCurrency(payment.amount)}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700">
                       {payment.subscription ? (
@@ -961,16 +970,33 @@ export default function DriverDetailPage() {
 function VehicleCard({ vehicle }: { vehicle: Database['public']['Tables']['vehicles']['Row'] }) {
   const [vehicleImageError, setVehicleImageError] = useState(false)
   const [registrationImageError, setRegistrationImageError] = useState(false)
+  const [lightbox, setLightbox] = useState<{ src: string; title: string } | null>(null)
 
   return (
     <div className="border border-gray-200 rounded-lg p-6">
+      <ImageLightbox
+        open={lightbox !== null}
+        onClose={() => setLightbox(null)}
+        src={lightbox?.src ?? ''}
+        title={lightbox?.title ?? ''}
+      />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Vehicle Images */}
         <div className="lg:col-span-1 space-y-4">
           {vehicle.vehicle_photo_url && (
             <div>
               <p className="text-sm font-medium text-gray-700 mb-2">Vehicle Photo</p>
-              <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+              <button
+                type="button"
+                onClick={() =>
+                  setLightbox({
+                    src: vehicle.vehicle_photo_url!,
+                    title: `${vehicle.make} ${vehicle.model}`,
+                  })
+                }
+                className="relative aspect-video w-full bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                aria-label={`View ${vehicle.make} ${vehicle.model} photo full size`}
+              >
                 {!vehicleImageError ? (
                   <Image
                     src={vehicle.vehicle_photo_url}
@@ -985,7 +1011,7 @@ function VehicleCard({ vehicle }: { vehicle: Database['public']['Tables']['vehic
                     <FileText className="h-8 w-8" />
                   </div>
                 )}
-              </div>
+              </button>
               <a
                 href={vehicle.vehicle_photo_url}
                 target="_blank"
@@ -1000,7 +1026,17 @@ function VehicleCard({ vehicle }: { vehicle: Database['public']['Tables']['vehic
           {vehicle.registration_url && (
             <div>
               <p className="text-sm font-medium text-gray-700 mb-2">Registration Document</p>
-              <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+              <button
+                type="button"
+                onClick={() =>
+                  setLightbox({
+                    src: vehicle.registration_url!,
+                    title: 'Registration Document',
+                  })
+                }
+                className="relative aspect-video w-full bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                aria-label="View registration document full size"
+              >
                 {!registrationImageError ? (
                   <Image
                     src={vehicle.registration_url}
@@ -1015,7 +1051,7 @@ function VehicleCard({ vehicle }: { vehicle: Database['public']['Tables']['vehic
                     <FileText className="h-8 w-8" />
                   </div>
                 )}
-              </div>
+              </button>
               <a
                 href={vehicle.registration_url}
                 target="_blank"

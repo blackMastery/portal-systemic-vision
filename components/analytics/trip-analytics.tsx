@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { ChartWrapper } from './chart-wrapper'
+import { formatCurrency } from '@/lib/format'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Route, DollarSign, TrendingUp } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/metric-card'
@@ -165,13 +166,13 @@ export function TripAnalytics({ dateRange }: TripAnalyticsProps) {
         />
         <MetricCard
           title="Average Fare"
-          value={`$${avgFare.toFixed(2)}`}
+          value={formatCurrency(avgFare)}
           icon={DollarSign}
           color="purple"
         />
         <MetricCard
           title="Total Revenue"
-          value={`$${totalRevenue.toFixed(2)}`}
+          value={formatCurrency(totalRevenue)}
           icon={DollarSign}
           color="emerald"
         />

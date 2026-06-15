@@ -22,7 +22,7 @@ import Link from 'next/link'
 import type { TripWithDetails } from '@/types/database'
 import { format } from 'date-fns'
 import { PAGE_SIZE_OPTIONS, useTripFilters } from './use-trip-filters'
-import { formatStatus } from '@/lib/format'
+import { formatStatus, formatAmount } from '@/lib/format'
 
 async function fetchTrips(filters: {
   status: string
@@ -389,7 +389,7 @@ function TripsContent() {
                             <span className="flex items-center font-medium text-gray-900 tabular-nums">
                               <DollarSign className="h-3.5 w-3.5 text-green-600 shrink-0" />
                               {trip.estimated_fare != null
-                                ? Number(trip.estimated_fare).toFixed(2)
+                                ? formatAmount(trip.estimated_fare)
                                 : '—'}
                             </span>
                           </div>
@@ -398,7 +398,7 @@ function TripsContent() {
                             <span className="flex items-center font-medium text-green-700 tabular-nums">
                               <DollarSign className="h-3.5 w-3.5 text-green-600 shrink-0" />
                               {trip.actual_fare != null
-                                ? Number(trip.actual_fare).toFixed(2)
+                                ? formatAmount(trip.actual_fare)
                                 : '—'}
                             </span>
                           </div>
@@ -550,7 +550,7 @@ function TripsContent() {
                             <span className="flex items-center text-sm font-medium text-gray-900 tabular-nums">
                               <DollarSign className="h-3.5 w-3.5 shrink-0 text-green-600" />
                               {trip.estimated_fare != null
-                                ? Number(trip.estimated_fare).toFixed(2)
+                                ? formatAmount(trip.estimated_fare)
                                 : '—'}
                             </span>
                           </div>
@@ -559,7 +559,7 @@ function TripsContent() {
                             <span className="flex items-center text-sm font-medium text-green-700 tabular-nums">
                               <DollarSign className="h-3.5 w-3.5 shrink-0 text-green-600" />
                               {trip.actual_fare != null
-                                ? Number(trip.actual_fare).toFixed(2)
+                                ? formatAmount(trip.actual_fare)
                                 : '—'}
                             </span>
                           </div>

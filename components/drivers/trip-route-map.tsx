@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { MapPin } from 'lucide-react'
 import type { TripRoutePoint } from '@/types/trip-route-point'
 import { formatGuyana } from '@/lib/guyana-time'
+import { formatCurrency } from '@/lib/format'
 import type { PlannedMapStop } from '@/lib/admin/trip-stops'
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
@@ -175,7 +176,7 @@ export function TripRouteMap({ trip, routePoints, isLoadingRoute, showTripInfo =
             {trip.pickup_address} → {trip.destination_address || 'N/A'}
           </p>
           <p className="text-sm text-gray-600 mt-1">
-            Fare: {trip.actual_fare ? `GYD ${Number(trip.actual_fare).toFixed(2)}` : 'N/A'}
+            Fare: {trip.actual_fare ? formatCurrency(trip.actual_fare) : 'N/A'}
           </p>
         </div>
       )}

@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { MapPin, Clock, DollarSign, User, Car, Route } from "lucide-react";
 import type { TripWithDetails } from "@/types/database";
-import { formatStatus } from "@/lib/format";
+import { formatStatus, formatAmount } from "@/lib/format";
 import Link from "next/link";
 
 async function fetchRecentTrips() {
@@ -115,7 +115,7 @@ export function RecentTrips() {
                     <div className="flex items-center text-sm font-semibold text-gray-700">
                       <DollarSign className="h-4 w-4 shrink-0" />
                       {trip.estimated_fare != null
-                        ? Number(trip.estimated_fare).toFixed(2)
+                        ? formatAmount(trip.estimated_fare)
                         : "—"}
                     </div>
                   </div>
@@ -126,7 +126,7 @@ export function RecentTrips() {
                     <div className="flex items-center text-sm font-semibold text-green-600">
                       <DollarSign className="h-4 w-4 shrink-0" />
                       {trip.actual_fare != null
-                        ? Number(trip.actual_fare).toFixed(2)
+                        ? formatAmount(trip.actual_fare)
                         : "—"}
                     </div>
                   </div>

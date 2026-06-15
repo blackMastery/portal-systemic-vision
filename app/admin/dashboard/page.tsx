@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { MetricCard } from '@/components/dashboard/metric-card'
 import { RecentTrips } from '@/components/dashboard/recent-trips'
 import { ActiveDriversMap } from '@/components/dashboard/active-drivers-map'
+import { formatCurrency } from '@/lib/format'
 
 async function fetchDashboardMetrics() {
   const supabase = createClient()
@@ -155,7 +156,7 @@ export default function DashboardPage() {
         />
         <MetricCard
           title="Today's Revenue"
-          value={`$${metrics?.todayRevenue?.toFixed(2) || '0.00'}`}
+          value={formatCurrency(metrics?.todayRevenue)}
           icon={DollarSign}
           color="emerald"
           href="/admin/payments"

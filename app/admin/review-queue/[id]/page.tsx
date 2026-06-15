@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { formatCurrency } from '@/lib/format'
 import { resolveReviewItem } from '../actions'
 import { ArrowLeft, Star, Flag, AlertCircle, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
@@ -282,7 +283,7 @@ export default function ReviewQueueDetailPage() {
                   </p>
                   <p className="text-gray-800">
                     {item.trip.actual_fare
-                      ? `GYD ${item.trip.actual_fare.toFixed(2)}`
+                      ? formatCurrency(item.trip.actual_fare)
                       : '—'}
                   </p>
                 </div>

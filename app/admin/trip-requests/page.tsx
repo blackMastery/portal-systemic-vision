@@ -24,7 +24,7 @@ import {
 import { format } from 'date-fns'
 import type { Database } from '@/types/database'
 import { PAGE_SIZE_OPTIONS, useTripRequestFilters } from './use-trip-request-filters'
-import { formatStatus } from '@/lib/format'
+import { formatStatus, formatCurrency } from '@/lib/format'
 import {
   googleMapsMultiStopDirectionsUrl,
   sortTripStops,
@@ -409,7 +409,7 @@ function TripRequestsContent() {
                         {r.passenger_count}
                       </span>
                       <span className="font-medium text-gray-900">
-                        {r.estimated_fare != null ? `GYD ${r.estimated_fare.toFixed(2)}` : 'Fare N/A'}
+                        {r.estimated_fare != null ? formatCurrency(r.estimated_fare) : 'Fare N/A'}
                       </span>
                     </div>
                   </button>
@@ -490,7 +490,7 @@ function TripRequestsContent() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                          {r.estimated_fare != null ? `GYD ${r.estimated_fare.toFixed(2)}` : 'N/A'}
+                          {r.estimated_fare != null ? formatCurrency(r.estimated_fare) : 'N/A'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {format(new Date(r.created_at), 'MMM d, yyyy')}
@@ -733,7 +733,7 @@ function TripRequestsContent() {
                 <div className="rounded-lg border border-gray-200 p-3">
                   <p className="text-xs uppercase tracking-wide text-gray-500">Estimated Fare</p>
                   <p className="mt-2 text-sm font-medium text-gray-900">
-                    {selectedRequest.estimated_fare != null ? `GYD ${selectedRequest.estimated_fare.toFixed(2)}` : 'N/A'}
+                    {selectedRequest.estimated_fare != null ? formatCurrency(selectedRequest.estimated_fare) : 'N/A'}
                   </p>
                 </div>
                 <div className="rounded-lg border border-gray-200 p-3">

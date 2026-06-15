@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { ChartWrapper } from './chart-wrapper'
+import { formatCurrency } from '@/lib/format'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { CreditCard, TrendingUp, AlertCircle } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/metric-card'
@@ -119,7 +120,7 @@ export function SubscriptionAnalytics({ dateRange }: SubscriptionAnalyticsProps)
         />
         <MetricCard
           title="Avg Subscription Value"
-          value={`$${avgSubscriptionValue.toFixed(2)}`}
+          value={formatCurrency(avgSubscriptionValue)}
           icon={CreditCard}
           color="blue"
         />

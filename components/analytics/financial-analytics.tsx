@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { ChartWrapper } from './chart-wrapper'
+import { formatCurrency } from '@/lib/format'
 import { LineChart, Line, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { DollarSign, TrendingUp } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/metric-card'
@@ -144,19 +145,19 @@ export function FinancialAnalytics({ dateRange }: FinancialAnalyticsProps) {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Total Revenue"
-          value={`$${totalRevenue.toFixed(2)}`}
+          value={formatCurrency(totalRevenue)}
           icon={DollarSign}
           color="emerald"
         />
         <MetricCard
           title="Subscription Revenue"
-          value={`$${subscriptionRevenue.toFixed(2)}`}
+          value={formatCurrency(subscriptionRevenue)}
           icon={DollarSign}
           color="blue"
         />
         <MetricCard
           title="Trip Revenue"
-          value={`$${tripRevenue.toFixed(2)}`}
+          value={formatCurrency(tripRevenue)}
           icon={DollarSign}
           color="green"
         />
@@ -203,7 +204,7 @@ export function FinancialAnalytics({ dateRange }: FinancialAnalyticsProps) {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, value, percent }) => `${name}: $${value.toFixed(2)} (${(percent * 100).toFixed(0)}%)`}
+                label={({ name, value, percent }) => `${name}: ${formatCurrency(value)} (${(percent * 100).toFixed(0)}%)`}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"

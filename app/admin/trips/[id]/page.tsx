@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { useInvalidateTripRouteOnLocationInsert } from '@/hooks/use-trip-route-location-realtime'
 import { createClient } from '@/lib/supabase/client'
+import { formatCurrency } from '@/lib/format'
 import Link from 'next/link'
 import { formatGuyana, formatLocationHistoryGuyana } from '@/lib/guyana-time'
 import {
@@ -284,7 +285,7 @@ export default function TripDetailPage() {
               <p className="text-xs font-medium text-gray-500">Estimated</p>
               <p className="text-lg sm:text-xl font-bold tabular-nums text-gray-900 break-words">
                 {trip.estimated_fare != null
-                  ? `${trip.currency ?? 'GYD'} ${Number(trip.estimated_fare).toFixed(2)}`
+                  ? formatCurrency(trip.estimated_fare)
                   : 'N/A'}
               </p>
             </div>
@@ -292,7 +293,7 @@ export default function TripDetailPage() {
               <p className="text-xs font-medium text-gray-500">Actual</p>
               <p className="text-lg sm:text-xl font-bold tabular-nums text-green-700 break-words">
                 {trip.actual_fare != null
-                  ? `${trip.currency ?? 'GYD'} ${Number(trip.actual_fare).toFixed(2)}`
+                  ? formatCurrency(trip.actual_fare)
                   : 'N/A'}
               </p>
             </div>
@@ -559,7 +560,7 @@ export default function TripDetailPage() {
                   <p className="text-xs text-gray-500 mb-1">Est. Fare</p>
                   <p className="text-sm font-medium text-gray-900">
                     {trip.trip_request.estimated_fare
-                      ? `GYD ${Number(trip.trip_request.estimated_fare).toFixed(2)}`
+                      ? formatCurrency(trip.trip_request.estimated_fare)
                       : 'N/A'}
                   </p>
                 </div>

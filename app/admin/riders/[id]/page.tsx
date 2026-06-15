@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { formatCurrency } from '@/lib/format'
 import { sendRiderPushNotification } from './actions'
 import { manuallyFlagTrip } from '../../review-queue/actions'
 import Image from 'next/image'
@@ -749,7 +750,7 @@ export default function RiderDetailPage() {
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-gray-900">
-                        {subscription.currency} {subscription.amount.toFixed(2)}
+                        {formatCurrency(subscription.amount)}
                       </p>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
                         subscription.status === 'active' 
@@ -903,7 +904,7 @@ export default function RiderDetailPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {trip.actual_fare ? `GYD ${trip.actual_fare.toFixed(2)}` : 'N/A'}
+                      {trip.actual_fare ? formatCurrency(trip.actual_fare) : 'N/A'}
                     </td>
                   </tr>
                 ))}
@@ -1057,7 +1058,7 @@ export default function RiderDetailPage() {
                       {format(new Date(payment.created_at), 'MMM dd, yyyy HH:mm')}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {payment.currency} {payment.amount.toFixed(2)}
+                      {formatCurrency(payment.amount)}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {payment.payment_method}
