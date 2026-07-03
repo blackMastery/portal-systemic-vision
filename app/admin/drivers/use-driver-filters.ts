@@ -10,6 +10,7 @@ const SEARCH_DEBOUNCE_MS = 280
 const DEFAULTS = {
   status:  'all',
   sub:     'all',
+  subexpiry: 'all',
   q:       '',
   online:  'all',
   sort:    'newest',
@@ -19,6 +20,7 @@ const DEFAULTS = {
   nid:     'all',
   indoc:   'all',
   trips:   'all',
+  activity: 'all',
   page:    '1',
   size:    String(DEFAULT_PAGE_SIZE),
 } as const
@@ -32,6 +34,7 @@ export function useDriverFilters() {
   // Read all filter values from URL
   const verificationStatus = searchParams.get('status') ?? 'all'
   const subscriptionStatus  = searchParams.get('sub')    ?? 'all'
+  const subscriptionExpiry  = searchParams.get('subexpiry') ?? 'all'
   const urlSearch           = searchParams.get('q')      ?? ''
   const onlineStatus        = searchParams.get('online') ?? 'all'
   const sortBy              = searchParams.get('sort')   ?? 'newest'
@@ -41,6 +44,7 @@ export function useDriverFilters() {
   const nationalIdDoc       = searchParams.get('nid')    ?? 'all'
   const insuranceDoc        = searchParams.get('indoc')  ?? 'all'
   const tripsFilter         = searchParams.get('trips')  ?? 'all'
+  const tripActivity        = searchParams.get('activity') ?? 'all'
   const page = Math.max(1, Number(searchParams.get('page') ?? '1'))
   const rawSize = Number(searchParams.get('size') ?? String(DEFAULT_PAGE_SIZE))
   const pageSize = (PAGE_SIZE_OPTIONS as readonly number[]).includes(rawSize)
@@ -101,6 +105,7 @@ export function useDriverFilters() {
     let n = 0
     if (verificationStatus !== 'all') n++
     if (subscriptionStatus !== 'all') n++
+    if (subscriptionExpiry !== 'all') n++
     if (urlSearch !== '') n++
     if (onlineStatus !== 'all') n++
     if (licenseExpiry !== 'all') n++
@@ -109,16 +114,18 @@ export function useDriverFilters() {
     if (nationalIdDoc !== 'all') n++
     if (insuranceDoc !== 'all') n++
     if (tripsFilter !== 'all') n++
+    if (tripActivity !== 'all') n++
     if (sortBy !== 'newest') n++
     return { activeFilterCount: n, hasActiveFilters: n > 0 }
   }, [
-    verificationStatus, subscriptionStatus, urlSearch, onlineStatus,
-    licenseExpiry, hasVehicle, licenseDoc, nationalIdDoc, insuranceDoc, tripsFilter, sortBy,
+    verificationStatus, subscriptionStatus, subscriptionExpiry, urlSearch, onlineStatus,
+    licenseExpiry, hasVehicle, licenseDoc, nationalIdDoc, insuranceDoc, tripsFilter, tripActivity, sortBy,
   ])
 
   return {
     verificationStatus,
     subscriptionStatus,
+    subscriptionExpiry,
     onlineStatus,
     sortBy,
     licenseExpiry,
@@ -127,6 +134,7 @@ export function useDriverFilters() {
     nationalIdDoc,
     insuranceDoc,
     tripsFilter,
+    tripActivity,
     searchInput,
     setSearchInput,
     debouncedSearch: urlSearch,

@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { Users, Car, Route, TrendingUp, Clock, DollarSign, Megaphone } from 'lucide-react'
+import { Users, Car, Route, TrendingUp, Clock, DollarSign, Megaphone, CalendarCheck, CalendarClock, UserX } from 'lucide-react'
 import Link from 'next/link'
 import { MetricCard } from '@/components/dashboard/metric-card'
 import { RecentTrips } from '@/components/dashboard/recent-trips'
@@ -10,15 +10,23 @@ import { ActiveDriversMap } from '@/components/dashboard/active-drivers-map'
 
 async function fetchDashboardMetrics() {
   const supabase = createClient()
-  
+
+  // Days remaining uses the same ceil convention as the payments page:
+  // 1-2 days left means end_date is within the next 2 days, 3+ means beyond that
+  const now = new Date()
+  const twoDaysFromNow = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000)
+  const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000)
+
   // Get real-time counts
   const [
     { count: activeDrivers },
     { count: activeRiders },
     { count: activeTrips },
-    { count: pendingRequests },
     { count: pendingDrivers },
     { count: approvedDrivers },
+    { count: subscribedDrivers },
+    { count: expiringSoonDrivers },
+    { data: recentAcceptedTrips },
   ] = await Promise.all([
     supabase
       .from('driver_profiles')
@@ -33,10 +41,6 @@ async function fetchDashboardMetrics() {
       .select('*', { count: 'exact', head: true })
       .in('status', ['accepted', 'picked_up']),
     supabase
-      .from('trip_requests')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'requested'),
-    supabase
       .from('driver_profiles')
       .select('*', { count: 'exact', head: true })
       .eq('verification_status', 'pending'),
@@ -44,7 +48,39 @@ async function fetchDashboardMetrics() {
       .from('driver_profiles')
       .select('*', { count: 'exact', head: true })
       .eq('verification_status', 'approved'),
+    supabase
+      .from('driver_profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('subscription_status', 'active')
+      .gt('subscription_end_date', twoDaysFromNow.toISOString()),
+    supabase
+      .from('driver_profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('subscription_status', 'active')
+      .gt('subscription_end_date', now.toISOString())
+      .lte('subscription_end_date', twoDaysFromNow.toISOString()),
+    supabase
+      .from('trips')
+      .select('driver_id')
+      .gte('accepted_at', twoDaysAgo.toISOString())
+      .not('driver_id', 'is', null),
   ])
+
+  // Active-subscription drivers with no accepted trip in the last 2 days
+  const recentlyActiveDriverIds = [...new Set(
+    ((recentAcceptedTrips ?? []) as Array<{ driver_id: string | null }>)
+      .map(trip => trip.driver_id)
+      .filter((id): id is string => !!id)
+  )]
+
+  let idleQuery = supabase
+    .from('driver_profiles')
+    .select('*', { count: 'exact', head: true })
+    .eq('subscription_status', 'active')
+  if (recentlyActiveDriverIds.length > 0) {
+    idleQuery = idleQuery.not('id', 'in', `(${recentlyActiveDriverIds.join(',')})`)
+  }
+  const { count: idleSubscribedDrivers } = await idleQuery
 
   // Get today's trips
   const today = new Date()
@@ -62,9 +98,11 @@ async function fetchDashboardMetrics() {
     activeDrivers: activeDrivers || 0,
     activeRiders: activeRiders || 0,
     activeTrips: activeTrips || 0,
-    pendingRequests: pendingRequests || 0,
     pendingDrivers: pendingDrivers || 0,
     approvedDrivers: approvedDrivers || 0,
+    subscribedDrivers: subscribedDrivers || 0,
+    expiringSoonDrivers: expiringSoonDrivers || 0,
+    idleSubscribedDrivers: idleSubscribedDrivers || 0,
     todayTripsCount: todayTrips?.length || 0,
     todayRevenue
   }
@@ -140,11 +178,25 @@ export default function DashboardPage() {
           href="/admin/trips"
         />
         <MetricCard
-          title="Pending Requests"
-          value={metrics?.pendingRequests || 0}
-          icon={Clock}
+          title="Subscribed Drivers (3+ Days Left)"
+          value={metrics?.subscribedDrivers || 0}
+          icon={CalendarCheck}
+          color="emerald"
+          href="/admin/drivers?sub=active&subexpiry=3plus"
+        />
+        <MetricCard
+          title="Subscriptions Expiring Soon (1-2 Days)"
+          value={metrics?.expiringSoonDrivers || 0}
+          icon={CalendarClock}
+          color="red"
+          href="/admin/drivers?sub=active&subexpiry=expiring"
+        />
+        <MetricCard
+          title="Subscribed Drivers Idle 2+ Days"
+          value={metrics?.idleSubscribedDrivers || 0}
+          icon={UserX}
           color="yellow"
-          href="/admin/trips"
+          href="/admin/drivers?sub=active&activity=idle"
         />
         <MetricCard
           title="Today's Trips"
