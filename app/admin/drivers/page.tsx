@@ -51,6 +51,7 @@ function FilterField({
 async function fetchDrivers(filters: {
   verificationStatus: string
   subscriptionStatus: string
+  subscriptionExpiry: string
   searchQuery: string
   onlineStatus: string
   sortBy: string
@@ -60,6 +61,7 @@ async function fetchDrivers(filters: {
   nationalIdDoc: string
   insuranceDoc: string
   tripsFilter: string
+  tripActivity: string
 }) {
   const supabase = createClient()
   const allRows: DriverWithDetails[] = []
@@ -156,6 +158,23 @@ async function fetchDrivers(filters: {
     )
   }
 
+  if (filters.subscriptionExpiry !== 'all') {
+    // Same ceil days-remaining convention as the payments page and dashboard
+    const msPerDay = 1000 * 60 * 60 * 24
+    const now = Date.now()
+
+    results = results.filter(driver => {
+      if (!driver.subscription_end_date) return filters.subscriptionExpiry === 'missing'
+      const daysRemaining = Math.ceil(
+        (new Date(driver.subscription_end_date).getTime() - now) / msPerDay
+      )
+      if (filters.subscriptionExpiry === '3plus') return daysRemaining >= 3
+      if (filters.subscriptionExpiry === 'expiring') return daysRemaining >= 1 && daysRemaining <= 2
+      if (filters.subscriptionExpiry === 'ended') return daysRemaining <= 0
+      return true
+    })
+  }
+
   if (filters.licenseExpiry !== 'all') {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -181,6 +200,40 @@ async function fetchDrivers(filters: {
       if (filters.tripsFilter === 'veteran') return trips > 100
       return true
     })
+  }
+
+  if (filters.tripActivity !== 'all') {
+    // Drivers who accepted a trip within the last 2 days; same window as the dashboard idle metric
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+    const recentlyActiveIds = new Set<string>()
+    let tripFrom = 0
+
+    while (true) {
+      const { data, error } = await supabase
+        .from('trips')
+        .select('driver_id')
+        .gte('accepted_at', twoDaysAgo.toISOString())
+        .not('driver_id', 'is', null)
+        .range(tripFrom, tripFrom + batchSize - 1)
+
+      if (error) {
+        throw error
+      }
+
+      const batch = (data ?? []) as Array<{ driver_id: string | null }>
+      for (const trip of batch) {
+        if (trip.driver_id) recentlyActiveIds.add(trip.driver_id)
+      }
+
+      if (batch.length < batchSize) break
+      tripFrom += batchSize
+    }
+
+    results = results.filter(driver =>
+      filters.tripActivity === 'recent'
+        ? recentlyActiveIds.has(driver.id)
+        : !recentlyActiveIds.has(driver.id)
+    )
   }
 
   return results
@@ -249,8 +302,8 @@ function DriversContent() {
   const filterIdPrefix = useId()
 
   const {
-    verificationStatus, subscriptionStatus, onlineStatus, sortBy, licenseExpiry,
-    hasVehicle, licenseDoc, nationalIdDoc, insuranceDoc, tripsFilter,
+    verificationStatus, subscriptionStatus, subscriptionExpiry, onlineStatus, sortBy, licenseExpiry,
+    hasVehicle, licenseDoc, nationalIdDoc, insuranceDoc, tripsFilter, tripActivity,
     searchInput, setSearchInput, debouncedSearch,
     page, pageSize, setPage, setPageSize, clampPage,
     setFilter, clearFilters: clearAllFilters,
@@ -275,6 +328,7 @@ function DriversContent() {
       'drivers',
       verificationStatus,
       subscriptionStatus,
+      subscriptionExpiry,
       debouncedSearch,
       onlineStatus,
       sortBy,
@@ -284,11 +338,13 @@ function DriversContent() {
       nationalIdDoc,
       insuranceDoc,
       tripsFilter,
+      tripActivity,
     ],
     queryFn: () =>
       fetchDrivers({
         verificationStatus,
         subscriptionStatus,
+        subscriptionExpiry,
         searchQuery: debouncedSearch,
         onlineStatus,
         sortBy,
@@ -298,6 +354,7 @@ function DriversContent() {
         nationalIdDoc,
         insuranceDoc,
         tripsFilter,
+        tripActivity,
       }),
   })
 
@@ -352,6 +409,20 @@ function DriversContent() {
               <option value="active">Active</option>
               <option value="trial">Trial</option>
               <option value="expired">Expired</option>
+            </select>
+          </FilterField>
+          <FilterField id={fid('sub-expiry')} label="Subscription days left">
+            <select
+              id={fid('sub-expiry')}
+              value={subscriptionExpiry}
+              onChange={(e) => setFilter('subexpiry', e.target.value)}
+              className={SELECT_CLASS}
+            >
+              <option value="all">All</option>
+              <option value="3plus">3+ days left</option>
+              <option value="expiring">Expiring soon (1–2 days)</option>
+              <option value="ended">Ended</option>
+              <option value="missing">No end date</option>
             </select>
           </FilterField>
           <FilterField id={fid('online')} label="Online status">
@@ -452,6 +523,18 @@ function DriversContent() {
               <option value="new">New (1–10)</option>
               <option value="active">Active (11–100)</option>
               <option value="veteran">Veteran (100+)</option>
+            </select>
+          </FilterField>
+          <FilterField id={fid('activity')} label="Trip activity">
+            <select
+              id={fid('activity')}
+              value={tripActivity}
+              onChange={(e) => setFilter('activity', e.target.value)}
+              className={SELECT_CLASS}
+            >
+              <option value="all">All</option>
+              <option value="recent">Accepted a trip (last 2 days)</option>
+              <option value="idle">Idle (no accepted trips in 2+ days)</option>
             </select>
           </FilterField>
           <FilterField id={fid('sort')} label="Sort by">
