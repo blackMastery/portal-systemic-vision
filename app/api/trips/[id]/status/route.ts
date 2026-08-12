@@ -142,6 +142,12 @@ export async function PATCH(
       return NextResponse.json(response, { status: statusCode });
     }
 
+    // The driver app cancels in two PATCHes (placeholder reason, then the real
+    // reason typed later), so a cancel request can arrive for a trip that is
+    // already cancelled. Used below to keep the reopen and the rider push
+    // idempotent.
+    const wasAlreadyCancelled = trip.status === "cancelled";
+
     // Resolve driver_profiles.user_id → users.id mapping
     const { data: driverProfile } = await serviceClient
       .from("driver_profiles")
@@ -301,66 +307,50 @@ export async function PATCH(
 
     logger.info("Trip status updated", { tripId, status });
 
-    // 9. On cancellation, reset linked trip_request to 'requested' (fire-and-forget)
+    // 9. On cancellation, hand the linked trip_request back to the pool.
+    //
+    // This MUST go through reopen_trip_request_after_cancel, which takes the
+    // same FOR UPDATE lock on trip_requests that accept_trip_request takes. A
+    // plain UPDATE here races the accept RPC and can hand a request that
+    // another driver already holds back to the pool — that is what produced
+    // the duplicate-driver reports. The RPC also makes the repeated cancel
+    // PATCH a no-op.
+    let requestReopened = false;
     if (status === "cancelled") {
-      try {
-        const { data: tripRow } = await serviceClient
-          .from("trips")
-          .select("*")
-          .eq("id", tripId)
-          .maybeSingle();
+      const { data: reopenData, error: reopenError } = await serviceClient.rpc(
+        "reopen_trip_request_after_cancel",
+        { p_trip_id: tripId },
+      );
 
-        const requestId = (tripRow as Record<string, unknown> | null)
-          ?.request_id as string | undefined;
-        if (requestId) {
-          // check if the trip_request is expired
-          const { data: tripRequest } = await serviceClient
-            .from("trip_requests")
-            .select("*")
-            .eq("id", requestId)
-            .maybeSingle();
-
-          const isExpired =
-            tripRequest?.expires_at &&
-            new Date(tripRequest.expires_at) < new Date();
-          // if not expired, update the trip_request to requested and calculate remaining time to be expired in 10 minutes
-          const remainingTime =
-            new Date(tripRequest.expires_at).getTime() - new Date().getTime();
-          const expiresAt = new Date(Date.now() + remainingTime);
-
-          if (!isExpired) {
-            await serviceClient
-              .from("trip_requests")
-              .update({
-                status: "requested",
-                expires_at: expiresAt.toISOString(),
-              })
-              .eq("id", requestId);
-          } else {
-            // send notification to rider that the trip has been cancelled and is now available to be requested again
-            await sendNotificationsToUsers(
-              [tripRow?.rider_id as string],
-              "Trip Cancelled",
-              "Your trip has been cancelled and is now available to be requested again",
-              "rider",
-              { trip_id: tripId, notification_type: `trip_cancelled` },
-            );
-          }
-          logger.info("Reset trip_request to requested", { requestId });
-        }
-      } catch (e) {
-        logger.warn("Failed to reset trip_request status on cancellation", {
+      if (reopenError) {
+        logger.warn("Failed to reopen trip_request on cancellation", {
           tripId,
-          error: e,
+          error: reopenError,
+        });
+      } else {
+        const row = (Array.isArray(reopenData) ? reopenData[0] : reopenData) as
+          | { reopened?: boolean; trip_request_id?: string; outcome?: string }
+          | null
+          | undefined;
+        requestReopened = row?.reopened === true;
+        logger.info("Reopen trip_request result", {
+          tripId,
+          requestId: row?.trip_request_id,
+          outcome: row?.outcome,
         });
       }
     }
 
     // 10. Send push notification to rider (fire-and-forget)
+    //
+    // Skipped when the trip was already cancelled: the driver app's two-step
+    // cancel would otherwise push the rider twice for one cancellation.
     const riderId = trip.rider_id;
-    if (riderId) {
+    const skipRiderPush = status === "cancelled" && wasAlreadyCancelled;
+    if (riderId && !skipRiderPush) {
       let title: string;
       let notificationBody: string;
+      let notificationType = `trip_${status}`;
 
       if (stopCompletionMeta && !stopCompletionMeta.tripFullyCompleted) {
         title = "Stop Completed";
@@ -372,6 +362,14 @@ export async function PATCH(
         title = "Trip Completed";
         notificationBody =
           "Your trip has been completed. Thank you for using Links!";
+      } else if (requestReopened) {
+        // The request went back to the pool, so the rider is being re-matched
+        // rather than left without a ride. Distinct type so the rider app can
+        // route them back to the searching screen.
+        title = "Trip Cancelled";
+        notificationBody =
+          "Your driver cancelled — we're finding you another driver";
+        notificationType = "trip_cancelled_reopened";
       } else {
         title = "Trip Cancelled";
         notificationBody = "Your trip has been cancelled by the driver";
@@ -392,7 +390,7 @@ export async function PATCH(
             title,
             notificationBody,
             "rider",
-            { trip_id: tripId, notification_type: `trip_${status}` },
+            { trip_id: tripId, notification_type: notificationType },
           );
         })
         .catch((error) => {
