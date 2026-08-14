@@ -87,7 +87,12 @@ function parseRootVars(cssText) {
   const vars = new Map()
   const root = cssText.match(/:root\s*\{([^}]*)\}/)
   if (!root) return vars
-  for (const decl of root[1].split(';')) {
+  // Strip comments FIRST. globals.css annotates each token with its hex, and
+  // splitting on ';' otherwise glues a trailing `/* #FFFFFF */` onto the front
+  // of the NEXT declaration, so its `^\s*--name` match fails and the variable
+  // silently vanishes — reported downstream as unresolved(--x).
+  const body = root[1].replace(/\/\*[\s\S]*?\*\//g, '')
+  for (const decl of body.split(';')) {
     const m = decl.match(/^\s*(--[\w-]+)\s*:\s*(.+?)\s*$/)
     if (m) vars.set(m[1], m[2])
   }
@@ -124,16 +129,26 @@ function canonicalColor(value, vars) {
   let v = value.trim()
   // Strip the alpha channel — migration never changes opacity.
   v = v.replace(/\s*\/\s*var\([^)]*\)\s*/g, '').replace(/\s*\/\s*[\d.%]+\s*/g, '')
-  // hsl(var(--x)) -> resolve
-  const varMatch = v.match(/^hsl\(\s*var\((--[\w-]+)\)\s*\)$/)
-  if (varMatch) {
-    const triplet = vars.get(varMatch[1])
-    if (triplet) {
-      const rgb = hslTripletToRgb(triplet)
-      if (rgb) return rgb
-    }
-    return `unresolved(${varMatch[1]})`
+  // Resolve every hsl(var(--x)) IN PLACE, not just a whole-value match: gradient
+  // stops read `hsl(var(--primary-soft)) var(--tw-gradient-from-position)`, so
+  // an anchored match would leave them permanently "unresolved" and blind the
+  // gate to real gradient changes.
+  v = v.replace(/hsl\(\s*var\((--[\w-]+)\)\s*\)/g, (whole, name) => {
+    const triplet = vars.get(name)
+    if (!triplet) return `unresolved(${name})`
+    return hslTripletToRgb(triplet) || whole
+  })
+  // Gradient stops carry a trailing position token; drop it so the colour is
+  // comparable. Tailwind writes the palette side as bare hex (`#eff6ff`) and
+  // the token side as hsl(var(...)) — without normalising both to rgb, every
+  // gradient migration reads as a change when the colour is identical.
+  v = v.replace(/\s*var\(--tw-gradient-[\w-]*position\)\s*/g, '').trim()
+  const hex = v.match(/^#([0-9a-fA-F]{6})$/) || v.match(/^#([0-9a-fA-F]{3})$/)
+  if (hex) {
+    const h = hex[1].length === 3 ? [...hex[1]].map((c) => c + c).join('') : hex[1]
+    return `rgb(${parseInt(h.slice(0, 2), 16)} ${parseInt(h.slice(2, 4), 16)} ${parseInt(h.slice(4, 6), 16)})`
   }
+  if (/^rgb\([\d ]+\)$/.test(v)) return v
   // hsl(H S% L%) literal
   const hslMatch = v.match(/^hsl\(\s*([\d.]+)\s+([\d.]+%)\s+([\d.]+%)\s*\)$/)
   if (hslMatch) {

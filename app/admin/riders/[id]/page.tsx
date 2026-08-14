@@ -132,10 +132,10 @@ async function fetchRiderDetail(riderId: string): Promise<RiderDetailData> {
 }
 
 const verificationBadgeColors = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  approved: 'bg-green-100 text-green-800',
-  rejected: 'bg-red-100 text-red-800',
-  suspended: 'bg-gray-100 text-gray-800',
+  pending: 'bg-warning-soft text-warning-soft-foreground',
+  approved: 'bg-success-soft text-success-soft-foreground',
+  rejected: 'bg-danger-soft text-danger-soft-foreground',
+  suspended: 'bg-muted text-secondary-foreground',
 }
 
 const verificationIcons = {
@@ -175,7 +175,7 @@ function RiderDocumentPreview({
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs font-medium text-blue-600 hover:text-blue-800 shrink-0"
+          className="text-xs font-medium text-primary-strong hover:text-primary-hover shrink-0"
         >
           Open full size
         </a>
@@ -196,7 +196,7 @@ function RiderDocumentPreview({
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="relative mx-auto block aspect-[4/3] max-h-72 w-full max-w-lg overflow-hidden rounded-lg border border-gray-200 bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="relative mx-auto block aspect-[4/3] max-h-72 w-full max-w-lg overflow-hidden rounded-lg border border-gray-200 bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Image
               src={url}
@@ -288,18 +288,18 @@ async function fetchNextPendingRider(currentCreatedAt: string): Promise<string |
 }
 
 const subscriptionBadgeColors = {
-  active: 'bg-green-100 text-green-800',
-  trial: 'bg-blue-100 text-blue-800',
-  expired: 'bg-red-100 text-red-800',
-  cancelled: 'bg-gray-100 text-gray-800',
+  active: 'bg-success-soft text-success-soft-foreground',
+  trial: 'bg-info-soft text-info-soft-foreground',
+  expired: 'bg-danger-soft text-danger-soft-foreground',
+  cancelled: 'bg-muted text-secondary-foreground',
 }
 
 const statusColors = {
-  requested: 'bg-yellow-100 text-yellow-800',
-  accepted: 'bg-blue-100 text-blue-800',
-  picked_up: 'bg-purple-100 text-purple-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
+  requested: 'bg-warning-soft text-warning-soft-foreground',
+  accepted: 'bg-info-soft text-info-soft-foreground',
+  picked_up: 'bg-violet-soft text-violet-soft-foreground',
+  completed: 'bg-success-soft text-success-soft-foreground',
+  cancelled: 'bg-danger-soft text-danger-soft-foreground',
 }
 
 export default function RiderDetailPage() {
@@ -354,7 +354,7 @@ export default function RiderDetailPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-strong mx-auto mb-4"></div>
           <p className="text-gray-600">Loading rider details...</p>
         </div>
       </div>
@@ -370,7 +370,7 @@ export default function RiderDetailPage() {
           <p className="text-gray-600 mb-4">The rider you&apos;re looking for doesn&apos;t exist.</p>
           <Link
             href="/admin/riders"
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Riders
@@ -455,7 +455,7 @@ export default function RiderDetailPage() {
             <button
               type="button"
               onClick={() => setShowVerificationModal(true)}
-              className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700 sm:px-4 sm:py-2 sm:text-sm"
+              className="inline-flex items-center rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover sm:px-4 sm:py-2 sm:text-sm"
             >
               <Edit className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
               Update Verification
@@ -516,8 +516,8 @@ export default function RiderDetailPage() {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Profile Overview</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="flex items-start gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <User className="h-5 w-5 text-blue-600" />
+            <div className="p-2 bg-primary-soft-deep rounded-lg">
+              <User className="h-5 w-5 text-primary-strong" />
             </div>
             <div>
               <p className="text-sm text-gray-500">Full Name</p>
@@ -631,8 +631,8 @@ export default function RiderDetailPage() {
               <p className="text-sm text-gray-500">Total Trips</p>
               <p className="text-2xl font-bold text-gray-900">{rider.total_trips}</p>
             </div>
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <TrendingUp className="h-6 w-6 text-blue-600" />
+            <div className="p-3 bg-primary-soft-deep rounded-lg">
+              <TrendingUp className="h-6 w-6 text-primary-strong" />
             </div>
           </div>
         </div>
@@ -660,12 +660,12 @@ export default function RiderDetailPage() {
             </div>
             <div className={`p-3 rounded-lg ${
               rider.subscription_status === 'active' ? 'bg-green-100' :
-              rider.subscription_status === 'trial' ? 'bg-blue-100' :
+              rider.subscription_status === 'trial' ? 'bg-primary-soft-deep' :
               'bg-red-100'
             }`}>
               <CreditCard className={`h-6 w-6 ${
                 rider.subscription_status === 'active' ? 'text-green-600' :
-                rider.subscription_status === 'trial' ? 'text-blue-600' :
+                rider.subscription_status === 'trial' ? 'text-primary-strong' :
                 'text-red-600'
               }`} />
             </div>
@@ -754,12 +754,12 @@ export default function RiderDetailPage() {
                       </p>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
                         subscription.status === 'active' 
-                          ? 'bg-green-100 text-green-800'
+                          ? 'bg-success-soft text-success-soft-foreground'
                           : subscription.status === 'trial'
-                          ? 'bg-blue-100 text-blue-800'
+                          ? 'bg-info-soft text-info-soft-foreground'
                           : subscription.status === 'expired'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-gray-100 text-gray-800'
+                          ? 'bg-danger-soft text-danger-soft-foreground'
+                          : 'bg-muted text-secondary-foreground'
                       }`}>
                         {subscription.status}
                       </span>
@@ -1066,12 +1066,12 @@ export default function RiderDetailPage() {
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         payment.status === 'completed'
-                          ? 'bg-green-100 text-green-800'
+                          ? 'bg-success-soft text-success-soft-foreground'
                           : payment.status === 'pending'
-                          ? 'bg-yellow-100 text-yellow-800'
+                          ? 'bg-warning-soft text-warning-soft-foreground'
                           : payment.status === 'failed'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-gray-100 text-gray-800'
+                          ? 'bg-danger-soft text-danger-soft-foreground'
+                          : 'bg-muted text-secondary-foreground'
                       }`}>
                         {payment.status}
                       </span>
@@ -1221,7 +1221,7 @@ function RiderVerificationUpdateModal({
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as VerificationStatus)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
               required
             >
               <option value="pending">Pending</option>
@@ -1237,7 +1237,7 @@ function RiderVerificationUpdateModal({
               value={adminNotes}
               onChange={(e) => setAdminNotes(e.target.value)}
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
               placeholder="Add any notes about this verification status change…"
             />
           </div>
@@ -1249,7 +1249,7 @@ function RiderVerificationUpdateModal({
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
                 rows={2}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
                 placeholder="Explain why the verification was rejected…"
                 required
               />
@@ -1273,7 +1273,7 @@ function RiderVerificationUpdateModal({
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Updating…' : 'Update status'}

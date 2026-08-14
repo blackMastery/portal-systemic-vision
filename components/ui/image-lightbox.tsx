@@ -63,7 +63,7 @@ export function ImageLightbox({ open, onClose, src, title }: Props) {
               href={src}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50"
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-primary-strong hover:bg-primary-soft"
             >
               <ExternalLink className="h-4 w-4" aria-hidden />
               Open full size

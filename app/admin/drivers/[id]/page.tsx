@@ -171,17 +171,17 @@ async function fetchDriverDetail(driverId: string): Promise<DriverDetailData> {
 }
 
 const verificationBadgeColors = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  approved: 'bg-green-100 text-green-800',
-  rejected: 'bg-red-100 text-red-800',
-  suspended: 'bg-gray-100 text-gray-800',
+  pending: 'bg-warning-soft text-warning-soft-foreground',
+  approved: 'bg-success-soft text-success-soft-foreground',
+  rejected: 'bg-danger-soft text-danger-soft-foreground',
+  suspended: 'bg-muted text-secondary-foreground',
 }
 
 const subscriptionBadgeColors = {
-  active: 'bg-green-100 text-green-800',
-  trial: 'bg-blue-100 text-blue-800',
-  expired: 'bg-red-100 text-red-800',
-  cancelled: 'bg-gray-100 text-gray-800',
+  active: 'bg-success-soft text-success-soft-foreground',
+  trial: 'bg-info-soft text-info-soft-foreground',
+  expired: 'bg-danger-soft text-danger-soft-foreground',
+  cancelled: 'bg-muted text-secondary-foreground',
 }
 
 const verificationIcons = {
@@ -222,7 +222,7 @@ function DriverDocumentPreview({
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs font-medium text-blue-600 hover:text-blue-800 shrink-0"
+          className="text-xs font-medium text-primary-strong hover:text-primary-hover shrink-0"
         >
           Open full size
         </a>
@@ -242,7 +242,7 @@ function DriverDocumentPreview({
           <button
             type="button"
             onClick={() => setLightboxOpen(true)}
-            className="relative mx-auto block aspect-[4/3] max-h-72 w-full max-w-lg cursor-zoom-in overflow-hidden rounded-lg border border-gray-200 bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="relative mx-auto block aspect-[4/3] max-h-72 w-full max-w-lg cursor-zoom-in overflow-hidden rounded-lg border border-gray-200 bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label={`View ${title} full size`}
           >
             <Image
@@ -268,11 +268,11 @@ function DriverDocumentPreview({
 }
 
 const statusColors = {
-  requested: 'bg-yellow-100 text-yellow-800',
-  accepted: 'bg-blue-100 text-blue-800',
-  picked_up: 'bg-purple-100 text-purple-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
+  requested: 'bg-warning-soft text-warning-soft-foreground',
+  accepted: 'bg-info-soft text-info-soft-foreground',
+  picked_up: 'bg-violet-soft text-violet-soft-foreground',
+  completed: 'bg-success-soft text-success-soft-foreground',
+  cancelled: 'bg-danger-soft text-danger-soft-foreground',
 }
 
 async function fetchNextPendingDriver(currentCreatedAt: string): Promise<string | null> {
@@ -325,7 +325,7 @@ export default function DriverDetailPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-strong mx-auto mb-4"></div>
           <p className="text-gray-600">Loading driver details...</p>
         </div>
       </div>
@@ -341,7 +341,7 @@ export default function DriverDetailPage() {
           <p className="text-gray-600 mb-4">The driver you&apos;re looking for doesn&apos;t exist.</p>
           <Link
             href="/admin/drivers"
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Drivers
@@ -411,7 +411,7 @@ export default function DriverDetailPage() {
           </button>
           <button
             onClick={() => setShowVerificationModal(true)}
-            className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700 sm:px-4 sm:py-2 sm:text-sm"
+            className="inline-flex items-center rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover sm:px-4 sm:py-2 sm:text-sm"
           >
             <Edit className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
             Update Verification
@@ -424,8 +424,8 @@ export default function DriverDetailPage() {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Profile Overview</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="flex items-start gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <User className="h-5 w-5 text-blue-600" />
+            <div className="p-2 bg-primary-soft-deep rounded-lg">
+              <User className="h-5 w-5 text-primary-strong" />
             </div>
             <div>
               <p className="text-sm text-gray-500">Full Name</p>
@@ -483,8 +483,8 @@ export default function DriverDetailPage() {
               <p className="text-sm text-gray-500">Total Trips</p>
               <p className="text-2xl font-bold text-gray-900">{driver.total_trips}</p>
             </div>
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <TrendingUp className="h-6 w-6 text-blue-600" />
+            <div className="p-3 bg-primary-soft-deep rounded-lg">
+              <TrendingUp className="h-6 w-6 text-primary-strong" />
             </div>
           </div>
         </div>
@@ -535,7 +535,7 @@ export default function DriverDetailPage() {
             {driver.user_id && (
               <Link
                 href={`/admin/agreement-acceptances?audience=driver&userId=${encodeURIComponent(driver.user_id)}`}
-                className="inline-flex items-center px-3 py-1.5 text-sm bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                className="inline-flex items-center px-3 py-1.5 text-sm bg-primary-soft text-primary-strong border border-primary-soft-deep rounded-lg hover:bg-primary-soft-deep transition-colors"
               >
                 <FileText className="h-3.5 w-3.5 mr-1.5" />
                 Agreement Acceptances
@@ -672,7 +672,7 @@ export default function DriverDetailPage() {
                     key={trip.id}
                     onClick={() => setSelectedTripId(trip.id === selectedTripId ? null : trip.id)}
                     className={`cursor-pointer transition-colors ${
-                      trip.id === selectedTripId ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-gray-50'
+                      trip.id === selectedTripId ? 'bg-primary-soft hover:bg-primary-soft-deep' : 'hover:bg-gray-50'
                     }`}
                   >
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
@@ -837,12 +837,12 @@ export default function DriverDetailPage() {
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         payment.status === 'completed'
-                          ? 'bg-green-100 text-green-800'
+                          ? 'bg-success-soft text-success-soft-foreground'
                           : payment.status === 'pending'
-                          ? 'bg-yellow-100 text-yellow-800'
+                          ? 'bg-warning-soft text-warning-soft-foreground'
                           : payment.status === 'failed'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-gray-100 text-gray-800'
+                          ? 'bg-danger-soft text-danger-soft-foreground'
+                          : 'bg-muted text-secondary-foreground'
                       }`}>
                         {payment.status}
                       </span>
@@ -994,7 +994,7 @@ function VehicleCard({ vehicle }: { vehicle: Database['public']['Tables']['vehic
                     title: `${vehicle.make} ${vehicle.model}`,
                   })
                 }
-                className="relative aspect-video w-full bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                className="relative aspect-video w-full bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label={`View ${vehicle.make} ${vehicle.model} photo full size`}
               >
                 {!vehicleImageError ? (
@@ -1016,7 +1016,7 @@ function VehicleCard({ vehicle }: { vehicle: Database['public']['Tables']['vehic
                 href={vehicle.vehicle_photo_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-2 inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
+                className="mt-2 inline-flex items-center text-sm text-primary-strong hover:text-primary-hover"
               >
                 <FileText className="h-4 w-4 mr-1" />
                 View Full Image
@@ -1034,7 +1034,7 @@ function VehicleCard({ vehicle }: { vehicle: Database['public']['Tables']['vehic
                     title: 'Registration Document',
                   })
                 }
-                className="relative aspect-video w-full bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                className="relative aspect-video w-full bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label="View registration document full size"
               >
                 {!registrationImageError ? (
@@ -1056,7 +1056,7 @@ function VehicleCard({ vehicle }: { vehicle: Database['public']['Tables']['vehic
                 href={vehicle.registration_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-2 inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
+                className="mt-2 inline-flex items-center text-sm text-primary-strong hover:text-primary-hover"
               >
                 <FileText className="h-4 w-4 mr-1" />
                 View Full Document
@@ -1078,8 +1078,8 @@ function VehicleCard({ vehicle }: { vehicle: Database['public']['Tables']['vehic
           <div className="flex items-start justify-between mb-4">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Car className="h-6 w-6 text-blue-600" />
+                <div className="p-2 bg-primary-soft-deep rounded-lg">
+                  <Car className="h-6 w-6 text-primary-strong" />
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900">
@@ -1090,7 +1090,7 @@ function VehicleCard({ vehicle }: { vehicle: Database['public']['Tables']['vehic
               </div>
               <div className="flex items-center gap-2 mt-2">
                 {vehicle.is_primary && (
-                  <span className="px-2.5 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                  <span className="px-2.5 py-1 bg-primary-soft-deep text-info-soft-foreground text-xs font-medium rounded-full">
                     Primary Vehicle
                   </span>
                 )}
@@ -1698,7 +1698,7 @@ function VerificationUpdateModal({
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as VerificationStatus)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
               required
             >
               <option value="pending">Pending</option>
@@ -1716,7 +1716,7 @@ function VerificationUpdateModal({
               value={adminNotes}
               onChange={(e) => setAdminNotes(e.target.value)}
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
               placeholder="Add any notes about this verification status change..."
             />
           </div>
@@ -1730,7 +1730,7 @@ function VerificationUpdateModal({
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
                 rows={2}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
                 placeholder="Explain why the verification was rejected..."
                 required
               />
@@ -1754,7 +1754,7 @@ function VerificationUpdateModal({
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Updating...' : 'Update Status'}

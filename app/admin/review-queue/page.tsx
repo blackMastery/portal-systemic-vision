@@ -87,14 +87,14 @@ async function fetchReviewQueue(filters: {
 }
 
 const statusColors: Record<ReviewQueueRow['status'], string> = {
-  open: 'bg-red-100 text-red-800',
-  resolved: 'bg-green-100 text-green-800',
+  open: 'bg-danger-soft text-danger-soft-foreground',
+  resolved: 'bg-success-soft text-success-soft-foreground',
   dismissed: 'bg-gray-100 text-gray-700',
 }
 
 const sourceColors: Record<ReviewQueueRow['flag_source'], string> = {
-  auto_low_rating: 'bg-amber-100 text-amber-800',
-  manual: 'bg-blue-100 text-blue-800',
+  auto_low_rating: 'bg-warning-soft text-warning-soft-foreground',
+  manual: 'bg-info-soft text-info-soft-foreground',
 }
 
 function StarsInline({ rating }: { rating: number | null }) {
@@ -160,7 +160,7 @@ export default function ReviewQueuePage() {
                 setStatus(e.target.value as typeof status)
                 setPage(0)
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-sm"
             >
               <option value="open">Open</option>
               <option value="resolved">Resolved</option>
@@ -178,7 +178,7 @@ export default function ReviewQueuePage() {
                 setFlagSource(e.target.value as typeof flagSource)
                 setPage(0)
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-sm"
             >
               <option value="all">All</option>
               <option value="auto_low_rating">Auto (rating ≤ 2)</option>
@@ -191,7 +191,7 @@ export default function ReviewQueuePage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-strong mx-auto" />
           </div>
         ) : rows.length > 0 ? (
           <>
@@ -228,7 +228,7 @@ export default function ReviewQueuePage() {
                         <td className="px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-500">
                           <Link
                             href={`/admin/review-queue/${row.id}`}
-                            className="text-gray-700 hover:text-blue-700"
+                            className="text-gray-700 hover:text-primary-hover"
                           >
                             {format(new Date(row.created_at), 'MMM d, yyyy HH:mm')}
                           </Link>
@@ -236,7 +236,7 @@ export default function ReviewQueuePage() {
                         <td className="px-4 md:px-6 py-3 whitespace-nowrap text-sm">
                           <Link
                             href={`/admin/riders/${row.rider_id}`}
-                            className="font-medium text-gray-900 hover:text-blue-700"
+                            className="font-medium text-gray-900 hover:text-primary-hover"
                           >
                             {riderName}
                           </Link>

@@ -40,10 +40,10 @@ const categoryLabels: Record<IncidentCategory, string> = {
 }
 
 const statusColors: Record<IncidentStatus, string> = {
-  open: 'bg-red-100 text-red-800',
-  under_review: 'bg-amber-100 text-amber-800',
-  resolved: 'bg-green-100 text-green-800',
-  escalated: 'bg-purple-100 text-purple-800',
+  open: 'bg-danger-soft text-danger-soft-foreground',
+  under_review: 'bg-warning-soft text-warning-soft-foreground',
+  resolved: 'bg-success-soft text-success-soft-foreground',
+  escalated: 'bg-violet-soft text-violet-soft-foreground',
 }
 
 const dashcamStatusLabels: Record<DashcamRequestStatus, string> = {
@@ -293,7 +293,7 @@ export default function AdminIncidentDetailPage() {
   if (isLoading) {
     return (
       <div className="p-8 text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-strong mx-auto" />
       </div>
     )
   }
@@ -448,7 +448,7 @@ export default function AdminIncidentDetailPage() {
           </h2>
           <Link
             href={`/admin/trips/${incident.trip_id}`}
-            className="text-sm text-blue-600 hover:text-blue-800"
+            className="text-sm text-primary-strong hover:text-primary-hover"
           >
             Open trip {incident.trip_id.slice(0, 8)}… →
           </Link>
@@ -488,7 +488,7 @@ export default function AdminIncidentDetailPage() {
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-blue-600 break-all"
+                      className="text-sm text-primary-strong break-all"
                     >
                       {path}
                     </a>
@@ -532,7 +532,7 @@ export default function AdminIncidentDetailPage() {
           </h2>
           <ul className="space-y-2 text-sm">
             {history.map((h) => (
-              <li key={h.id} className="border-l-2 border-blue-200 pl-3">
+              <li key={h.id} className="border-l-2 border-primary-soft-deep pl-3">
                 <span className="text-gray-500">
                   {format(new Date(h.changed_at), 'MMM d, yyyy h:mm a')}
                 </span>
@@ -582,7 +582,7 @@ export default function AdminIncidentDetailPage() {
                 type="button"
                 disabled={isPending}
                 onClick={handleStatusSave}
-                className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm disabled:opacity-50"
+                className="px-3 py-2 bg-primary text-white rounded-lg text-sm disabled:opacity-50"
               >
                 Save
               </button>

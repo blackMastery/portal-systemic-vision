@@ -241,7 +241,7 @@ export function ActiveDriversMap() {
               <div className="text-left bg-yellow-50 border border-yellow-200 rounded p-3 text-xs text-gray-700">
                 <p className="font-semibold mb-2">To fix this:</p>
                 <ol className="list-decimal list-inside space-y-1">
-                  <li>Go to <a href="https://console.cloud.google.com/apis/library" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Google Cloud Console</a></li>
+                  <li>Go to <a href="https://console.cloud.google.com/apis/library" target="_blank" rel="noopener noreferrer" className="text-primary-strong hover:underline">Google Cloud Console</a></li>
                   <li>Search for &quot;Maps JavaScript API&quot;</li>
                   <li>Click &quot;Enable&quot; to activate it</li>
                   <li>Ensure billing is enabled for your project</li>
@@ -253,7 +253,7 @@ export function ActiveDriversMap() {
         {!isLoaded && !loadError && (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-2"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-strong mx-auto mb-2"></div>
               <p className="text-sm text-gray-500">Loading map...</p>
             </div>
           </div>
@@ -325,8 +325,8 @@ export function ActiveDriversMap() {
                     <span
                       className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                         selectedDriver.is_available
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
+                          ? 'bg-success-soft text-success-soft-foreground'
+                          : 'bg-warning-soft text-warning-soft-foreground'
                       }`}
                     >
                       {selectedDriver.is_available ? 'Available' : 'On Trip'}
@@ -354,8 +354,8 @@ export function ActiveDriversMap() {
               className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <div className="flex items-center space-x-3">
-                <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Navigation className="h-5 w-5 text-blue-600" />
+                <div className="h-10 w-10 bg-primary-soft-deep rounded-full flex items-center justify-center">
+                  <Navigation className="h-5 w-5 text-primary-strong" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-900">
@@ -369,8 +369,8 @@ export function ActiveDriversMap() {
               <div className="flex items-center space-x-2">
                 <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
                   driver.is_available 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-yellow-100 text-yellow-800'
+                    ? 'bg-success-soft text-success-soft-foreground' 
+                    : 'bg-warning-soft text-warning-soft-foreground'
                 }`}>
                   {driver.is_available ? 'Available' : 'On Trip'}
                 </span>

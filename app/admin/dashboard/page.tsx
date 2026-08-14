@@ -119,7 +119,7 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-strong"></div>
       </div>
     )
   }
@@ -134,7 +134,7 @@ export default function DashboardPage() {
         </p>
         <Link
           href="/admin/notifications"
-          className="mt-3 inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-800 hover:bg-blue-100 transition-colors"
+          className="mt-3 inline-flex items-center gap-2 rounded-lg border border-primary-soft-deep bg-primary-soft px-3 py-2 text-sm font-medium text-info-soft-foreground hover:bg-primary-soft-deep transition-colors"
         >
           <Megaphone className="h-4 w-4" />
           Broadcast push to all drivers or riders

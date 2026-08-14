@@ -51,11 +51,11 @@ const defaultOptions = {
 }
 
 const statusColors: Record<string, string> = {
-  requested: 'bg-yellow-100 text-yellow-800',
-  accepted: 'bg-blue-100 text-blue-800',
-  picked_up: 'bg-purple-100 text-purple-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
+  requested: 'bg-warning-soft text-warning-soft-foreground',
+  accepted: 'bg-info-soft text-info-soft-foreground',
+  picked_up: 'bg-violet-soft text-violet-soft-foreground',
+  completed: 'bg-success-soft text-success-soft-foreground',
+  cancelled: 'bg-danger-soft text-danger-soft-foreground',
 }
 
 function formatCoord(lat: number, lng: number) {
@@ -168,7 +168,7 @@ export function TripRouteMap({ trip, routePoints, isLoadingRoute, showTripInfo =
             <p className="text-sm text-gray-500">
               {formatGuyana(trip.requested_at, 'MMM d, yyyy • HH:mm')}
             </p>
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[trip.status] ?? 'bg-gray-100 text-gray-800'}`}>
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[trip.status] ?? 'bg-muted text-secondary-foreground'}`}>
               {trip.status.replace('_', ' ')}
             </span>
           </div>
@@ -206,7 +206,7 @@ export function TripRouteMap({ trip, routePoints, isLoadingRoute, showTripInfo =
         {!isLoaded && !loadError && (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-2" />
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-strong mx-auto mb-2" />
               <p className="text-sm text-gray-500">Loading map...</p>
             </div>
           </div>
@@ -268,7 +268,7 @@ export function TripRouteMap({ trip, routePoints, isLoadingRoute, showTripInfo =
         {isLoaded && isLoadingRoute && (
           <div className="absolute inset-0 bg-white bg-opacity-60 flex items-center justify-center">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-2" />
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-strong mx-auto mb-2" />
               <p className="text-sm text-gray-600">Loading route...</p>
             </div>
           </div>

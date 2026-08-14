@@ -92,23 +92,23 @@ async function fetchPaymentTransactions(filters: {
 }
 
 const subscriptionStatusColors: Record<string, string> = {
-  active: 'bg-green-100 text-green-800',
-  trial: 'bg-blue-100 text-blue-800',
-  expired: 'bg-red-100 text-red-800',
-  cancelled: 'bg-gray-100 text-gray-800',
+  active: 'bg-success-soft text-success-soft-foreground',
+  trial: 'bg-info-soft text-info-soft-foreground',
+  expired: 'bg-danger-soft text-danger-soft-foreground',
+  cancelled: 'bg-muted text-secondary-foreground',
 }
 
 const paymentStatusColors: Record<string, string> = {
-  completed: 'bg-green-100 text-green-800',
-  pending: 'bg-yellow-100 text-yellow-800',
-  failed: 'bg-red-100 text-red-800',
-  refunded: 'bg-gray-100 text-gray-800',
+  completed: 'bg-success-soft text-success-soft-foreground',
+  pending: 'bg-warning-soft text-warning-soft-foreground',
+  failed: 'bg-danger-soft text-danger-soft-foreground',
+  refunded: 'bg-muted text-secondary-foreground',
 }
 
 const roleColors: Record<string, string> = {
-  rider: 'bg-green-100 text-green-800',
-  driver: 'bg-blue-100 text-blue-800',
-  admin: 'bg-purple-100 text-purple-800',
+  rider: 'bg-success-soft text-success-soft-foreground',
+  driver: 'bg-info-soft text-info-soft-foreground',
+  admin: 'bg-violet-soft text-violet-soft-foreground',
 }
 
 function calculateDaysRemaining(endDate: string): number {
@@ -124,14 +124,14 @@ function ViewToggle({ view, onChange }: { view: 'table' | 'card'; onChange: (v: 
     <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
       <button
         onClick={() => onChange('table')}
-        className={`p-2 ${view === 'table' ? 'bg-blue-50 text-blue-600' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+        className={`p-2 ${view === 'table' ? 'bg-primary-soft text-primary-strong' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
         title="Table view"
       >
         <LayoutList className="h-4 w-4" />
       </button>
       <button
         onClick={() => onChange('card')}
-        className={`p-2 ${view === 'card' ? 'bg-blue-50 text-blue-600' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+        className={`p-2 ${view === 'card' ? 'bg-primary-soft text-primary-strong' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
         title="Card view"
       >
         <LayoutGrid className="h-4 w-4" />
@@ -163,8 +163,8 @@ function SubscriptionDialog({ subscription, onClose }: { subscription: Subscript
           <div>
             <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">User</p>
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <User className="h-5 w-5 text-blue-600" />
+              <div className="h-10 w-10 bg-primary-soft-deep rounded-full flex items-center justify-center flex-shrink-0">
+                <User className="h-5 w-5 text-primary-strong" />
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-900">{subscription.user?.full_name || 'Unknown'}</p>
@@ -172,7 +172,7 @@ function SubscriptionDialog({ subscription, onClose }: { subscription: Subscript
                 <p className="text-xs text-gray-500">{subscription.user?.email}</p>
               </div>
               {subscription.user_role && (
-                <span className={`ml-auto inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${roleColors[subscription.user_role] || 'bg-gray-100 text-gray-800'}`}>
+                <span className={`ml-auto inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${roleColors[subscription.user_role] || 'bg-muted text-secondary-foreground'}`}>
                   {subscription.user_role}
                 </span>
               )}
@@ -191,7 +191,7 @@ function SubscriptionDialog({ subscription, onClose }: { subscription: Subscript
             </div>
             <div>
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Status</p>
-              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${subscriptionStatusColors[subscription.status] || 'bg-gray-100 text-gray-800'}`}>
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${subscriptionStatusColors[subscription.status] || 'bg-muted text-secondary-foreground'}`}>
                 {subscription.status}
               </span>
             </div>
@@ -279,8 +279,8 @@ function TransactionDialog({ transaction, onClose }: { transaction: PaymentTrans
               <div>
                 <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">User</p>
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <User className="h-5 w-5 text-blue-600" />
+                  <div className="h-10 w-10 bg-primary-soft-deep rounded-full flex items-center justify-center flex-shrink-0">
+                    <User className="h-5 w-5 text-primary-strong" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-900">{transaction.user.full_name}</p>
@@ -288,7 +288,7 @@ function TransactionDialog({ transaction, onClose }: { transaction: PaymentTrans
                     <p className="text-xs text-gray-500">{transaction.user.email}</p>
                   </div>
                   {transaction.user.role && (
-                    <span className={`ml-auto inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${roleColors[transaction.user.role] || 'bg-gray-100 text-gray-800'}`}>
+                    <span className={`ml-auto inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${roleColors[transaction.user.role] || 'bg-muted text-secondary-foreground'}`}>
                       {transaction.user.role}
                     </span>
                   )}
@@ -304,9 +304,9 @@ function TransactionDialog({ transaction, onClose }: { transaction: PaymentTrans
               <div>
                 <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Subscription</p>
                 <div className="flex items-center gap-2">
-                  <ExternalLink className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-600">{transaction.subscription.plan_type}</span>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${subscriptionStatusColors[transaction.subscription.status] || 'bg-gray-100 text-gray-800'}`}>
+                  <ExternalLink className="h-4 w-4 text-primary-strong" />
+                  <span className="text-sm font-medium text-primary-strong">{transaction.subscription.plan_type}</span>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${subscriptionStatusColors[transaction.subscription.status] || 'bg-muted text-secondary-foreground'}`}>
                     {transaction.subscription.status}
                   </span>
                 </div>
@@ -323,7 +323,7 @@ function TransactionDialog({ transaction, onClose }: { transaction: PaymentTrans
             </div>
             <div>
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Status</p>
-              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${paymentStatusColors[transaction.status] || 'bg-gray-100 text-gray-800'}`}>
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${paymentStatusColors[transaction.status] || 'bg-muted text-secondary-foreground'}`}>
                 {transaction.status}
               </span>
             </div>
@@ -455,7 +455,7 @@ export default function PaymentsPage() {
               onClick={() => setActiveTab(tab)}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === tab
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-ring text-primary-strong'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -486,7 +486,7 @@ export default function PaymentsPage() {
             </div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center">
-                <DollarSign className="h-8 w-8 text-blue-600" />
+                <DollarSign className="h-8 w-8 text-primary-strong" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Total Revenue</p>
                   <p className="text-2xl font-semibold text-gray-900">{formatCurrency(totalRevenue)}</p>
@@ -515,25 +515,25 @@ export default function PaymentsPage() {
                     placeholder="Search by user name, phone, or email..."
                     value={subscriptionSearch}
                     onChange={e => setSubscriptionSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
                   />
                 </div>
               </div>
-              <select value={subscriptionStatus} onChange={e => setSubscriptionStatus(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <select value={subscriptionStatus} onChange={e => setSubscriptionStatus(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring">
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
                 <option value="trial">Trial</option>
                 <option value="expired">Expired</option>
                 <option value="cancelled">Cancelled</option>
               </select>
-              <select value={userRole} onChange={e => setUserRole(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <select value={userRole} onChange={e => setUserRole(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring">
                 <option value="all">All Roles</option>
                 <option value="rider">Rider</option>
                 <option value="driver">Driver</option>
               </select>
             </div>
             <div className="mt-4 flex flex-wrap gap-4 items-center">
-              <select value={planType} onChange={e => setPlanType(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <select value={planType} onChange={e => setPlanType(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring">
                 <option value="all">All Plan Types</option>
                 <option value="monthly">Monthly</option>
                 <option value="biannual">Biannual</option>
@@ -541,9 +541,9 @@ export default function PaymentsPage() {
               </select>
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-gray-400" />
-                <input type="date" value={subscriptionDateFrom} onChange={e => setSubscriptionDateFrom(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" />
+                <input type="date" value={subscriptionDateFrom} onChange={e => setSubscriptionDateFrom(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-sm" />
                 <span className="text-gray-400 text-sm">to</span>
-                <input type="date" value={subscriptionDateTo} onChange={e => setSubscriptionDateTo(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" />
+                <input type="date" value={subscriptionDateTo} onChange={e => setSubscriptionDateTo(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-sm" />
               </div>
             </div>
           </div>
@@ -558,7 +558,7 @@ export default function PaymentsPage() {
 
             {subscriptionsLoading ? (
               <div className="p-8 text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-strong mx-auto" />
               </div>
             ) : subscriptions && subscriptions.length > 0 ? (
               subscriptionView === 'table' ? (
@@ -584,8 +584,8 @@ export default function PaymentsPage() {
                           >
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
-                                <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <User className="h-4 w-4 text-blue-600" />
+                                <div className="h-8 w-8 bg-primary-soft-deep rounded-full flex items-center justify-center flex-shrink-0">
+                                  <User className="h-4 w-4 text-primary-strong" />
                                 </div>
                                 <div className="ml-3">
                                   <div className="text-sm font-medium text-gray-900">{subscription.user?.full_name || 'Unknown'}</div>
@@ -643,13 +643,13 @@ export default function PaymentsPage() {
                     return (
                       <div
                         key={subscription.id}
-                        className="border border-gray-200 rounded-xl p-4 hover:shadow-md hover:border-blue-200 cursor-pointer transition-all"
+                        className="border border-gray-200 rounded-xl p-4 hover:shadow-md hover:border-primary-soft-deep cursor-pointer transition-all"
                         onClick={() => setSelectedSubscription(subscription)}
                       >
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-2">
-                            <div className="h-9 w-9 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                              <User className="h-4 w-4 text-blue-600" />
+                            <div className="h-9 w-9 bg-primary-soft-deep rounded-full flex items-center justify-center flex-shrink-0">
+                              <User className="h-4 w-4 text-primary-strong" />
                             </div>
                             <div>
                               <p className="text-sm font-medium text-gray-900 leading-tight">{subscription.user?.full_name || 'Unknown'}</p>
@@ -705,7 +705,7 @@ export default function PaymentsPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center">
-                <CreditCard className="h-8 w-8 text-blue-600" />
+                <CreditCard className="h-8 w-8 text-primary-strong" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Total Transactions</p>
                   <p className="text-2xl font-semibold text-gray-900">{transactions?.length || 0}</p>
@@ -752,18 +752,18 @@ export default function PaymentsPage() {
                     placeholder="Search by user name, phone, or MMG transaction ID..."
                     value={transactionSearch}
                     onChange={e => setTransactionSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
                   />
                 </div>
               </div>
-              <select value={transactionStatus} onChange={e => setTransactionStatus(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <select value={transactionStatus} onChange={e => setTransactionStatus(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring">
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
                 <option value="completed">Completed</option>
                 <option value="failed">Failed</option>
                 <option value="refunded">Refunded</option>
               </select>
-              <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring">
                 <option value="all">All Methods</option>
                 <option value="mmg">MMG</option>
                 <option value="other">Other</option>
@@ -771,9 +771,9 @@ export default function PaymentsPage() {
             </div>
             <div className="mt-4 flex items-center gap-2">
               <Calendar className="h-4 w-4 text-gray-400" />
-              <input type="date" value={transactionDateFrom} onChange={e => setTransactionDateFrom(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" />
+              <input type="date" value={transactionDateFrom} onChange={e => setTransactionDateFrom(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-sm" />
               <span className="text-gray-400 text-sm">to</span>
-              <input type="date" value={transactionDateTo} onChange={e => setTransactionDateTo(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" />
+              <input type="date" value={transactionDateTo} onChange={e => setTransactionDateTo(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-sm" />
             </div>
           </div>
 
@@ -786,7 +786,7 @@ export default function PaymentsPage() {
 
             {transactionsLoading ? (
               <div className="p-8 text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-strong mx-auto" />
               </div>
             ) : transactions && transactions.length > 0 ? (
               transactionView === 'table' ? (
@@ -809,8 +809,8 @@ export default function PaymentsPage() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             {transaction.user ? (
                               <div className="flex items-center">
-                                <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <User className="h-4 w-4 text-blue-600" />
+                                <div className="h-8 w-8 bg-primary-soft-deep rounded-full flex items-center justify-center flex-shrink-0">
+                                  <User className="h-4 w-4 text-primary-strong" />
                                 </div>
                                 <div className="ml-3">
                                   <div className="text-sm font-medium text-gray-900">{transaction.user.full_name}</div>
@@ -829,8 +829,8 @@ export default function PaymentsPage() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             {transaction.subscription ? (
                               <div className="flex items-center text-sm gap-1">
-                                <ExternalLink className="h-4 w-4 text-blue-600" />
-                                <span className="text-blue-600 font-medium">{transaction.subscription.plan_type}</span>
+                                <ExternalLink className="h-4 w-4 text-primary-strong" />
+                                <span className="text-primary-strong font-medium">{transaction.subscription.plan_type}</span>
                                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${subscriptionStatusColors[transaction.subscription.status] || ''}`}>
                                   {transaction.subscription.status}
                                 </span>
@@ -875,13 +875,13 @@ export default function PaymentsPage() {
                   {transactions.map(transaction => (
                     <div
                       key={transaction.id}
-                      className="border border-gray-200 rounded-xl p-4 hover:shadow-md hover:border-blue-200 cursor-pointer transition-all"
+                      className="border border-gray-200 rounded-xl p-4 hover:shadow-md hover:border-primary-soft-deep cursor-pointer transition-all"
                       onClick={() => setSelectedTransaction(transaction)}
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <div className="h-9 w-9 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <User className="h-4 w-4 text-blue-600" />
+                          <div className="h-9 w-9 bg-primary-soft-deep rounded-full flex items-center justify-center flex-shrink-0">
+                            <User className="h-4 w-4 text-primary-strong" />
                           </div>
                           <div>
                             <p className="text-sm font-medium text-gray-900 leading-tight">{transaction.user?.full_name || 'Unknown'}</p>
@@ -902,8 +902,8 @@ export default function PaymentsPage() {
 
                       {transaction.subscription && (
                         <div className="flex items-center gap-1 mb-2">
-                          <ExternalLink className="h-3 w-3 text-blue-500" />
-                          <span className="text-xs text-blue-600">{transaction.subscription.plan_type}</span>
+                          <ExternalLink className="h-3 w-3 text-primary-strong" />
+                          <span className="text-xs text-primary-strong">{transaction.subscription.plan_type}</span>
                           <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${subscriptionStatusColors[transaction.subscription.status] || ''}`}>
                             {transaction.subscription.status}
                           </span>

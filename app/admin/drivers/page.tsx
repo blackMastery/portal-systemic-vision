@@ -25,7 +25,7 @@ import { SendNotificationModal } from './send-notification-modal'
 import { formatStatus } from '@/lib/format'
 
 const SELECT_CLASS =
-  'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+  'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring'
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const
 
@@ -240,10 +240,10 @@ async function fetchDrivers(filters: {
 }
 
 const verificationBadgeColors = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  approved: 'bg-green-100 text-green-800',
-  rejected: 'bg-red-100 text-red-800',
-  suspended: 'bg-gray-100 text-gray-800',
+  pending: 'bg-warning-soft text-warning-soft-foreground',
+  approved: 'bg-success-soft text-success-soft-foreground',
+  rejected: 'bg-danger-soft text-danger-soft-foreground',
+  suspended: 'bg-muted text-secondary-foreground',
 }
 
 function DocumentThumb({
@@ -269,7 +269,7 @@ function DocumentThumb({
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 rounded border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs font-medium text-blue-600 hover:bg-gray-100"
+        className="inline-flex items-center gap-1 rounded border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs font-medium text-primary-strong hover:bg-gray-100"
         title={`Open ${label}`}
       >
         <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -283,7 +283,7 @@ function DocumentThumb({
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block rounded border border-gray-200 bg-gray-50 overflow-hidden hover:ring-2 hover:ring-blue-400 hover:ring-offset-1"
+      className="block rounded border border-gray-200 bg-gray-50 overflow-hidden hover:ring-2 hover:ring-ring hover:ring-offset-1"
       title={`Open ${label}`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -580,7 +580,7 @@ function DriversContent() {
             type="button"
             onClick={() => setNotificationModalOpen(true)}
             disabled={isLoading || totalCount === 0}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:pointer-events-none"
             title={
               totalCount === 0
                 ? 'No drivers match the current filters'
@@ -631,7 +631,7 @@ function DriversContent() {
               )}
               {advancedFiltersExpanded ? 'Hide options' : 'Show options'}
               {!advancedFiltersExpanded && activeFilterCount > 0 && (
-                <span className="min-w-[1.25rem] h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-blue-600 text-white text-xs font-semibold">
+                <span className="min-w-[1.25rem] h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-primary text-white text-xs font-semibold">
                   {activeFilterCount}
                 </span>
               )}
@@ -641,7 +641,7 @@ function DriversContent() {
             <button
               type="button"
               onClick={clearAllFilters}
-              className="hidden md:inline text-sm font-medium text-blue-600 hover:text-blue-800 self-start sm:self-auto"
+              className="hidden md:inline text-sm font-medium text-primary-strong hover:text-primary-hover self-start sm:self-auto"
             >
               Clear filters
             </button>
@@ -665,7 +665,7 @@ function DriversContent() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 autoComplete="off"
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
               />
             </div>
           </div>
@@ -677,7 +677,7 @@ function DriversContent() {
             <SlidersHorizontal className="h-5 w-5 text-gray-600" aria-hidden />
             Filters
             {activeFilterCount > 0 && (
-              <span className="min-w-[1.25rem] h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-blue-600 text-white text-xs font-semibold">
+              <span className="min-w-[1.25rem] h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-primary text-white text-xs font-semibold">
                 {activeFilterCount}
               </span>
             )}
@@ -732,7 +732,7 @@ function DriversContent() {
             <button
               type="button"
               onClick={() => setFiltersOpen(false)}
-              className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+              className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary-hover"
             >
               Done
             </button>
@@ -775,7 +775,7 @@ function DriversContent() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-strong mx-auto"></div>
           </div>
         ) : drivers && drivers.length > 0 ? (
           <>
@@ -819,8 +819,8 @@ function DriversContent() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="h-10 w-10 flex-shrink-0">
-                              <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                <span className="text-blue-600 font-medium">
+                              <div className="h-10 w-10 bg-primary-soft-deep rounded-full flex items-center justify-center">
+                                <span className="text-primary-strong font-medium">
                                   {driver.user?.full_name?.charAt(0) || '?'}
                                 </span>
                               </div>
@@ -886,10 +886,10 @@ function DriversContent() {
                           <div className="space-y-1">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                               driver.subscription_status === 'active'
-                                ? 'bg-green-100 text-green-800'
+                                ? 'bg-success-soft text-success-soft-foreground'
                                 : driver.subscription_status === 'trial'
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-red-100 text-red-800'
+                                  ? 'bg-info-soft text-info-soft-foreground'
+                                  : 'bg-danger-soft text-danger-soft-foreground'
                             }`}>
                               {formatStatus(driver.subscription_status)}
                             </span>
@@ -918,7 +918,7 @@ function DriversContent() {
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <Link
                             href={`/admin/drivers/${driver.id}`}
-                            className="text-blue-600 hover:text-blue-900"
+                            className="text-primary-strong hover:text-primary-hover"
                           >
                             View Details
                           </Link>
@@ -988,7 +988,7 @@ function DriversContent() {
                     <div className="mt-4 border-t border-gray-100 pt-3">
                       <Link
                         href={`/admin/drivers/${driver.id}`}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-900"
+                        className="text-sm font-medium text-primary-strong hover:text-primary-hover"
                       >
                         View Details
                       </Link>
@@ -1013,7 +1013,7 @@ function DriversContent() {
                   <select
                     value={pageSize}
                     onChange={(e) => setPageSize(Number(e.target.value))}
-                    className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-ring focus:border-ring"
                   >
                     {PAGE_SIZE_OPTIONS.map((n) => (
                       <option key={n} value={n}>

@@ -59,8 +59,8 @@ export function AdminHeader() {
             onClick={() => setShowProfileMenu(!showProfileMenu)}
             className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <User className="h-5 w-5 text-blue-600" />
+            <div className="w-8 h-8 bg-primary-soft-deep rounded-full flex items-center justify-center">
+              <User className="h-5 w-5 text-primary-strong" />
             </div>
             <span className="text-sm font-medium text-gray-700 capitalize hidden md:block">
               {adminName}

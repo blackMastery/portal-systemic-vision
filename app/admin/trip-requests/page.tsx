@@ -105,18 +105,18 @@ function googleMapsDirectionsUrl(
 }
 
 const statusColors: Record<string, string> = {
-  requested: 'bg-yellow-100 text-yellow-800',
-  accepted: 'bg-blue-100 text-blue-800',
-  picked_up: 'bg-purple-100 text-purple-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
+  requested: 'bg-warning-soft text-warning-soft-foreground',
+  accepted: 'bg-info-soft text-info-soft-foreground',
+  picked_up: 'bg-violet-soft text-violet-soft-foreground',
+  completed: 'bg-success-soft text-success-soft-foreground',
+  cancelled: 'bg-danger-soft text-danger-soft-foreground',
 }
 
 const tripTypeColors: Record<string, string> = {
-  airport: 'bg-indigo-100 text-indigo-800',
-  short_drop: 'bg-blue-100 text-blue-800',
-  market: 'bg-green-100 text-green-800',
-  other: 'bg-gray-100 text-gray-800',
+  airport: 'bg-violet-soft text-violet-soft-foreground',
+  short_drop: 'bg-info-soft text-info-soft-foreground',
+  market: 'bg-success-soft text-success-soft-foreground',
+  other: 'bg-muted text-secondary-foreground',
 }
 
 function TripRequestsContent() {
@@ -219,7 +219,7 @@ function TripRequestsContent() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center">
-            <ClipboardList className="h-8 w-8 text-blue-600" />
+            <ClipboardList className="h-8 w-8 text-primary-strong" />
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Total Requests</p>
               <p className="text-2xl font-semibold text-gray-900">{total}</p>
@@ -266,7 +266,7 @@ function TripRequestsContent() {
                 placeholder="Search by rider name, phone, or pickup address..."
                 value={searchInput}
                 onChange={e => setSearchInput(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
               />
             </div>
           </div>
@@ -274,7 +274,7 @@ function TripRequestsContent() {
             <select
               value={status}
               onChange={e => setFilter('status', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
             >
               <option value="all">All Status</option>
               <option value="requested">Requested</option>
@@ -288,7 +288,7 @@ function TripRequestsContent() {
             <select
               value={tripType}
               onChange={e => setFilter('type', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
             >
               <option value="all">All Trip Types</option>
               <option value="airport">Airport</option>
@@ -304,7 +304,7 @@ function TripRequestsContent() {
             type="date"
             value={startDate}
             onChange={e => setFilter('start', e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-sm"
             aria-label="Filter from date"
           />
           <span className="text-gray-400 text-sm">to</span>
@@ -312,7 +312,7 @@ function TripRequestsContent() {
             type="date"
             value={endDate}
             onChange={e => setFilter('end', e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-sm"
             aria-label="Filter to date"
           />
         </div>
@@ -348,7 +348,7 @@ function TripRequestsContent() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-strong mx-auto"></div>
           </div>
         ) : requests && requests.length > 0 ? (
           view === 'card' ? (
@@ -366,14 +366,14 @@ function TripRequestsContent() {
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            statusColors[r.status] ?? 'bg-gray-100 text-gray-800'
+                            statusColors[r.status] ?? 'bg-muted text-secondary-foreground'
                           }`}
                         >
                           {formatStatus(r.status)}
                         </span>
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            tripTypeColors[r.trip_type] ?? 'bg-gray-100 text-gray-800'
+                            tripTypeColors[r.trip_type] ?? 'bg-muted text-secondary-foreground'
                           }`}
                         >
                           {formatStatus(r.trip_type)}
@@ -444,8 +444,8 @@ function TripRequestsContent() {
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                              <User className="h-4 w-4 text-blue-600" />
+                            <div className="h-8 w-8 bg-primary-soft-deep rounded-full flex items-center justify-center flex-shrink-0">
+                              <User className="h-4 w-4 text-primary-strong" />
                             </div>
                             <div className="ml-3">
                               <div className="text-sm font-medium text-gray-900">
@@ -474,12 +474,12 @@ function TripRequestsContent() {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tripTypeColors[r.trip_type] ?? 'bg-gray-100 text-gray-800'}`}>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tripTypeColors[r.trip_type] ?? 'bg-muted text-secondary-foreground'}`}>
                             {formatStatus(r.trip_type)}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[r.status] ?? 'bg-gray-100 text-gray-800'}`}>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[r.status] ?? 'bg-muted text-secondary-foreground'}`}>
                             {formatStatus(r.status)}
                           </span>
                         </td>
@@ -559,7 +559,7 @@ function TripRequestsContent() {
               <select
                 value={pageSize}
                 onChange={e => setPageSize(Number(e.target.value))}
-                className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-ring focus:border-ring"
               >
                 {PAGE_SIZE_OPTIONS.map(n => (
                   <option key={n} value={n}>
@@ -626,13 +626,13 @@ function TripRequestsContent() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="rounded-lg border border-gray-200 p-3">
                   <p className="text-xs uppercase tracking-wide text-gray-500">Status</p>
-                  <span className={`mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[selectedRequest.status] ?? 'bg-gray-100 text-gray-800'}`}>
+                  <span className={`mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[selectedRequest.status] ?? 'bg-muted text-secondary-foreground'}`}>
                     {formatStatus(selectedRequest.status)}
                   </span>
                 </div>
                 <div className="rounded-lg border border-gray-200 p-3">
                   <p className="text-xs uppercase tracking-wide text-gray-500">Trip Type</p>
-                  <span className={`mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tripTypeColors[selectedRequest.trip_type] ?? 'bg-gray-100 text-gray-800'}`}>
+                  <span className={`mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tripTypeColors[selectedRequest.trip_type] ?? 'bg-muted text-secondary-foreground'}`}>
                     {formatStatus(selectedRequest.trip_type)}
                   </span>
                 </div>

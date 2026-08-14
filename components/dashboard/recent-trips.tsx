@@ -35,11 +35,11 @@ async function fetchRecentTrips() {
 }
 
 const statusColors = {
-  requested: "bg-yellow-100 text-yellow-800",
-  accepted: "bg-blue-100 text-blue-800",
-  picked_up: "bg-purple-100 text-purple-800",
-  completed: "bg-green-100 text-green-800",
-  cancelled: "bg-red-100 text-red-800",
+  requested: "bg-warning-soft text-warning-soft-foreground",
+  accepted: "bg-info-soft text-info-soft-foreground",
+  picked_up: "bg-violet-soft text-violet-soft-foreground",
+  completed: "bg-success-soft text-success-soft-foreground",
+  cancelled: "bg-danger-soft text-danger-soft-foreground",
 };
 
 export function RecentTrips() {
@@ -55,7 +55,7 @@ export function RecentTrips() {
         <h2 className="text-lg font-semibold text-gray-900">Recent Trips</h2>
         <Link
           href="/admin/trips"
-          className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+          className="text-sm text-primary-strong hover:text-primary-hover font-medium"
         >
           View all
         </Link>
@@ -75,7 +75,7 @@ export function RecentTrips() {
             <Link
               key={trip.id}
               href={`/admin/trips/${trip.id}`}
-              className="block p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-sm transition-all"
+              className="block p-4 border border-gray-200 rounded-lg hover:border-primary-soft-deep hover:shadow-sm transition-all"
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1 min-w-0">

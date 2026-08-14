@@ -1,0 +1,14 @@
+{
+  "_comment": "Pass A — whole-string rules. These paired fill+text strings are the status-badge vocabulary, copy-pasted into ~16 inlined maps across the admin pages. Resolving them as WHOLE strings is what keeps `bg-blue-100` (a brand avatar tile) distinct from `bg-blue-100 text-blue-800` (an 'accepted' status badge). Order matters: this pass runs before any single-class map.",
+
+  "bg-green-100 text-green-800": "bg-success-soft text-success-soft-foreground",
+  "bg-red-100 text-red-800": "bg-danger-soft text-danger-soft-foreground",
+  "bg-yellow-100 text-yellow-800": "bg-warning-soft text-warning-soft-foreground",
+  "bg-blue-100 text-blue-800": "bg-info-soft text-info-soft-foreground",
+  "bg-purple-100 text-purple-800": "bg-violet-soft text-violet-soft-foreground",
+  "bg-indigo-100 text-indigo-800": "bg-violet-soft text-violet-soft-foreground",
+  "bg-gray-100 text-gray-800": "bg-muted text-secondary-foreground",
+
+  "bg-emerald-100 text-emerald-800": "bg-success-soft text-success-soft-foreground",
+  "bg-amber-100 text-amber-800": "bg-warning-soft text-warning-soft-foreground"
+}

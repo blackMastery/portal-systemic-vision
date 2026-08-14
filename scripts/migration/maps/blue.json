@@ -1,0 +1,34 @@
+{
+  "_comment": "Pass B — brand blue. Run AFTER maps/status-pairs.json, which consumes the `bg-blue-100 text-blue-800` status badges. What survives here is genuinely brand chrome. Disambiguation rule: would this element still be blue if the brand were purple? Yes -> info. No -> primary.",
+
+  "focus:ring-blue-500": "focus:ring-ring",
+  "focus-visible:ring-blue-500": "focus-visible:ring-ring",
+  "focus:border-blue-500": "focus:border-ring",
+  "hover:ring-blue-400": "hover:ring-ring",
+  "border-blue-500": "border-ring",
+
+  "text-blue-600": "text-primary-strong",
+  "text-blue-700": "text-primary-strong",
+  "text-blue-500": "text-primary-strong",
+  "hover:text-blue-700": "hover:text-primary-hover",
+  "hover:text-blue-800": "hover:text-primary-hover",
+  "hover:text-blue-900": "hover:text-primary-hover",
+
+  "bg-blue-600": "bg-primary",
+  "hover:bg-blue-700": "hover:bg-primary-hover",
+  "disabled:bg-blue-400": "disabled:bg-primary",
+  "bg-blue-400": "bg-info",
+
+  "bg-blue-50": "bg-primary-soft",
+  "hover:bg-blue-50": "hover:bg-primary-soft",
+  "bg-blue-100": "bg-primary-soft-deep",
+  "hover:bg-blue-100": "hover:bg-primary-soft-deep",
+  "from-blue-50": "from-primary-soft",
+
+  "border-blue-600": "border-primary-strong",
+  "border-blue-200": "border-primary-soft-deep",
+  "hover:border-blue-200": "hover:border-primary-soft-deep",
+  "hover:border-blue-300": "hover:border-primary-soft-deep",
+
+  "text-blue-800": "text-info-soft-foreground"
+}

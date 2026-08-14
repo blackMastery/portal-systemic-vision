@@ -203,7 +203,7 @@ export function AgreementAcceptancesLog({
                           <button
                             type="button"
                             onClick={() => void onDownloadPdf(r.id)}
-                            className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm"
+                            className="inline-flex items-center gap-1 text-primary-strong hover:text-primary-hover text-sm"
                           >
                             <Download className="h-4 w-4" />
                             Download

@@ -18,9 +18,9 @@ import {
 type Tab = 'zones' | 'landmarks'
 
 const inputClass =
-  'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+  'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-ring'
 const btnPrimary =
-  'inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50'
+  'inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-hover disabled:opacity-50'
 const btnSecondary =
   'inline-flex items-center justify-center gap-2 px-3 py-1.5 border border-gray-300 text-sm rounded-lg hover:bg-gray-50'
 
@@ -77,7 +77,7 @@ export default function CostEstimateLandmarksPage() {
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <MapPin className="h-8 w-8 text-blue-600" aria-hidden />
+          <MapPin className="h-8 w-8 text-primary-strong" aria-hidden />
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Cost estimate landmarks</h1>
             <p className="text-sm text-gray-600 mt-1">
@@ -93,7 +93,7 @@ export default function CostEstimateLandmarksPage() {
           onClick={() => setTab('landmarks')}
           className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
             tab === 'landmarks'
-              ? 'border-blue-600 text-blue-700'
+              ? 'border-primary-strong text-primary-strong'
               : 'border-transparent text-gray-600 hover:text-gray-900'
           }`}
         >
@@ -104,7 +104,7 @@ export default function CostEstimateLandmarksPage() {
           onClick={() => setTab('zones')}
           className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
             tab === 'zones'
-              ? 'border-blue-600 text-blue-700'
+              ? 'border-primary-strong text-primary-strong'
               : 'border-transparent text-gray-600 hover:text-gray-900'
           }`}
         >

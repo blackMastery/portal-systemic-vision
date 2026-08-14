@@ -96,18 +96,18 @@ async function fetchTripDetail(tripId: string): Promise<TripDetailData> {
 }
 
 const statusColors: Record<TripStatus, string> = {
-  requested: 'bg-yellow-100 text-yellow-800',
-  accepted: 'bg-blue-100 text-blue-800',
-  picked_up: 'bg-purple-100 text-purple-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
+  requested: 'bg-warning-soft text-warning-soft-foreground',
+  accepted: 'bg-info-soft text-info-soft-foreground',
+  picked_up: 'bg-violet-soft text-violet-soft-foreground',
+  completed: 'bg-success-soft text-success-soft-foreground',
+  cancelled: 'bg-danger-soft text-danger-soft-foreground',
 }
 
 const tripTypeColors: Record<TripType, string> = {
-  airport: 'bg-indigo-100 text-indigo-800',
-  short_drop: 'bg-blue-100 text-blue-800',
-  market: 'bg-green-100 text-green-800',
-  other: 'bg-gray-100 text-gray-800',
+  airport: 'bg-violet-soft text-violet-soft-foreground',
+  short_drop: 'bg-info-soft text-info-soft-foreground',
+  market: 'bg-success-soft text-success-soft-foreground',
+  other: 'bg-muted text-secondary-foreground',
 }
 
 function StarRating({ value, label }: { value: number | null | undefined; label: string }) {
@@ -204,7 +204,7 @@ export default function TripDetailPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-strong mx-auto mb-4" />
           <p className="text-gray-600">Loading trip details...</p>
         </div>
       </div>
@@ -219,7 +219,7 @@ export default function TripDetailPage() {
           <p className="text-gray-900 font-medium mb-2">Trip not found</p>
           <Link
             href="/admin/trips"
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Trips
@@ -237,7 +237,7 @@ export default function TripDetailPage() {
   // Timeline events in order
   const timelineEvents = [
     { label: 'Requested', timestamp: trip.requested_at, icon: Clock, color: 'bg-yellow-100 text-yellow-600' },
-    { label: 'Accepted by Driver', timestamp: trip.accepted_at, icon: CheckCircle, color: 'bg-blue-100 text-blue-600' },
+    { label: 'Accepted by Driver', timestamp: trip.accepted_at, icon: CheckCircle, color: 'bg-primary-soft-deep text-primary-strong' },
     { label: 'Driver Arrived', timestamp: trip.driver_arrived_at, icon: Navigation, color: 'bg-purple-100 text-purple-600' },
     { label: 'Picked Up', timestamp: trip.picked_up_at, icon: Users, color: 'bg-indigo-100 text-indigo-600' },
     { label: 'Completed', timestamp: trip.completed_at, icon: CheckCircle, color: 'bg-green-100 text-green-600' },
@@ -301,7 +301,7 @@ export default function TripDetailPage() {
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
           <div className="flex items-center gap-3 mb-1">
-            <Route className="h-5 w-5 text-blue-600" />
+            <Route className="h-5 w-5 text-primary-strong" />
             <span className="text-sm text-gray-500">Distance</span>
           </div>
           <p className="text-xl sm:text-2xl font-bold text-gray-900">
@@ -432,7 +432,7 @@ export default function TripDetailPage() {
               </div>
               <Link
                 href={`/admin/riders/${trip.rider.id}`}
-                className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
+                className="inline-flex items-center text-sm text-primary-strong hover:text-primary-hover"
               >
                 View rider profile →
               </Link>
@@ -451,8 +451,8 @@ export default function TripDetailPage() {
           {trip.driver?.user ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Car className="h-6 w-6 text-blue-600" />
+                <div className="h-12 w-12 bg-primary-soft-deep rounded-full flex items-center justify-center">
+                  <Car className="h-6 w-6 text-primary-strong" />
                 </div>
                 <div>
                   <p className="font-semibold text-gray-900">{trip.driver.user.full_name}</p>
@@ -465,7 +465,7 @@ export default function TripDetailPage() {
               </div>
               <Link
                 href={`/admin/drivers/${trip.driver.id}`}
-                className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
+                className="inline-flex items-center text-sm text-primary-strong hover:text-primary-hover"
               >
                 View driver profile →
               </Link>

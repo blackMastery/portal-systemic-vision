@@ -59,9 +59,22 @@ if (has('--inventory')) {
     fs.readFileSync(path.join(__dirname, 'inventory.json'), 'utf8')
   )
   stringRules = inv.rows.filter((r) => r.to && r.to !== r.from)
-  // Longest first so a shorter string can never pre-empt a longer superset.
-  stringRules.sort((a, b) => b.from.length - a.from.length)
 }
+
+// Decisions kept outside inventory.json so they survive a regeneration
+// (inventory.js resets every `to` to null).
+const stringsArg = val('--strings')
+if (stringsArg) {
+  const m = JSON.parse(fs.readFileSync(stringsArg, 'utf8'))
+  stringRules.push(
+    ...Object.entries(m)
+      .filter(([from, to]) => to && to !== from)
+      .map(([from, to]) => ({ from, to }))
+  )
+}
+
+// Longest first so a shorter string can never pre-empt a longer superset.
+stringRules.sort((a, b) => b.from.length - a.from.length)
 
 const mapArg = val('--map')
 if (mapArg) {
@@ -73,7 +86,9 @@ if (mapArg) {
 }
 
 if (!stringRules.length && !tokenRules.length) {
-  console.error('nothing to do: pass --inventory and/or --map <file.json>')
+  console.error(
+    'nothing to do: pass --inventory, --strings <file.json> and/or --map <file.json>'
+  )
   process.exit(2)
 }
 

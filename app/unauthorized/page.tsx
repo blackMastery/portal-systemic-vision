@@ -3,7 +3,7 @@ import { Shield, Home, LogIn } from 'lucide-react'
 
 export default function UnauthorizedPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-soft to-indigo-100 px-4">
       <div className="max-w-md w-full bg-white rounded-xl shadow-2xl p-8 text-center">
         <div className="flex justify-center mb-4">
           <div className="rounded-full bg-red-100 p-3">
@@ -26,7 +26,7 @@ export default function UnauthorizedPage() {
         <div className="flex flex-col gap-3">
           <Link
             href="/login"
-            className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center justify-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
           >
             <LogIn className="h-4 w-4 mr-2" />
             Sign in as Admin

@@ -108,8 +108,8 @@ function Stars({ rating }: { rating: number | null }) {
 }
 
 const statusColors: Record<ReviewItem['status'], string> = {
-  open: 'bg-red-100 text-red-800',
-  resolved: 'bg-green-100 text-green-800',
+  open: 'bg-danger-soft text-danger-soft-foreground',
+  resolved: 'bg-success-soft text-success-soft-foreground',
   dismissed: 'bg-gray-100 text-gray-700',
 }
 
@@ -149,7 +149,7 @@ export default function ReviewQueueDetailPage() {
   if (isLoading) {
     return (
       <div className="p-8 text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-strong mx-auto" />
       </div>
     )
   }
@@ -228,7 +228,7 @@ export default function ReviewQueueDetailPage() {
                   </>
                 ) : (
                   <>
-                    <Flag className="h-4 w-4 text-blue-600" />
+                    <Flag className="h-4 w-4 text-primary-strong" />
                     Manual flag
                   </>
                 )}
@@ -291,7 +291,7 @@ export default function ReviewQueueDetailPage() {
               <div className="pt-3 border-t border-gray-100">
                 <Link
                   href={`/admin/trips/${item.trip.id}`}
-                  className="text-sm text-blue-600 hover:text-blue-800"
+                  className="text-sm text-primary-strong hover:text-primary-hover"
                 >
                   View full trip →
                 </Link>
@@ -326,7 +326,7 @@ export default function ReviewQueueDetailPage() {
           </div>
           <Link
             href={`/admin/riders/${item.rider_id}`}
-            className="text-sm text-blue-600 hover:text-blue-800"
+            className="text-sm text-primary-strong hover:text-primary-hover"
           >
             View rider profile →
           </Link>
@@ -343,7 +343,7 @@ export default function ReviewQueueDetailPage() {
           {item.trip?.driver?.id && (
             <Link
               href={`/admin/drivers/${item.trip.driver.id}`}
-              className="text-sm text-blue-600 hover:text-blue-800"
+              className="text-sm text-primary-strong hover:text-primary-hover"
             >
               View driver profile →
             </Link>
@@ -387,7 +387,7 @@ export default function ReviewQueueDetailPage() {
                 rows={4}
                 maxLength={1000}
                 placeholder="What was decided and why?"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-sm"
               />
               <p className="mt-1 text-xs text-gray-500">
                 {note.length}/1000 characters

@@ -87,9 +87,9 @@ async function fetchActors(actorIds: string[]) {
 }
 
 const actionColors = {
-  INSERT: 'bg-green-100 text-green-800',
-  UPDATE: 'bg-blue-100 text-blue-800',
-  DELETE: 'bg-red-100 text-red-800',
+  INSERT: 'bg-success-soft text-success-soft-foreground',
+  UPDATE: 'bg-info-soft text-info-soft-foreground',
+  DELETE: 'bg-danger-soft text-danger-soft-foreground',
 }
 
 export default function AuditLogPage() {
@@ -146,7 +146,7 @@ export default function AuditLogPage() {
                 setTableName(e.target.value)
                 setPage(0)
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-sm"
             >
               <option value="all">All tables</option>
               {AUDITED_TABLES.map((t) => (
@@ -164,7 +164,7 @@ export default function AuditLogPage() {
                 setAction(e.target.value)
                 setPage(0)
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-sm"
             >
               <option value="all">All</option>
               <option value="INSERT">Insert</option>
@@ -181,7 +181,7 @@ export default function AuditLogPage() {
                 setDateFrom(e.target.value)
                 setPage(0)
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-sm"
             />
           </div>
           <div>
@@ -193,7 +193,7 @@ export default function AuditLogPage() {
                 setDateTo(e.target.value)
                 setPage(0)
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-sm"
             />
           </div>
         </div>
@@ -224,7 +224,7 @@ export default function AuditLogPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-strong mx-auto" />
           </div>
         ) : rows.length > 0 ? (
           <>

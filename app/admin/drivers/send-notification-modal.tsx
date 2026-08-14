@@ -180,7 +180,7 @@ export function SendNotificationModal({
       <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-start justify-between gap-3 px-6 pt-6 pb-3 border-b border-gray-100">
           <div>
-            <div className="flex items-center gap-2 text-blue-600 mb-1">
+            <div className="flex items-center gap-2 text-primary-strong mb-1">
               <Megaphone className="h-5 w-5" />
               <span className="text-xs font-medium uppercase tracking-wide">
                 Push
@@ -228,7 +228,7 @@ export function SendNotificationModal({
                 maxLength={100}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-ring focus:ring-1 focus:ring-ring"
                 placeholder="e.g. Service update"
               />
               <p className="mt-1 text-xs text-gray-500">{title.length}/100</p>
@@ -248,7 +248,7 @@ export function SendNotificationModal({
                 rows={4}
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-ring focus:ring-1 focus:ring-ring"
                 placeholder="Notification body shown on the device"
               />
               <p className="mt-1 text-xs text-gray-500">{body.length}/500</p>
@@ -266,7 +266,7 @@ export function SendNotificationModal({
                 type="text"
                 value={notificationType}
                 onChange={(e) => setNotificationType(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-ring focus:ring-1 focus:ring-ring"
                 placeholder="e.g. announcement"
               />
             </div>
@@ -286,7 +286,7 @@ export function SendNotificationModal({
                   setDataJson(e.target.value)
                   setDataError(null)
                 }}
-                className="w-full font-mono text-sm rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full font-mono text-sm rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-ring focus:ring-1 focus:ring-ring"
                 placeholder='{"screen":"home"} — keys and values must be strings'
               />
               {dataError && (
@@ -322,7 +322,7 @@ export function SendNotificationModal({
               <button
                 type="submit"
                 disabled={!canSend}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-primary-hover disabled:opacity-50 disabled:pointer-events-none"
               >
                 <Megaphone className="h-4 w-4" />
                 Continue
@@ -373,7 +373,7 @@ export function SendNotificationModal({
               <button
                 type="button"
                 onClick={handleConfirmSend}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-700"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-primary-hover"
               >
                 <Megaphone className="h-4 w-4" />
                 Confirm and send
@@ -384,7 +384,7 @@ export function SendNotificationModal({
 
         {step === 'submitting' && (
           <div className="px-6 py-10 flex flex-col items-center justify-center gap-3 text-gray-700">
-            <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+            <Loader2 className="h-6 w-6 animate-spin text-primary-strong" />
             <p className="text-sm">Sending notifications…</p>
           </div>
         )}
@@ -407,7 +407,7 @@ export function SendNotificationModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-hover"
               >
                 Done
               </button>

@@ -40,10 +40,10 @@ const categoryLabels: Record<IncidentCategory, string> = {
 }
 
 const statusColors: Record<IncidentStatus, string> = {
-  open: 'bg-red-100 text-red-800',
-  under_review: 'bg-amber-100 text-amber-800',
-  resolved: 'bg-green-100 text-green-800',
-  escalated: 'bg-purple-100 text-purple-800',
+  open: 'bg-danger-soft text-danger-soft-foreground',
+  under_review: 'bg-warning-soft text-warning-soft-foreground',
+  resolved: 'bg-success-soft text-success-soft-foreground',
+  escalated: 'bg-violet-soft text-violet-soft-foreground',
 }
 
 async function fetchIncidents(filters: {
@@ -223,7 +223,7 @@ export default function AdminIncidentsPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-strong mx-auto" />
           </div>
         ) : rows.length > 0 ? (
           <>
@@ -254,7 +254,7 @@ export default function AdminIncidentsPage() {
                       <td className="px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-500">
                         <Link
                           href={`/admin/incidents/${row.id}`}
-                          className="text-gray-700 hover:text-blue-700"
+                          className="text-gray-700 hover:text-primary-hover"
                         >
                           {format(new Date(row.created_at), 'MMM d, yyyy HH:mm')}
                         </Link>
@@ -285,7 +285,7 @@ export default function AdminIncidentsPage() {
                         {row.trip_id ? (
                           <Link
                             href={`/admin/trips/${row.trip_id}`}
-                            className="text-blue-600 hover:text-blue-800"
+                            className="text-primary-strong hover:text-primary-hover"
                           >
                             {row.trip?.pickup_address ?? row.trip_id.slice(0, 8) + '…'}
                           </Link>

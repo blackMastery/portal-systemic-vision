@@ -149,7 +149,7 @@ function MessageLogsContent() {
                 placeholder="Search recipient, message, or sender..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
               />
             </div>
           </div>
@@ -159,7 +159,7 @@ function MessageLogsContent() {
             <select
               value={channel}
               onChange={(e) => setChannel(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
             >
               <option value="all">All Channels</option>
               <option value="sms">SMS</option>
@@ -172,7 +172,7 @@ function MessageLogsContent() {
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
             >
               <option value="all">All Statuses</option>
               <option value="sent">Sent</option>
@@ -185,7 +185,7 @@ function MessageLogsContent() {
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
             >
               <option value="all">All Time</option>
               <option value="today">Today</option>
@@ -233,7 +233,7 @@ function MessageLogsContent() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-strong mx-auto"></div>
           </div>
         ) : logs && logs.length > 0 ? (
           viewMode === 'card' ? (
@@ -249,14 +249,14 @@ function MessageLogsContent() {
                     <div className="flex items-center gap-2">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          log.channel === 'sms' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                          log.channel === 'sms' ? 'bg-info-soft text-info-soft-foreground' : 'bg-violet-soft text-violet-soft-foreground'
                         }`}
                       >
                         {log.channel.toUpperCase()}
                       </span>
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          log.status === 'sent' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          log.status === 'sent' ? 'bg-success-soft text-success-soft-foreground' : 'bg-danger-soft text-danger-soft-foreground'
                         }`}
                       >
                         {log.status}
@@ -314,8 +314,8 @@ function MessageLogsContent() {
                           <span
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                               log.channel === 'sms'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-purple-100 text-purple-800'
+                                ? 'bg-info-soft text-info-soft-foreground'
+                                : 'bg-violet-soft text-violet-soft-foreground'
                             }`}
                           >
                             {log.channel.toUpperCase()}
@@ -359,8 +359,8 @@ function MessageLogsContent() {
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             log.status === 'sent'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
+                              ? 'bg-success-soft text-success-soft-foreground'
+                              : 'bg-danger-soft text-danger-soft-foreground'
                           }`}
                         >
                           {log.status}
@@ -510,7 +510,7 @@ function MessageLogsContent() {
                   type="button"
                   onClick={() => selectedLog && resendMutation.mutate(selectedLog.id)}
                   disabled={resendMutation.isPending}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:pointer-events-none"
                 >
                   <RefreshCw
                     className={`h-4 w-4 shrink-0 ${resendMutation.isPending ? 'animate-spin' : ''}`}

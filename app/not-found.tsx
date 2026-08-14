@@ -5,7 +5,7 @@ import { Home, ArrowLeft } from 'lucide-react'
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-soft to-indigo-100 px-4">
       <div className="max-w-md w-full bg-white rounded-xl shadow-2xl p-8 text-center">
         <div className="flex justify-center mb-4">
           <div className="rounded-full bg-yellow-100 p-3">
@@ -24,7 +24,7 @@ export default function NotFound() {
         <div className="flex flex-col sm:flex-row gap-3">
           <Link
             href="/admin/dashboard"
-            className="flex-1 flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex-1 flex items-center justify-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
           >
             <Home className="h-4 w-4 mr-2" />
             Go to Dashboard

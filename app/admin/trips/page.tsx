@@ -87,18 +87,18 @@ async function fetchTrips(filters: {
 }
 
 const statusColors = {
-  requested: 'bg-yellow-100 text-yellow-800',
-  accepted: 'bg-blue-100 text-blue-800',
-  picked_up: 'bg-purple-100 text-purple-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
+  requested: 'bg-warning-soft text-warning-soft-foreground',
+  accepted: 'bg-info-soft text-info-soft-foreground',
+  picked_up: 'bg-violet-soft text-violet-soft-foreground',
+  completed: 'bg-success-soft text-success-soft-foreground',
+  cancelled: 'bg-danger-soft text-danger-soft-foreground',
 }
 
 const tripTypeColors = {
-  airport: 'bg-indigo-100 text-indigo-800',
-  short_drop: 'bg-blue-100 text-blue-800',
-  market: 'bg-green-100 text-green-800',
-  other: 'bg-gray-100 text-gray-800',
+  airport: 'bg-violet-soft text-violet-soft-foreground',
+  short_drop: 'bg-info-soft text-info-soft-foreground',
+  market: 'bg-success-soft text-success-soft-foreground',
+  other: 'bg-muted text-secondary-foreground',
 }
 
 function TripsContent() {
@@ -166,7 +166,7 @@ function TripsContent() {
 
   const statusStats = [
     { key: 'total', label: 'Total', color: 'bg-yellow-50 border-yellow-200 text-yellow-800', dot: 'bg-yellow-400' },
-    { key: 'accepted', label: 'Accepted', color: 'bg-blue-50 border-blue-200 text-blue-800', dot: 'bg-blue-400' },
+    { key: 'accepted', label: 'Accepted', color: 'bg-primary-soft border-primary-soft-deep text-info-soft-foreground', dot: 'bg-info' },
     { key: 'picked_up', label: 'Picked Up', color: 'bg-purple-50 border-purple-200 text-purple-800', dot: 'bg-purple-400' },
     { key: 'completed', label: 'Completed', color: 'bg-green-50 border-green-200 text-green-800', dot: 'bg-green-400' },
     { key: 'cancelled', label: 'Cancelled', color: 'bg-red-50 border-red-200 text-red-800', dot: 'bg-red-400' },
@@ -185,7 +185,7 @@ function TripsContent() {
         {(activeTripsCount > 0 || pendingRequestsCount > 0) && (
           <div className="flex gap-2">
             {activeTripsCount > 0 && (
-              <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-lg">
+              <div className="inline-flex items-center px-4 py-2 bg-primary-soft-deep text-info-soft-foreground rounded-lg">
                 <Route className="h-5 w-5 mr-2" />
                 {activeTripsCount} Active
               </div>
@@ -235,7 +235,7 @@ function TripsContent() {
                 placeholder="Search by rider, driver, or address..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
               />
             </div>
           </div>
@@ -245,7 +245,7 @@ function TripsContent() {
             <select
               value={status}
               onChange={(e) => setFilter('status', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
             >
               <option value="all">All Status</option>
               <option value="requested">Requested</option>
@@ -262,7 +262,7 @@ function TripsContent() {
               type="date"
               value={startDate}
               onChange={(e) => setFilter('start', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
               aria-label="Filter from date"
             />
           </div>
@@ -273,7 +273,7 @@ function TripsContent() {
               type="date"
               value={endDate}
               onChange={(e) => setFilter('end', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
               aria-label="Filter to date"
             />
           </div>
@@ -283,7 +283,7 @@ function TripsContent() {
             <select
               value={tripType}
               onChange={(e) => setFilter('type', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
             >
               <option value="all">All Types</option>
               <option value="airport">Airport</option>
@@ -321,7 +321,7 @@ function TripsContent() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-strong mx-auto"></div>
           </div>
         ) : trips && trips.length > 0 ? (
           viewMode === 'card' ? (
@@ -371,8 +371,8 @@ function TripsContent() {
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <div className="h-6 w-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Car className="h-3 w-3 text-blue-600" />
+                        <div className="h-6 w-6 bg-primary-soft-deep rounded-full flex items-center justify-center flex-shrink-0">
+                          <Car className="h-3 w-3 text-primary-strong" />
                         </div>
                         <span className="text-gray-700 truncate max-w-[100px]">
                           {trip.driver?.user?.full_name ?? 'Unassigned'}
@@ -415,7 +415,7 @@ function TripsContent() {
                           </span>
                         )}
                       </div>
-                      <Link href={`/admin/trips/${trip.id}`} className="text-xs text-blue-600 hover:text-blue-900 font-medium">
+                      <Link href={`/admin/trips/${trip.id}`} className="text-xs text-primary-strong hover:text-primary-hover font-medium">
                         View →
                       </Link>
                     </div>
@@ -467,7 +467,7 @@ function TripsContent() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <Link
                           href={`/admin/trips/${trip.id}`}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-primary-strong hover:text-primary-hover"
                         >
                           View Details
                         </Link>
@@ -512,8 +512,8 @@ function TripsContent() {
                         {trip.driver?.user ? (
                           <div className="flex items-center">
                             <div className="h-8 w-8 flex-shrink-0">
-                              <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                <Car className="h-4 w-4 text-blue-600" />
+                              <div className="h-8 w-8 bg-primary-soft-deep rounded-full flex items-center justify-center">
+                                <Car className="h-4 w-4 text-primary-strong" />
                               </div>
                             </div>
                             <div className="ml-3">
@@ -645,7 +645,7 @@ function TripsContent() {
               <select
                 value={pageSize}
                 onChange={(e) => setPageSize(Number(e.target.value))}
-                className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-ring focus:border-ring"
               >
                 {PAGE_SIZE_OPTIONS.map((n) => (
                   <option key={n} value={n}>

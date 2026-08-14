@@ -310,7 +310,7 @@ export default function AdminSettingsPage() {
                           onChange={(e) =>
                             updateRow(row.app_type, row.platform, 'version_string', e.target.value)
                           }
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-ring focus:ring-1 focus:ring-ring text-sm"
                           placeholder="e.g. 1.0.5"
                         />
                       </div>
@@ -327,7 +327,7 @@ export default function AdminSettingsPage() {
                           onChange={(e) =>
                             updateRow(row.app_type, row.platform, 'build_number', e.target.value)
                           }
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-ring focus:ring-1 focus:ring-ring text-sm"
                           placeholder="e.g. 37"
                         />
                       </div>
@@ -339,7 +339,7 @@ export default function AdminSettingsPage() {
                         onChange={(e) =>
                           updateMandatory(row.app_type, row.platform, e.target.checked)
                         }
-                        className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="mt-0.5 rounded border-gray-300 text-primary-strong focus:ring-ring"
                       />
                       <span className="text-sm text-gray-700">
                         <span className="font-medium text-gray-900">Mandatory update</span>
@@ -371,7 +371,7 @@ export default function AdminSettingsPage() {
                 <button
                   type="submit"
                   disabled={saving || !!loadError}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white shadow hover:bg-primary-hover disabled:opacity-50 disabled:pointer-events-none"
                 >
                   {saving ? (
                     <>

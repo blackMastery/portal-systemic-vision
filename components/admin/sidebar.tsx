@@ -108,7 +108,7 @@ export function AdminSidebar() {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center h-16 px-6 border-b border-gray-200">
-            <h1 className="text-2xl font-bold text-blue-600">Links</h1>
+            <h1 className="text-2xl font-bold text-primary-strong">Links</h1>
           </div>
 
           {/* Navigation */}
@@ -133,11 +133,11 @@ export function AdminSidebar() {
                   onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
                     isActive
-                      ? 'bg-blue-50 text-blue-700'
+                      ? 'bg-primary-soft text-primary-strong'
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  <Icon className={`mr-3 h-5 w-5 ${isActive ? 'text-blue-700' : 'text-gray-400'}`} />
+                  <Icon className={`mr-3 h-5 w-5 ${isActive ? 'text-primary-strong' : 'text-gray-400'}`} />
                   <span className="flex-1">{item.name}</span>
                   {showBadge && (
                     <span

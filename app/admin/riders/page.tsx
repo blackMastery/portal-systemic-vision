@@ -84,17 +84,17 @@ async function fetchRiders(filters: {
 }
 
 const subscriptionBadgeColors = {
-  active: 'bg-green-100 text-green-800',
-  trial: 'bg-blue-100 text-blue-800',
-  expired: 'bg-red-100 text-red-800',
-  cancelled: 'bg-gray-100 text-gray-800',
+  active: 'bg-success-soft text-success-soft-foreground',
+  trial: 'bg-info-soft text-info-soft-foreground',
+  expired: 'bg-danger-soft text-danger-soft-foreground',
+  cancelled: 'bg-muted text-secondary-foreground',
 }
 
 const verificationBadgeColors: Record<VerificationStatus, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  approved: 'bg-green-100 text-green-800',
-  rejected: 'bg-red-100 text-red-800',
-  suspended: 'bg-gray-100 text-gray-800',
+  pending: 'bg-warning-soft text-warning-soft-foreground',
+  approved: 'bg-success-soft text-success-soft-foreground',
+  rejected: 'bg-danger-soft text-danger-soft-foreground',
+  suspended: 'bg-muted text-secondary-foreground',
 }
 
 const subscriptionValues = ['all', 'active', 'trial', 'expired', 'cancelled'] as const
@@ -185,7 +185,7 @@ export default function RidersPage() {
   const verificationStats = [
     { key: 'total', label: 'Total', color: 'bg-yellow-50 border-yellow-200 text-yellow-800', dot: 'bg-yellow-400' },
     { key: 'approved', label: 'Approved', color: 'bg-green-50 border-green-200 text-green-800', dot: 'bg-green-400' },
-    { key: 'pending', label: 'Pending', color: 'bg-blue-50 border-blue-200 text-blue-800', dot: 'bg-blue-400' },
+    { key: 'pending', label: 'Pending', color: 'bg-primary-soft border-primary-soft-deep text-info-soft-foreground', dot: 'bg-info' },
     { key: 'rejected', label: 'Rejected', color: 'bg-red-50 border-red-200 text-red-800', dot: 'bg-red-400' },
     { key: 'suspended', label: 'Suspended', color: 'bg-gray-50 border-gray-300 text-gray-800', dot: 'bg-gray-400' },
   ]
@@ -268,7 +268,7 @@ export default function RidersPage() {
           type="button"
           onClick={() => setNotificationModalOpen(true)}
           disabled={isLoading || totalRiders === 0}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:pointer-events-none"
           title={
             totalRiders === 0
               ? 'No riders match the current filters'
@@ -338,7 +338,7 @@ export default function RidersPage() {
                   setSearchQuery(e.target.value)
                   setCurrentPage(1)
                 }}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
               />
             </div>
           </div>
@@ -353,7 +353,7 @@ export default function RidersPage() {
                 )
                 setCurrentPage(1)
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
             >
               <option value="all">All Subscription Status</option>
               <option value="active">Active</option>
@@ -371,7 +371,7 @@ export default function RidersPage() {
                 setAccountStatus(parseEnumParam(e.target.value, accountValues, 'all'))
                 setCurrentPage(1)
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
             >
               <option value="all">All Account Status</option>
               <option value="active">Active</option>
@@ -389,7 +389,7 @@ export default function RidersPage() {
                 )
                 setCurrentPage(1)
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
             >
               <option value="all">All Verification</option>
               <option value="pending">Pending</option>
@@ -407,7 +407,7 @@ export default function RidersPage() {
                 setIdCardStatus(parseEnumParam(e.target.value, idCardValues, 'all'))
                 setCurrentPage(1)
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
             >
               <option value="all">All ID Card Status</option>
               <option value="has">Has ID Card</option>
@@ -423,7 +423,7 @@ export default function RidersPage() {
                 setProfilePhotoStatus(parseEnumParam(e.target.value, photoValues, 'all'))
                 setCurrentPage(1)
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
             >
               <option value="all">All Profile Photo Status</option>
               <option value="has">Has Profile Photo</option>
@@ -459,7 +459,7 @@ export default function RidersPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-strong mx-auto"></div>
           </div>
         ) : riders && riders.length > 0 ? (
           viewMode === 'card' ? (
@@ -488,7 +488,7 @@ export default function RidersPage() {
 
                     {/* Badges */}
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${rider.user?.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${rider.user?.is_active ? 'bg-success-soft text-success-soft-foreground' : 'bg-muted text-secondary-foreground'}`}>
                         {rider.user?.is_active ? 'Active' : 'Inactive'}
                       </span>
                       <span
@@ -519,7 +519,7 @@ export default function RidersPage() {
                           {rider.rating_average.toFixed(1)}
                         </span>
                       </div>
-                      <Link href={`/admin/riders/${rider.id}`} className="text-xs text-blue-600 hover:text-blue-900 font-medium">
+                      <Link href={`/admin/riders/${rider.id}`} className="text-xs text-primary-strong hover:text-primary-hover font-medium">
                         View →
                       </Link>
                     </div>
@@ -593,7 +593,7 @@ export default function RidersPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          rider.user?.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          rider.user?.is_active ? 'bg-success-soft text-success-soft-foreground' : 'bg-muted text-secondary-foreground'
                         }`}>
                           {rider.user?.is_active ? 'Active' : 'Inactive'}
                         </span>
@@ -655,7 +655,7 @@ export default function RidersPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <Link
                           href={`/admin/riders/${rider.id}`}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-primary-strong hover:text-primary-hover"
                         >
                           View Details
                         </Link>
