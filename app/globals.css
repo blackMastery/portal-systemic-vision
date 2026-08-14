@@ -2,50 +2,93 @@
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * Design tokens — the single source of truth for colour.
+ *
+ * STAGE A (this commit): every value below is numerically identical to the
+ * hardcoded Tailwind palette colour it replaces, so migrating a class to its
+ * token is a provable no-op. Verified by scripts/migration/color-signature.js.
+ *
+ * STAGE B (later): these values flip to the Links 592 palette. That is the ONLY
+ * file the recolour touches — which is the whole point of doing it this way.
+ *
+ * The `.dark` block was deleted: `darkMode` was never set, there are zero
+ * `dark:` utilities in the app, and nothing ever applied the class, so it was
+ * unreachable code. Leaving a stale shadcn-blue `.dark` behind would be a trap —
+ * the next person to enable dark mode would get an app that flips from brand
+ * orange to generic blue. `darkMode: 'class'` is now set explicitly in
+ * tailwind.config.ts so a stray `dark:` stays inert until someone opts in.
+ */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
-  }
+    /* ── Surfaces ─────────────────────────────────────────────────────── */
+    --background: 0 0% 100%;                    /* #FFFFFF  white      — <body> */
+    --canvas: 210 20% 98%;                      /* #F9FAFB  gray-50    — admin page canvas */
+    --card: 0 0% 100%;                          /* #FFFFFF  white      — elevated container */
+    --card-foreground: 220.9 39.3% 11%;         /* #111827  gray-900 */
+    --popover: 0 0% 100%;                       /* #FFFFFF  white      — modals, dropdowns */
+    --popover-foreground: 220.9 39.3% 11%;      /* #111827  gray-900 */
+    --muted: 220 14.3% 95.9%;                   /* #F3F4F6  gray-100   — header strips, inert chips */
+    --secondary: 220 14.3% 95.9%;               /* #F3F4F6  gray-100   — neutral button fill */
+    --secondary-foreground: 215 27.9% 16.9%;    /* #1F2937  gray-800 */
+    --accent: 210 20% 98%;                      /* #F9FAFB  gray-50    — row hover wash */
+    --accent-foreground: 220.9 39.3% 11%;       /* #111827  gray-900 */
+    --overlay: 0 0% 0%;                         /* #000000  black      — modal scrim */
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    /* ── Ink ──────────────────────────────────────────────────────────── */
+    --foreground: 220.9 39.3% 11%;              /* #111827  gray-900   — headings, values */
+    --foreground-secondary: 216.9 19.1% 26.7%;  /* #374151  gray-700   — cells, labels */
+    --foreground-muted: 220 8.9% 46.1%;         /* #6B7280  gray-500   — captions, helper text */
+    --foreground-faint: 217.9 10.6% 64.9%;      /* #9CA3AF  gray-400   — NON-TEXT only: icons */
+    --muted-foreground: 220 8.9% 46.1%;         /* alias of --foreground-muted */
+
+    /* ── Lines ────────────────────────────────────────────────────────── */
+    --border: 220 13% 91%;                      /* #E5E7EB  gray-200   — decorative hairlines */
+    --border-strong: 216 12.2% 83.9%;           /* #D1D5DB  gray-300   — table rules */
+    --input: 216 12.2% 83.9%;                   /* #D1D5DB  gray-300   — form control boundary */
+    --ring: 217.2 91.2% 59.8%;                  /* #3B82F6  blue-500   — focus indicator */
+
+    /* ── Brand ────────────────────────────────────────────────────────── */
+    --primary: 221.2 83.2% 53.3%;               /* #2563EB  blue-600   — FILL ONLY */
+    --primary-foreground: 0 0% 100%;            /* #FFFFFF  white      — label on the fill */
+    --primary-hover: 224.3 76.3% 48%;           /* #1D4ED8  blue-700 */
+    --primary-strong: 221.2 83.2% 53.3%;        /* #2563EB  blue-600   — brand as INK: links, icons */
+    --primary-soft: 213.8 100% 96.9%;           /* #EFF6FF  blue-50    — active nav, banners */
+    --primary-soft-deep: 214.3 94.6% 92.7%;     /* #DBEAFE  blue-100   — icon tiles, gradient stop */
+
+    /* ── Status: meaning, not brand. Never re-tinted in Stage B. ──────── */
+    --success: 142.1 76.2% 36.3%;               /* #16A34A  green-600 */
+    --success-foreground: 0 0% 100%;            /* #FFFFFF */
+    --success-soft: 140.6 84.2% 92.5%;          /* #DCFCE7  green-100 */
+    --success-soft-foreground: 142.8 64.2% 24.1%; /* #166534  green-800 */
+
+    --warning: 47.9 95.8% 53.1%;                /* #FACC15  yellow-400 — FILL ONLY */
+    --warning-foreground: 220.9 39.3% 11%;      /* #111827  gray-900   — ink on the fill */
+    --warning-strong: 40.6 96.1% 40.4%;         /* #CA8A04  yellow-600 — solid + white text */
+    --warning-soft: 54.9 96.7% 88%;             /* #FEF9C3  yellow-100 */
+    --warning-soft-foreground: 31.8 81% 28.8%;  /* #854D0E  yellow-800 */
+
+    --danger: 0 72.2% 50.6%;                    /* #DC2626  red-600 */
+    --danger-foreground: 0 0% 100%;             /* #FFFFFF */
+    --danger-soft: 0 93.3% 94.1%;               /* #FEE2E2  red-100 */
+    --danger-soft-foreground: 0 70% 35.3%;      /* #991B1B  red-800 */
+
+    /* Blue that means "accepted / trial / UPDATE", NOT brand. Stays blue when
+       the brand goes orange — collapsing it into primary would destroy the
+       status vocabulary. */
+    --info: 221.2 83.2% 53.3%;                  /* #2563EB  blue-600 */
+    --info-foreground: 0 0% 100%;               /* #FFFFFF */
+    --info-soft: 214.3 94.6% 92.7%;             /* #DBEAFE  blue-100 */
+    --info-soft-foreground: 225.9 70.7% 40.2%;  /* #1E40AF  blue-800 */
+
+    /* Categorical, deliberately not semantic: picked_up, escalated, airport.
+       Absorbs both purple and indigo. */
+    --violet: 271.5 81.3% 55.9%;                /* #9333EA  purple-600 */
+    --violet-foreground: 0 0% 100%;             /* #FFFFFF */
+    --violet-soft: 268.7 100% 95.5%;            /* #F3E8FF  purple-100 */
+    --violet-soft-foreground: 272.9 67.2% 39.4%; /* #6B21A8  purple-800 */
+
+    --radius: 0.5rem;
   }
 }
 
