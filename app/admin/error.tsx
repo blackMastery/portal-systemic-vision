@@ -42,7 +42,7 @@ export default function AdminError({ error, reset }: ErrorProps) {
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={reset}
-            className="flex-1 flex items-center justify-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
+            className="flex-1 flex items-center justify-center px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors"
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             Try again

@@ -580,7 +580,7 @@ function DriversContent() {
             type="button"
             onClick={() => setNotificationModalOpen(true)}
             disabled={isLoading || totalCount === 0}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:pointer-events-none"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:pointer-events-none"
             title={
               totalCount === 0
                 ? 'No drivers match the current filters'
@@ -631,7 +631,7 @@ function DriversContent() {
               )}
               {advancedFiltersExpanded ? 'Hide options' : 'Show options'}
               {!advancedFiltersExpanded && activeFilterCount > 0 && (
-                <span className="min-w-[1.25rem] h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-primary text-white text-xs font-semibold">
+                <span className="min-w-[1.25rem] h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
                   {activeFilterCount}
                 </span>
               )}
@@ -677,7 +677,7 @@ function DriversContent() {
             <SlidersHorizontal className="h-5 w-5 text-gray-600" aria-hidden />
             Filters
             {activeFilterCount > 0 && (
-              <span className="min-w-[1.25rem] h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-primary text-white text-xs font-semibold">
+              <span className="min-w-[1.25rem] h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
                 {activeFilterCount}
               </span>
             )}
@@ -732,7 +732,7 @@ function DriversContent() {
             <button
               type="button"
               onClick={() => setFiltersOpen(false)}
-              className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary-hover"
+              className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold text-primary-foreground bg-primary rounded-lg hover:bg-primary-hover"
             >
               Done
             </button>

@@ -341,7 +341,7 @@ export default function DriverDetailPage() {
           <p className="text-gray-600 mb-4">The driver you&apos;re looking for doesn&apos;t exist.</p>
           <Link
             href="/admin/drivers"
-            className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover"
+            className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Drivers
@@ -411,7 +411,7 @@ export default function DriverDetailPage() {
           </button>
           <button
             onClick={() => setShowVerificationModal(true)}
-            className="inline-flex items-center rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover sm:px-4 sm:py-2 sm:text-sm"
+            className="inline-flex items-center rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary-hover sm:px-4 sm:py-2 sm:text-sm"
           >
             <Edit className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
             Update Verification
@@ -1754,7 +1754,7 @@ function VerificationUpdateModal({
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Updating...' : 'Update Status'}

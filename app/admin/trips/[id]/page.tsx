@@ -219,7 +219,7 @@ export default function TripDetailPage() {
           <p className="text-gray-900 font-medium mb-2">Trip not found</p>
           <Link
             href="/admin/trips"
-            className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover"
+            className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Trips

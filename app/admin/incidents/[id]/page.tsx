@@ -582,7 +582,7 @@ export default function AdminIncidentDetailPage() {
                 type="button"
                 disabled={isPending}
                 onClick={handleStatusSave}
-                className="px-3 py-2 bg-primary text-white rounded-lg text-sm disabled:opacity-50"
+                className="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm disabled:opacity-50"
               >
                 Save
               </button>

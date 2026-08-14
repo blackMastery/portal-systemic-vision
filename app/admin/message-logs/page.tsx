@@ -510,7 +510,7 @@ function MessageLogsContent() {
                   type="button"
                   onClick={() => selectedLog && resendMutation.mutate(selectedLog.id)}
                   disabled={resendMutation.isPending}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:pointer-events-none"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-primary-foreground bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:pointer-events-none"
                 >
                   <RefreshCw
                     className={`h-4 w-4 shrink-0 ${resendMutation.isPending ? 'animate-spin' : ''}`}

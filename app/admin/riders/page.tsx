@@ -268,7 +268,7 @@ export default function RidersPage() {
           type="button"
           onClick={() => setNotificationModalOpen(true)}
           disabled={isLoading || totalRiders === 0}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:pointer-events-none"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:pointer-events-none"
           title={
             totalRiders === 0
               ? 'No riders match the current filters'

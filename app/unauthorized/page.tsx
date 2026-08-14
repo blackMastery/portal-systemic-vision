@@ -26,7 +26,7 @@ export default function UnauthorizedPage() {
         <div className="flex flex-col gap-3">
           <Link
             href="/login"
-            className="flex items-center justify-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
+            className="flex items-center justify-center px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors"
           >
             <LogIn className="h-4 w-4 mr-2" />
             Sign in as Admin

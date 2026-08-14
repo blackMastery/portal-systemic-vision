@@ -322,7 +322,7 @@ export function SendNotificationModal({
               <button
                 type="submit"
                 disabled={!canSend}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-primary-hover disabled:opacity-50 disabled:pointer-events-none"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary-hover disabled:opacity-50 disabled:pointer-events-none"
               >
                 <Megaphone className="h-4 w-4" />
                 Continue
@@ -373,7 +373,7 @@ export function SendNotificationModal({
               <button
                 type="button"
                 onClick={handleConfirmSend}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-primary-hover"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary-hover"
               >
                 <Megaphone className="h-4 w-4" />
                 Confirm and send
@@ -407,7 +407,7 @@ export function SendNotificationModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-hover"
+                className="px-4 py-2 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:bg-primary-hover"
               >
                 Done
               </button>

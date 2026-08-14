@@ -46,15 +46,21 @@
     --border: 220 13% 91%;                      /* #E5E7EB  gray-200   — decorative hairlines */
     --border-strong: 216 12.2% 83.9%;           /* #D1D5DB  gray-300   — table rules */
     --input: 216 12.2% 83.9%;                   /* #D1D5DB  gray-300   — form control boundary */
-    --ring: 217.2 91.2% 59.8%;                  /* #3B82F6  blue-500   — focus indicator */
+    /* Focus ring follows the brand, but uses primary-strong: the orange fill is
+       2.00:1 on white, below the 3:1 minimum for a non-text indicator. */
+    --ring: 26.1 90.5% 37.1%;                   /* #B45309  — 5.02:1 on white */
 
-    /* ── Brand ────────────────────────────────────────────────────────── */
-    --primary: 221.2 83.2% 53.3%;               /* #2563EB  blue-600   — FILL ONLY */
-    --primary-foreground: 0 0% 100%;            /* #FFFFFF  white      — label on the fill */
-    --primary-hover: 224.3 76.3% 48%;           /* #1D4ED8  blue-700 */
-    --primary-strong: 221.2 83.2% 53.3%;        /* #2563EB  blue-600   — brand as INK: links, icons */
-    --primary-soft: 213.8 100% 96.9%;           /* #EFF6FF  blue-50    — active nav, banners */
-    --primary-soft-deep: 214.3 94.6% 92.7%;     /* #DBEAFE  blue-100   — icon tiles, gradient stop */
+    /* ── Brand — STAGE B: Links 592 orange, matching the driver/rider apps ──
+       The brand orange is a FILL. At 2.00:1 on white it cannot carry text,
+       icons or strokes; --primary-strong does that job at 5.02:1. Never put
+       white on --primary: that pairing is 2.00:1 and fails AA even for large
+       text. --primary-foreground is dark ink at 8.05:1. */
+    --primary: 30.8 100% 62.5%;                 /* #FFA240  brand orange — FILL ONLY */
+    --primary-foreground: 0 0% 12.9%;           /* #212121  ink        — 8.05:1 on the fill */
+    --primary-hover: 31 74.2% 52.9%;            /* #E08A2E  darkened   — matches the apps' pressed state */
+    --primary-strong: 26.1 90.5% 37.1%;         /* #B45309  — brand as INK: links, icons, rings. 5.02:1 */
+    --primary-soft: 30 100% 95.1%;              /* #FFF3E6  — active nav, banners. strong-on-soft = 4.59:1 */
+    --primary-soft-deep: 30.4 100% 90%;         /* #FFE6CC  — icon tiles, gradient stop */
 
     /* ── Status: meaning, not brand. Never re-tinted in Stage B. ──────── */
     --success: 142.1 76.2% 36.3%;               /* #16A34A  green-600 */

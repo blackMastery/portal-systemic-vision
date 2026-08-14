@@ -284,7 +284,7 @@ export default function AdminNotificationsPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white shadow hover:bg-primary-hover disabled:opacity-50 disabled:pointer-events-none"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow hover:bg-primary-hover disabled:opacity-50 disabled:pointer-events-none"
           >
             {submitting ? (
               <>
