@@ -39,10 +39,10 @@ for (const file of sourceFiles()) {
 }
 
 // Compile Tailwind over the real content globs and collect emitted selectors.
+// Compile the real stylesheet so tokens defined in :root are in scope.
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'twverify-'))
-const cssIn = path.join(tmp, 'in.css')
+const cssIn = 'app/globals.css'
 const cssOut = path.join(tmp, 'out.css')
-fs.writeFileSync(cssIn, '@tailwind base;@tailwind components;@tailwind utilities;')
 
 try {
   execSync(`npx tailwindcss -i ${cssIn} -o ${cssOut}`, { stdio: 'pipe' })

@@ -57,17 +57,100 @@ if (argv[0] === '--diff') {
 // ---------------------------------------------------------------------------
 // Build the class -> declarations map by compiling Tailwind once.
 // ---------------------------------------------------------------------------
+// Compile the REAL stylesheet, not a synthetic one: `app/globals.css` is where
+// the :root custom properties live, and without them every `hsl(var(--x))`
+// resolves to nothing and the whole gate silently reports "unresolved".
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'twsig-'))
-const cssIn = path.join(tmp, 'in.css')
+const cssIn = 'app/globals.css'
 const cssOut = path.join(tmp, 'out.css')
-fs.writeFileSync(cssIn, '@tailwind base;@tailwind components;@tailwind utilities;')
 execSync(`npx tailwindcss -i ${cssIn} -o ${cssOut}`, { stdio: 'pipe' })
 const css = fs.readFileSync(cssOut, 'utf8')
 fs.rmSync(tmp, { recursive: true, force: true })
 
 const COLOR_PROP = /^(color|background-color|border(-[a-z]+)?-color|fill|stroke|outline-color|caret-color|accent-color|text-decoration-color|--tw-ring-color|--tw-gradient-from|--tw-gradient-to|--tw-gradient-via|--tw-shadow-color|--tw-ring-offset-color)$/
 
-/** class (unescaped) -> { prop: value } */
+// ---------------------------------------------------------------------------
+// Canonicalise colour values to `rgb(R G B)`.
+//
+// This is the crux of the gate. A palette class emits
+//   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1))
+// while the token that replaces it emits
+//   background-color: hsl(var(--card) / var(--tw-bg-opacity, 1))
+// Those differ as TEXT but are identical as COLOUR. Comparing raw declaration
+// strings would flag every single migrated class, making the gate useless for
+// the one thing it exists to prove. So: resolve the var, convert HSL to RGB,
+// and drop the opacity channel (which the migration never changes).
+// ---------------------------------------------------------------------------
+
+/** Parse `--name: H S% L%;` pairs out of the :root block. */
+function parseRootVars(cssText) {
+  const vars = new Map()
+  const root = cssText.match(/:root\s*\{([^}]*)\}/)
+  if (!root) return vars
+  for (const decl of root[1].split(';')) {
+    const m = decl.match(/^\s*(--[\w-]+)\s*:\s*(.+?)\s*$/)
+    if (m) vars.set(m[1], m[2])
+  }
+  return vars
+}
+
+function hslTripletToRgb(triplet) {
+  const m = triplet.match(/^([\d.]+)\s+([\d.]+)%\s+([\d.]+)%$/)
+  if (!m) return null
+  const h = parseFloat(m[1]) / 360
+  const s = parseFloat(m[2]) / 100
+  const l = parseFloat(m[3]) / 100
+  if (s === 0) {
+    const v = Math.round(l * 255)
+    return `rgb(${v} ${v} ${v})`
+  }
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s
+  const p = 2 * l - q
+  const hue = (t) => {
+    if (t < 0) t += 1
+    if (t > 1) t -= 1
+    if (t < 1 / 6) return p + (q - p) * 6 * t
+    if (t < 1 / 2) return q
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6
+    return p
+  }
+  const r = Math.round(hue(h + 1 / 3) * 255)
+  const g = Math.round(hue(h) * 255)
+  const b = Math.round(hue(h - 1 / 3) * 255)
+  return `rgb(${r} ${g} ${b})`
+}
+
+function canonicalColor(value, vars) {
+  let v = value.trim()
+  // Strip the alpha channel — migration never changes opacity.
+  v = v.replace(/\s*\/\s*var\([^)]*\)\s*/g, '').replace(/\s*\/\s*[\d.%]+\s*/g, '')
+  // hsl(var(--x)) -> resolve
+  const varMatch = v.match(/^hsl\(\s*var\((--[\w-]+)\)\s*\)$/)
+  if (varMatch) {
+    const triplet = vars.get(varMatch[1])
+    if (triplet) {
+      const rgb = hslTripletToRgb(triplet)
+      if (rgb) return rgb
+    }
+    return `unresolved(${varMatch[1]})`
+  }
+  // hsl(H S% L%) literal
+  const hslMatch = v.match(/^hsl\(\s*([\d.]+)\s+([\d.]+%)\s+([\d.]+%)\s*\)$/)
+  if (hslMatch) {
+    const rgb = hslTripletToRgb(`${hslMatch[1]} ${hslMatch[2]} ${hslMatch[3]}`)
+    if (rgb) return rgb
+  }
+  // rgb(R G B) already canonical — normalise whitespace/commas
+  const rgbMatch = v.match(/^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/)
+  if (rgbMatch) {
+    return `rgb(${Math.round(+rgbMatch[1])} ${Math.round(+rgbMatch[2])} ${Math.round(+rgbMatch[3])})`
+  }
+  return v
+}
+
+const rootVars = parseRootVars(css)
+
+/** class (unescaped) -> { prop: canonical rgb } */
 const declsFor = new Map()
 for (const m of css.matchAll(/((?:\.(?:\\.|[^\s{},>+~])+[^{]*?))\{([^}]*)\}/g)) {
   const selector = m[1]
@@ -82,7 +165,7 @@ for (const m of css.matchAll(/((?:\.(?:\\.|[^\s{},>+~])+[^{]*?))\{([^}]*)\}/g)) 
     const val = d.slice(i + 1).trim()
     if (!COLOR_PROP.test(prop)) continue
     if (!declsFor.has(cls)) declsFor.set(cls, {})
-    declsFor.get(cls)[prop] = val
+    declsFor.get(cls)[prop] = canonicalColor(val, rootVars)
   }
 }
 
