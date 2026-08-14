@@ -79,7 +79,7 @@ export function AgreementAcceptancesLog({
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-4">
-      <h3 className="text-md font-semibold text-gray-900">{title}</h3>
+      <h3 className="text-base font-semibold text-gray-900">{title}</h3>
       <p className="text-sm text-gray-600">{description}</p>
       {downloadErr && (
         <div className="text-sm text-red-600 flex items-center gap-2">

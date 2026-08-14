@@ -179,7 +179,7 @@ export function AgreementSettingsSection() {
                 key={aud}
                 className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-4"
               >
-                <h3 className="text-md font-semibold text-gray-900 flex items-center gap-2">
+                <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
                   <FileText className="h-5 w-5 text-gray-500" />
                   {label} agreement
                 </h3>
