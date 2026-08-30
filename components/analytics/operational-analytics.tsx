@@ -6,7 +6,9 @@ import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { formatGuyana } from '@/lib/guyana-time'
 import type { AnalyticsDateRange } from '@/types/analytics-date-range'
 import { ChartWrapper } from './chart-wrapper'
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { LineChart, toLineSeries } from './charts/line-chart'
+import { BarChart } from './charts/bar-chart'
+import { CHART_COLORS } from './chart-theme'
 import { Clock, TrendingUp } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/metric-card'
 
@@ -169,15 +171,10 @@ export function OperationalAnalytics({ dateRange }: OperationalAnalyticsProps) {
           isError={isError}
           isEmpty={Object.keys(peakHoursData).length === 0}
         >
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={peakHoursChart}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="hour" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="trips" fill="#3B82F6" />
-            </BarChart>
-          </ResponsiveContainer>
+          <BarChart
+            data={peakHoursChart.map(d => ({ label: d.hour, value: d.trips }))}
+            maxXTicks={8}
+          />
         </ChartWrapper>
 
         <ChartWrapper
@@ -187,17 +184,13 @@ export function OperationalAnalytics({ dateRange }: OperationalAnalyticsProps) {
           isError={isError}
           isEmpty={durationChart.length === 0}
         >
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={durationChart}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="estimated" stroke="#F59E0B" name="Estimated" />
-              <Line type="monotone" dataKey="actual" stroke="#10B981" name="Actual" />
-            </LineChart>
-          </ResponsiveContainer>
+          <LineChart
+            series={toLineSeries(durationChart as Record<string, unknown>[], [
+              { id: 'Estimated', key: 'estimated', color: CHART_COLORS.warningStrong },
+              { id: 'Actual', key: 'actual', color: CHART_COLORS.success },
+            ])}
+            valueFormat={v => `${v.toFixed(0)} min`}
+          />
         </ChartWrapper>
       </div>
     </div>

@@ -6,15 +6,15 @@ import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { formatGuyana } from '@/lib/guyana-time'
 import type { AnalyticsDateRange } from '@/types/analytics-date-range'
 import { ChartWrapper } from './chart-wrapper'
-import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { LineChart, toLineSeries } from './charts/line-chart'
+import { PieChart } from './charts/pie-chart'
+import { CHART_COLORS } from './chart-theme'
 import { Users, TrendingUp } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/metric-card'
 
 interface UserAnalyticsProps {
   dateRange: AnalyticsDateRange
 }
-
-const COLORS = ['#10B981', '#3B82F6', '#8B5CF6']
 
 type UserData = {
   created_at: string
@@ -159,18 +159,13 @@ export function UserAnalytics({ dateRange }: UserAnalyticsProps) {
           isError={isError}
           isEmpty={userGrowthChart.length === 0}
         >
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={userGrowthChart}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="riders" stroke="#10B981" name="Riders" />
-              <Line type="monotone" dataKey="drivers" stroke="#3B82F6" name="Drivers" />
-              <Line type="monotone" dataKey="total" stroke="#8B5CF6" name="Total" />
-            </LineChart>
-          </ResponsiveContainer>
+          <LineChart
+            series={toLineSeries(userGrowthChart as Record<string, unknown>[], [
+              { id: 'Riders', key: 'riders', color: CHART_COLORS.success },
+              { id: 'Drivers', key: 'drivers', color: CHART_COLORS.info },
+              { id: 'Total', key: 'total', color: CHART_COLORS.violet },
+            ])}
+          />
         </ChartWrapper>
 
         <ChartWrapper
@@ -180,17 +175,13 @@ export function UserAnalytics({ dateRange }: UserAnalyticsProps) {
           isError={isError}
           isEmpty={activeUsersChart.length === 0}
         >
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={activeUsersChart}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Area type="monotone" dataKey="riders" stackId="1" stroke="#10B981" fill="#10B981" name="Active Riders" />
-              <Area type="monotone" dataKey="drivers" stackId="1" stroke="#3B82F6" fill="#3B82F6" name="Active Drivers" />
-            </AreaChart>
-          </ResponsiveContainer>
+          <LineChart
+            stacked
+            series={toLineSeries(activeUsersChart as Record<string, unknown>[], [
+              { id: 'Active Riders', key: 'riders', color: CHART_COLORS.success },
+              { id: 'Active Drivers', key: 'drivers', color: CHART_COLORS.info },
+            ])}
+          />
         </ChartWrapper>
 
         <ChartWrapper
@@ -200,25 +191,11 @@ export function UserAnalytics({ dateRange }: UserAnalyticsProps) {
           isError={isError}
           isEmpty={roleChart.length === 0}
         >
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={roleChart}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {roleChart.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+          <PieChart
+            data={roleChart.map(d => ({ id: d.name, value: Number(d.value) }))}
+            centerLabel={String(totalUsers)}
+            centerCaption="users"
+          />
         </ChartWrapper>
       </div>
     </div>

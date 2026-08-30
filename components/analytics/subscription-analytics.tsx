@@ -7,7 +7,8 @@ import { formatGuyana } from '@/lib/guyana-time'
 import type { AnalyticsDateRange } from '@/types/analytics-date-range'
 import { ChartWrapper } from './chart-wrapper'
 import { formatCurrency } from '@/lib/format'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { LineChart, toLineSeries } from './charts/line-chart'
+import { CHART_COLORS } from './chart-theme'
 import { CreditCard, TrendingUp, AlertCircle } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/metric-card'
 
@@ -126,18 +127,13 @@ export function SubscriptionAnalytics({ dateRange }: SubscriptionAnalyticsProps)
           isError={isError}
           isEmpty={subscriptionTrendsChart.length === 0}
         >
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={subscriptionTrendsChart}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="new" stroke="#3B82F6" name="New" />
-              <Line type="monotone" dataKey="active" stroke="#10B981" name="Active" />
-              <Line type="monotone" dataKey="expired" stroke="#EF4444" name="Expired" />
-            </LineChart>
-          </ResponsiveContainer>
+          <LineChart
+            series={toLineSeries(subscriptionTrendsChart as Record<string, unknown>[], [
+              { id: 'New', key: 'new', color: CHART_COLORS.info },
+              { id: 'Active', key: 'active', color: CHART_COLORS.success },
+              { id: 'Expired', key: 'expired', color: CHART_COLORS.danger },
+            ])}
+          />
         </ChartWrapper>
       </div>
     </div>

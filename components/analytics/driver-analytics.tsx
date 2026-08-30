@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { ChartWrapper } from './chart-wrapper'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { BarChart } from './charts/bar-chart'
 import { Car, CheckCircle, Star } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/metric-card'
 
@@ -100,15 +100,7 @@ export function DriverAnalytics() {
         isError={isError}
         isEmpty={verificationChart.length === 0}
       >
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={verificationChart}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="value" fill="#3B82F6" />
-          </BarChart>
-        </ResponsiveContainer>
+        <BarChart data={verificationChart.map(d => ({ label: d.name, value: Number(d.value) }))} />
       </ChartWrapper>
     </div>
   )

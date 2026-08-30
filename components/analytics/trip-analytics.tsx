@@ -7,7 +7,9 @@ import { formatGuyana } from '@/lib/guyana-time'
 import type { AnalyticsDateRange } from '@/types/analytics-date-range'
 import { ChartWrapper } from './chart-wrapper'
 import { formatCurrency } from '@/lib/format'
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { LineChart, toLineSeries } from './charts/line-chart'
+import { BarChart } from './charts/bar-chart'
+import { CHART_COLORS } from './chart-theme'
 import { Route, DollarSign, TrendingUp } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/metric-card'
 
@@ -15,12 +17,9 @@ interface TripAnalyticsProps {
   dateRange: AnalyticsDateRange
 }
 
-const COLORS = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444']
-
 type TripData = {
   requested_at: string
   status: string
-  trip_type: string
   actual_fare: number | null
   estimated_fare: number | null
   actual_distance_km: number | null
@@ -37,7 +36,7 @@ async function fetchTripAnalytics(dateRange: AnalyticsDateRange) {
   const trips = await fetchAllRows<TripData>(() => {
     let query = supabase
       .from('trips')
-      .select('requested_at, status, trip_type, actual_fare, estimated_fare, actual_distance_km, estimated_distance_km, actual_duration_minutes')
+      .select('requested_at, status, actual_fare, estimated_fare, actual_distance_km, estimated_distance_km, actual_duration_minutes')
       .lte('requested_at', endDate)
       .order('requested_at', { ascending: true })
     if (startDate) query = query.gte('requested_at', startDate)
@@ -69,17 +68,6 @@ export function TripAnalytics({ dateRange }: TripAnalyticsProps) {
 
   const tripVolumeChart = Object.values(tripVolumeData as Record<string, { day: string }>)
     .sort((a, b) => a.day.localeCompare(b.day))
-
-  // Process trip type distribution (completed trips)
-  const tripTypeData = completedTripRows.reduce((acc: any, trip) => {
-    acc[trip.trip_type] = (acc[trip.trip_type] || 0) + 1
-    return acc
-  }, {})
-
-  const tripTypeChart = Object.entries(tripTypeData).map(([name, value]) => ({
-    name: name.replace('_', ' '),
-    value,
-  }))
 
   // Process status breakdown
   const statusData = data?.trips.reduce((acc: any, trip) => {
@@ -169,46 +157,13 @@ export function TripAnalytics({ dateRange }: TripAnalyticsProps) {
           isError={isError}
           isEmpty={tripVolumeChart.length === 0}
         >
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={tripVolumeChart}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="total" stroke="#3B82F6" name="Total" />
-              <Line type="monotone" dataKey="completed" stroke="#10B981" name="Completed" />
-              <Line type="monotone" dataKey="cancelled" stroke="#EF4444" name="Cancelled" />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartWrapper>
-
-        <ChartWrapper
-          title="Trip Type Distribution"
-          description="Distribution of completed trips by type"
-          isLoading={isLoading}
-          isError={isError}
-          isEmpty={tripTypeChart.length === 0}
-        >
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={tripTypeChart}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {tripTypeChart.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+          <LineChart
+            series={toLineSeries(tripVolumeChart as Record<string, unknown>[], [
+              { id: 'Total', key: 'total', color: CHART_COLORS.info },
+              { id: 'Completed', key: 'completed', color: CHART_COLORS.success },
+              { id: 'Cancelled', key: 'cancelled', color: CHART_COLORS.danger },
+            ])}
+          />
         </ChartWrapper>
 
         <ChartWrapper
@@ -218,15 +173,7 @@ export function TripAnalytics({ dateRange }: TripAnalyticsProps) {
           isError={isError}
           isEmpty={statusChart.length === 0}
         >
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={statusChart}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="value" fill="#3B82F6" />
-            </BarChart>
-          </ResponsiveContainer>
+          <BarChart data={statusChart.map(d => ({ label: d.name, value: Number(d.value) }))} />
         </ChartWrapper>
       </div>
     </div>

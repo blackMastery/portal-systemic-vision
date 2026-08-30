@@ -7,15 +7,16 @@ import { formatGuyana } from '@/lib/guyana-time'
 import type { AnalyticsDateRange } from '@/types/analytics-date-range'
 import { ChartWrapper } from './chart-wrapper'
 import { formatCurrency } from '@/lib/format'
-import { LineChart, Line, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { LineChart, toLineSeries } from './charts/line-chart'
+import { BarChart } from './charts/bar-chart'
+import { PieChart } from './charts/pie-chart'
+import { CHART_COLORS, formatCompactCurrency } from './chart-theme'
 import { DollarSign, TrendingUp } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/metric-card'
 
 interface FinancialAnalyticsProps {
   dateRange: AnalyticsDateRange
 }
-
-const COLORS = ['#10B981', '#3B82F6']
 
 type SubscriptionData = {
   created_at: string
@@ -176,18 +177,15 @@ export function FinancialAnalytics({ dateRange }: FinancialAnalyticsProps) {
           isError={isError}
           isEmpty={revenueChart.length === 0}
         >
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={revenueChart}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="subscription" stroke="#3B82F6" name="Subscription Revenue" />
-              <Line type="monotone" dataKey="trip" stroke="#10B981" name="Trip Revenue" />
-              <Line type="monotone" dataKey="total" stroke="#8B5CF6" name="Total Revenue" />
-            </LineChart>
-          </ResponsiveContainer>
+          <LineChart
+            series={toLineSeries(revenueChart as Record<string, unknown>[], [
+              { id: 'Subscription Revenue', key: 'subscription', color: CHART_COLORS.info },
+              { id: 'Trip Revenue', key: 'trip', color: CHART_COLORS.success },
+              { id: 'Total Revenue', key: 'total', color: CHART_COLORS.violet },
+            ])}
+            valueFormat={formatCurrency}
+            axisFormat={formatCompactCurrency}
+          />
         </ChartWrapper>
 
         <ChartWrapper
@@ -197,25 +195,13 @@ export function FinancialAnalytics({ dateRange }: FinancialAnalyticsProps) {
           isError={isError}
           isEmpty={totalRevenue === 0}
         >
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={revenueBySource}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, value, percent }) => `${name}: ${formatCurrency(value)} (${(percent * 100).toFixed(0)}%)`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {revenueBySource.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+          <PieChart
+            data={revenueBySource.map(d => ({ id: d.name, value: d.value }))}
+            colors={[CHART_COLORS.info, CHART_COLORS.success]}
+            valueFormat={formatCurrency}
+            centerLabel={formatCurrency(totalRevenue)}
+            centerCaption="revenue"
+          />
         </ChartWrapper>
 
         <ChartWrapper
@@ -225,15 +211,7 @@ export function FinancialAnalytics({ dateRange }: FinancialAnalyticsProps) {
           isError={isError}
           isEmpty={paymentStatusChart.length === 0}
         >
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={paymentStatusChart}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="value" fill="#3B82F6" />
-            </BarChart>
-          </ResponsiveContainer>
+          <BarChart data={paymentStatusChart.map(d => ({ label: d.name, value: Number(d.value) }))} />
         </ChartWrapper>
       </div>
     </div>
