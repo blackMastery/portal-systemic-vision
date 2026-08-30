@@ -89,11 +89,13 @@ async function fetchDashboardMetrics() {
   
   const { data: todayTrips } = await supabase
     .from('trips')
-    .select('actual_fare')
+    .select('actual_fare, estimated_fare')
     .gte('requested_at', today.toISOString())
     .eq('status', 'completed')
 
-  const todayRevenue = (todayTrips as Array<{ actual_fare: number | null }> | null)?.reduce((sum, trip) => sum + (trip.actual_fare || 0), 0) || 0
+  const todayTripRows = (todayTrips as Array<{ actual_fare: number | null; estimated_fare: number | null }> | null) || []
+  const todayRevenue = todayTripRows.reduce((sum, trip) => sum + (trip.actual_fare || 0), 0)
+  const todayEstimatedRevenue = todayTripRows.reduce((sum, trip) => sum + (trip.estimated_fare || 0), 0)
 
   return {
     activeDrivers: activeDrivers || 0,
@@ -104,8 +106,9 @@ async function fetchDashboardMetrics() {
     subscribedDrivers: subscribedDrivers || 0,
     expiringSoonDrivers: expiringSoonDrivers || 0,
     idleSubscribedDrivers: idleSubscribedDrivers || 0,
-    todayTripsCount: todayTrips?.length || 0,
-    todayRevenue
+    todayTripsCount: todayTripRows.length,
+    todayRevenue,
+    todayEstimatedRevenue
   }
 }
 
@@ -216,11 +219,19 @@ export default function DashboardPage() {
           href="/admin/trips"
         />
         <MetricCard
-          title="Today's Revenue"
+          title="Today's Revenue (Actual)"
           value={formatCurrency(metrics?.todayRevenue)}
-          description="Fares from today's completed trips"
+          description="Final fares charged on today's completed trips"
           icon={DollarSign}
           color="emerald"
+          href="/admin/payments"
+        />
+        <MetricCard
+          title="Today's Revenue (Estimated)"
+          value={formatCurrency(metrics?.todayEstimatedRevenue)}
+          description="Quoted fares on today's completed trips"
+          icon={DollarSign}
+          color="yellow"
           href="/admin/payments"
         />
       </div>
