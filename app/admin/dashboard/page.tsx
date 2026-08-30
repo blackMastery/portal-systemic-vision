@@ -146,6 +146,7 @@ export default function DashboardPage() {
         <MetricCard
           title="Active Drivers"
           value={metrics?.activeDrivers || 0}
+          description="Drivers currently online in the app"
           icon={Car}
           color="blue"
           href="/admin/drivers"
@@ -153,6 +154,7 @@ export default function DashboardPage() {
         <MetricCard
           title="Pending Drivers"
           value={metrics?.pendingDrivers || 0}
+          description="Sign-ups awaiting verification"
           icon={Clock}
           color="yellow"
           href="/admin/drivers?status=pending"
@@ -160,6 +162,7 @@ export default function DashboardPage() {
         <MetricCard
           title="Approved Drivers"
           value={metrics?.approvedDrivers || 0}
+          description="Verified and cleared to drive"
           icon={Car}
           color="green"
           href="/admin/drivers?status=approved"
@@ -167,6 +170,7 @@ export default function DashboardPage() {
         <MetricCard
           title="Active Riders"
           value={metrics?.activeRiders || 0}
+          description="Riders with an active subscription"
           icon={Users}
           color="green"
           href="/admin/riders"
@@ -174,6 +178,7 @@ export default function DashboardPage() {
         <MetricCard
           title="Active Trips"
           value={metrics?.activeTrips || 0}
+          description="Trips in progress right now"
           icon={Route}
           color="purple"
           href="/admin/trips"
@@ -181,6 +186,7 @@ export default function DashboardPage() {
         <MetricCard
           title="Subscribed Drivers (3+ Days Left)"
           value={metrics?.subscribedDrivers || 0}
+          description="Active subscriptions with 3+ days remaining"
           icon={CalendarCheck}
           color="emerald"
           href="/admin/drivers?sub=active&subexpiry=3plus"
@@ -188,6 +194,7 @@ export default function DashboardPage() {
         <MetricCard
           title="Subscriptions Expiring Soon (1-2 Days)"
           value={metrics?.expiringSoonDrivers || 0}
+          description="Active subscriptions ending within 2 days"
           icon={CalendarClock}
           color="red"
           href="/admin/drivers?sub=active&subexpiry=expiring"
@@ -195,6 +202,7 @@ export default function DashboardPage() {
         <MetricCard
           title="Subscribed Drivers Idle 2+ Days"
           value={metrics?.idleSubscribedDrivers || 0}
+          description="Subscribed but no accepted trip in 2+ days"
           icon={UserX}
           color="yellow"
           href="/admin/drivers?sub=active&activity=idle"
@@ -202,6 +210,7 @@ export default function DashboardPage() {
         <MetricCard
           title="Today's Trips"
           value={metrics?.todayTripsCount || 0}
+          description="Trips completed since midnight"
           icon={TrendingUp}
           color="indigo"
           href="/admin/trips"
@@ -209,6 +218,7 @@ export default function DashboardPage() {
         <MetricCard
           title="Today's Revenue"
           value={formatCurrency(metrics?.todayRevenue)}
+          description="Fares from today's completed trips"
           icon={DollarSign}
           color="emerald"
           href="/admin/payments"

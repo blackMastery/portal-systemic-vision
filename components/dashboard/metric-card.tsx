@@ -4,6 +4,7 @@ import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react'
 interface MetricCardProps {
   title: string
   value: string | number
+  description?: string
   icon: LucideIcon
   trend?: string
   trendUp?: boolean
@@ -24,6 +25,7 @@ const colorClasses = {
 export function MetricCard({
   title,
   value,
+  description,
   icon: Icon,
   trend,
   trendUp,
@@ -36,7 +38,11 @@ export function MetricCard({
         <div className="flex-1">
           <p className="text-sm font-medium text-gray-600">{title}</p>
           <p className="mt-2 text-3xl font-bold text-gray-900">{value}</p>
-          
+
+          {description && (
+            <p className="mt-1 text-xs text-gray-500">{description}</p>
+          )}
+
           {trend && (
             <div className="mt-2 flex items-center">
               {trendUp ? (
