@@ -2,14 +2,16 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
+import { formatGuyana } from '@/lib/guyana-time'
+import type { AnalyticsDateRange } from '@/types/analytics-date-range'
 import { ChartWrapper } from './chart-wrapper'
 import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Users, TrendingUp } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/metric-card'
-import { format } from 'date-fns'
 
 interface UserAnalyticsProps {
-  dateRange: { start: Date; end: Date }
+  dateRange: AnalyticsDateRange
 }
 
 const COLORS = ['#10B981', '#3B82F6', '#8B5CF6']
@@ -25,67 +27,75 @@ type ActiveUserData = {
   requested_at: string
 }
 
-async function fetchUserAnalytics(dateRange: { start: Date; end: Date }) {
+async function fetchUserAnalytics(dateRange: AnalyticsDateRange) {
   const supabase = createClient()
-  const startDate = dateRange.start.toISOString()
+  const startDate = dateRange.start?.toISOString()
   const endDate = dateRange.end.toISOString()
 
   // User growth
-  const { data: users } = await supabase
-    .from('users')
-    .select('created_at, role')
-    .gte('created_at', startDate)
-    .lte('created_at', endDate)
+  const users = await fetchAllRows<UserData>(() => {
+    let query = supabase
+      .from('users')
+      .select('created_at, role')
+      .lte('created_at', endDate)
+      .order('created_at', { ascending: true })
+    if (startDate) query = query.gte('created_at', startDate)
+    return query
+  })
 
   // Active users (users with trips in date range)
-  const { data: activeUsers } = await supabase
-    .from('trips')
-    .select('rider_id, driver_id, requested_at')
-    .gte('requested_at', startDate)
-    .lte('requested_at', endDate)
+  const activeUsers = await fetchAllRows<ActiveUserData>(() => {
+    let query = supabase
+      .from('trips')
+      .select('rider_id, driver_id, requested_at')
+      .lte('requested_at', endDate)
+      .order('requested_at', { ascending: true })
+    if (startDate) query = query.gte('requested_at', startDate)
+    return query
+  })
 
-  return {
-    users: (users as UserData[] | null) || [],
-    activeUsers: (activeUsers as ActiveUserData[] | null) || [],
-  }
+  return { users, activeUsers }
 }
 
 export function UserAnalytics({ dateRange }: UserAnalyticsProps) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['user-analytics', dateRange.start, dateRange.end],
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['user-analytics', dateRange.start?.toISOString() ?? 'all', dateRange.end.toISOString()],
     queryFn: () => fetchUserAnalytics(dateRange),
   })
 
-  // Process user growth
+  // Process user growth (bucketed by Guyana calendar day)
   const userGrowthData = data?.users.reduce((acc: any, user) => {
-    const date = format(new Date(user.created_at), 'MMM d')
-    if (!acc[date]) {
-      acc[date] = { date, riders: 0, drivers: 0, total: 0 }
+    const day = formatGuyana(user.created_at, 'yyyy-MM-dd')
+    if (!acc[day]) {
+      acc[day] = { day, date: formatGuyana(user.created_at, 'MMM d'), riders: 0, drivers: 0, total: 0 }
     }
-    acc[date].total++
-    if (user.role === 'rider') acc[date].riders++
-    if (user.role === 'driver') acc[date].drivers++
+    acc[day].total++
+    if (user.role === 'rider') acc[day].riders++
+    if (user.role === 'driver') acc[day].drivers++
     return acc
   }, {}) || {}
 
-  const userGrowthChart = Object.values(userGrowthData).slice(-30)
+  const userGrowthChart = Object.values(userGrowthData as Record<string, { day: string }>)
+    .sort((a, b) => a.day.localeCompare(b.day))
 
   // Process active users
   const activeUsersData = data?.activeUsers.reduce((acc: any, trip) => {
-    const date = format(new Date(trip.requested_at), 'MMM d')
-    if (!acc[date]) {
-      acc[date] = { date, riders: new Set(), drivers: new Set() }
+    const day = formatGuyana(trip.requested_at, 'yyyy-MM-dd')
+    if (!acc[day]) {
+      acc[day] = { day, date: formatGuyana(trip.requested_at, 'MMM d'), riders: new Set(), drivers: new Set() }
     }
-    if (trip.rider_id) acc[date].riders.add(trip.rider_id)
-    if (trip.driver_id) acc[date].drivers.add(trip.driver_id)
+    if (trip.rider_id) acc[day].riders.add(trip.rider_id)
+    if (trip.driver_id) acc[day].drivers.add(trip.driver_id)
     return acc
   }, {}) || {}
 
-  const activeUsersChart = Object.entries(activeUsersData).map(([date, value]: [string, any]) => ({
-    date,
-    riders: value.riders.size,
-    drivers: value.drivers.size,
-  })).slice(-30)
+  const activeUsersChart = Object.values(activeUsersData as Record<string, any>)
+    .sort((a, b) => a.day.localeCompare(b.day))
+    .map(value => ({
+      date: value.date,
+      riders: value.riders.size,
+      drivers: value.drivers.size,
+    }))
 
   // Role distribution
   const roleData = data?.users.reduce((acc: any, user) => {
@@ -113,7 +123,7 @@ export function UserAnalytics({ dateRange }: UserAnalyticsProps) {
       </h2>
 
       {/* Metrics */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 lg:gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Total Users"
           value={totalUsers}
@@ -141,11 +151,12 @@ export function UserAnalytics({ dateRange }: UserAnalyticsProps) {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:gap-6 lg:grid-cols-2">
         <ChartWrapper
           title="User Growth Over Time"
           description="New user registrations by role"
           isLoading={isLoading}
+          isError={isError}
           isEmpty={userGrowthChart.length === 0}
         >
           <ResponsiveContainer width="100%" height={300}>
@@ -166,6 +177,7 @@ export function UserAnalytics({ dateRange }: UserAnalyticsProps) {
           title="Active Users Trend"
           description="Daily active users by role"
           isLoading={isLoading}
+          isError={isError}
           isEmpty={activeUsersChart.length === 0}
         >
           <ResponsiveContainer width="100%" height={300}>
@@ -185,6 +197,7 @@ export function UserAnalytics({ dateRange }: UserAnalyticsProps) {
           title="User Role Distribution"
           description="Distribution of users by role"
           isLoading={isLoading}
+          isError={isError}
           isEmpty={roleChart.length === 0}
         >
           <ResponsiveContainer width="100%" height={300}>
@@ -211,4 +224,3 @@ export function UserAnalytics({ dateRange }: UserAnalyticsProps) {
     </div>
   )
 }
-

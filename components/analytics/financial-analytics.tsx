@@ -2,15 +2,17 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
+import { formatGuyana } from '@/lib/guyana-time'
+import type { AnalyticsDateRange } from '@/types/analytics-date-range'
 import { ChartWrapper } from './chart-wrapper'
 import { formatCurrency } from '@/lib/format'
 import { LineChart, Line, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { DollarSign, TrendingUp } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/metric-card'
-import { format } from 'date-fns'
 
 interface FinancialAnalyticsProps {
-  dateRange: { start: Date; end: Date }
+  dateRange: AnalyticsDateRange
 }
 
 const COLORS = ['#10B981', '#3B82F6']
@@ -28,79 +30,87 @@ type TripRevenueData = {
 
 type TransactionData = {
   status: string
-  payment_method: string
-  amount: number
   created_at: string
 }
 
-async function fetchFinancialAnalytics(dateRange: { start: Date; end: Date }) {
+async function fetchFinancialAnalytics(dateRange: AnalyticsDateRange) {
   const supabase = createClient()
-  const startDate = dateRange.start.toISOString()
+  const startDate = dateRange.start?.toISOString()
   const endDate = dateRange.end.toISOString()
 
   // Subscription revenue
-  const { data: subscriptions } = await supabase
-    .from('subscriptions')
-    .select('created_at, amount, status')
-    .gte('created_at', startDate)
-    .lte('created_at', endDate)
-    .eq('status', 'active')
+  const subscriptions = await fetchAllRows<SubscriptionData>(() => {
+    let query = supabase
+      .from('subscriptions')
+      .select('created_at, amount, status')
+      .eq('status', 'active')
+      .lte('created_at', endDate)
+      .order('created_at', { ascending: true })
+    if (startDate) query = query.gte('created_at', startDate)
+    return query
+  })
 
   // Trip revenue
-  const { data: trips } = await supabase
-    .from('trips')
-    .select('completed_at, actual_fare')
-    .eq('status', 'completed')
-    .not('completed_at', 'is', null)
-    .gte('completed_at', startDate)
-    .lte('completed_at', endDate)
+  const trips = await fetchAllRows<TripRevenueData>(() => {
+    let query = supabase
+      .from('trips')
+      .select('completed_at, actual_fare')
+      .eq('status', 'completed')
+      .not('completed_at', 'is', null)
+      .lte('completed_at', endDate)
+      .order('completed_at', { ascending: true })
+    if (startDate) query = query.gte('completed_at', startDate)
+    return query
+  })
 
   // Payment transactions
-  const { data: transactions } = await supabase
-    .from('payment_transactions')
-    .select('status, payment_method, amount, created_at')
-    .gte('created_at', startDate)
-    .lte('created_at', endDate)
+  const transactions = await fetchAllRows<TransactionData>(() => {
+    let query = supabase
+      .from('payment_transactions')
+      .select('status, created_at')
+      .lte('created_at', endDate)
+      .order('created_at', { ascending: true })
+    if (startDate) query = query.gte('created_at', startDate)
+    return query
+  })
 
-  return {
-    subscriptions: (subscriptions as SubscriptionData[] | null) || [],
-    trips: (trips as TripRevenueData[] | null) || [],
-    transactions: (transactions as TransactionData[] | null) || [],
-  }
+  return { subscriptions, trips, transactions }
 }
 
 export function FinancialAnalytics({ dateRange }: FinancialAnalyticsProps) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['financial-analytics', dateRange.start, dateRange.end],
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['financial-analytics', dateRange.start?.toISOString() ?? 'all', dateRange.end.toISOString()],
     queryFn: () => fetchFinancialAnalytics(dateRange),
   })
 
-  // Process revenue trends
+  // Process revenue trends (bucketed by Guyana calendar day)
   const revenueData: any = {}
-  
+
   data?.subscriptions.forEach(sub => {
-    const date = format(new Date(sub.created_at), 'MMM d')
-    if (!revenueData[date]) {
-      revenueData[date] = { date, subscription: 0, trip: 0, total: 0 }
+    const day = formatGuyana(sub.created_at, 'yyyy-MM-dd')
+    if (!revenueData[day]) {
+      revenueData[day] = { day, date: formatGuyana(sub.created_at, 'MMM d'), subscription: 0, trip: 0, total: 0 }
     }
-    revenueData[date].subscription += sub.amount
-    revenueData[date].total += sub.amount
+    revenueData[day].subscription += sub.amount
+    revenueData[day].total += sub.amount
   })
 
   data?.trips.forEach(trip => {
-    const date = format(new Date(trip.completed_at!), 'MMM d')
-    if (!revenueData[date]) {
-      revenueData[date] = { date, subscription: 0, trip: 0, total: 0 }
+    const day = formatGuyana(trip.completed_at, 'yyyy-MM-dd')
+    if (!revenueData[day]) {
+      revenueData[day] = { day, date: formatGuyana(trip.completed_at, 'MMM d'), subscription: 0, trip: 0, total: 0 }
     }
-    revenueData[date].trip += trip.actual_fare || 0
-    revenueData[date].total += trip.actual_fare || 0
+    revenueData[day].trip += trip.actual_fare || 0
+    revenueData[day].total += trip.actual_fare || 0
   })
 
-  const revenueChart = Object.values(revenueData).slice(-30)
+  const revenueChart = Object.values(revenueData as Record<string, { day: string }>)
+    .sort((a, b) => a.day.localeCompare(b.day))
 
   // Revenue by source
   const subscriptionRevenue = data?.subscriptions.reduce((sum, s) => sum + s.amount, 0) || 0
   const tripRevenue = data?.trips.reduce((sum, t) => sum + (t.actual_fare || 0), 0) || 0
+  const totalRevenue = subscriptionRevenue + tripRevenue
   const revenueBySource = [
     { name: 'Subscriptions', value: subscriptionRevenue },
     { name: 'Trips', value: tripRevenue },
@@ -117,19 +127,7 @@ export function FinancialAnalytics({ dateRange }: FinancialAnalyticsProps) {
     value,
   }))
 
-  // Payment method
-  const paymentMethod = data?.transactions.reduce((acc: any, t) => {
-    acc[t.payment_method] = (acc[t.payment_method] || 0) + 1
-    return acc
-  }, {}) || {}
-
-  const paymentMethodChart = Object.entries(paymentMethod).map(([name, value]) => ({
-    name: name.toUpperCase(),
-    value,
-  }))
-
   // Calculate metrics
-  const totalRevenue = subscriptionRevenue + tripRevenue
   const completedTransactions = data?.transactions.filter(t => t.status === 'completed').length || 0
   const totalTransactions = data?.transactions.length || 0
   const successRate = totalTransactions > 0 ? ((completedTransactions / totalTransactions) * 100).toFixed(1) : '0'
@@ -142,7 +140,7 @@ export function FinancialAnalytics({ dateRange }: FinancialAnalyticsProps) {
       </h2>
 
       {/* Metrics */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 lg:gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Total Revenue"
           value={formatCurrency(totalRevenue)}
@@ -170,11 +168,12 @@ export function FinancialAnalytics({ dateRange }: FinancialAnalyticsProps) {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:gap-6 lg:grid-cols-2">
         <ChartWrapper
           title="Revenue Trends"
           description="Daily revenue from subscriptions and trips"
           isLoading={isLoading}
+          isError={isError}
           isEmpty={revenueChart.length === 0}
         >
           <ResponsiveContainer width="100%" height={300}>
@@ -195,7 +194,8 @@ export function FinancialAnalytics({ dateRange }: FinancialAnalyticsProps) {
           title="Revenue by Source"
           description="Revenue breakdown by source"
           isLoading={isLoading}
-          isEmpty={revenueBySource.length === 0}
+          isError={isError}
+          isEmpty={totalRevenue === 0}
         >
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
@@ -222,6 +222,7 @@ export function FinancialAnalytics({ dateRange }: FinancialAnalyticsProps) {
           title="Payment Transaction Status"
           description="Distribution of payment transactions by status"
           isLoading={isLoading}
+          isError={isError}
           isEmpty={paymentStatusChart.length === 0}
         >
           <ResponsiveContainer width="100%" height={300}>
@@ -234,25 +235,7 @@ export function FinancialAnalytics({ dateRange }: FinancialAnalyticsProps) {
             </BarChart>
           </ResponsiveContainer>
         </ChartWrapper>
-
-        <ChartWrapper
-          title="Payment Method Distribution"
-          description="Transactions by payment method"
-          isLoading={isLoading}
-          isEmpty={paymentMethodChart.length === 0}
-        >
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={paymentMethodChart}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="value" fill="#8B5CF6" />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartWrapper>
       </div>
     </div>
   )
 }
-

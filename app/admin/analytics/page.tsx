@@ -1,11 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
-import { BarChart3, Calendar, RefreshCw } from 'lucide-react'
-import { format, subDays, startOfDay, endOfDay } from 'date-fns'
-import { ChartWrapper } from '@/components/analytics/chart-wrapper'
+import { useEffect, useMemo, useState } from 'react'
+import { Calendar } from 'lucide-react'
+import { subDays } from 'date-fns'
+import { endOfDayGuyana, guyanaDayEnd, guyanaDayStart, startOfDayGuyana } from '@/lib/guyana-time'
+import type { AnalyticsDateRange } from '@/types/analytics-date-range'
 import { TripAnalytics } from '@/components/analytics/trip-analytics'
 import { UserAnalytics } from '@/components/analytics/user-analytics'
 import { DriverAnalytics } from '@/components/analytics/driver-analytics'
@@ -14,66 +13,73 @@ import { FinancialAnalytics } from '@/components/analytics/financial-analytics'
 import { OperationalAnalytics } from '@/components/analytics/operational-analytics'
 import { SubscriptionAnalytics } from '@/components/analytics/subscription-analytics'
 
-type DateRange = '7d' | '30d' | '90d' | 'all' | 'custom'
+type DateRangePreset = '7d' | '30d' | '90d' | 'all' | 'custom'
+
+const dateInputClass =
+  'px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring'
 
 export default function AnalyticsPage() {
-  const [dateRange, setDateRange] = useState<DateRange>('30d')
-  const [customStartDate, setCustomStartDate] = useState<string>('')
-  const [customEndDate, setCustomEndDate] = useState<string>('')
+  const [preset, setPreset] = useState<DateRangePreset>('30d')
+  // Drafts track the inputs directly; the committed values are debounced so
+  // scrubbing a date field doesn't fire a query fan-out per keystroke.
+  const [draftStart, setDraftStart] = useState('')
+  const [draftEnd, setDraftEnd] = useState('')
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
 
-  const getDateRange = () => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCustomStart(draftStart)
+      setCustomEnd(draftEnd)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [draftStart, draftEnd])
+
+  // Day boundaries are computed in Guyana time so every admin sees the same
+  // windows regardless of their browser timezone. Presets include today, so
+  // "last N days" subtracts N-1.
+  const resolved = useMemo((): { range: AnalyticsDateRange } | { hint: string } => {
     const now = new Date()
-    let startDate: Date
-
-    switch (dateRange) {
+    switch (preset) {
       case '7d':
-        startDate = subDays(now, 7)
-        break
+        return { range: { start: startOfDayGuyana(subDays(now, 6)), end: endOfDayGuyana(now) } }
       case '30d':
-        startDate = subDays(now, 30)
-        break
+        return { range: { start: startOfDayGuyana(subDays(now, 29)), end: endOfDayGuyana(now) } }
       case '90d':
-        startDate = subDays(now, 90)
-        break
+        return { range: { start: startOfDayGuyana(subDays(now, 89)), end: endOfDayGuyana(now) } }
+      case 'all':
+        return { range: { start: null, end: endOfDayGuyana(now) } }
       case 'custom':
-        if (customStartDate && customEndDate) {
-          return {
-            start: startOfDay(new Date(customStartDate)),
-            end: endOfDay(new Date(customEndDate)),
-          }
+        if (!customStart || !customEnd) {
+          return { hint: 'Pick a start and an end date to run the custom report.' }
         }
-        startDate = subDays(now, 30)
-        break
-      default:
-        startDate = new Date(0) // All time
+        if (customStart > customEnd) {
+          return { hint: 'The start date must be on or before the end date.' }
+        }
+        return { range: { start: guyanaDayStart(customStart), end: guyanaDayEnd(customEnd) } }
     }
-
-    return {
-      start: dateRange === 'all' ? new Date(0) : startOfDay(startDate),
-      end: endOfDay(now),
-    }
-  }
-
-  const dateRangeValue = getDateRange()
+  }, [preset, customStart, customEnd])
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Comprehensive insights into your Links transportation platform
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {/* Date Range Selector */}
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Analytics</h1>
+        <p className="mt-1 text-sm text-gray-600">
+          Comprehensive insights into your Links transportation platform
+        </p>
+      </div>
+
+      {/* Sticky toolbar: date filter + section shortcuts stay reachable on this long page */}
+      <div className="sticky top-0 z-20 -mx-6 px-6 py-3 bg-gray-50/95 backdrop-blur border-b border-gray-200 space-y-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-gray-400" />
+            <Calendar className="h-5 w-5 text-gray-400" aria-hidden="true" />
             <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value as DateRange)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
+              value={preset}
+              onChange={(e) => setPreset(e.target.value as DateRangePreset)}
+              aria-label="Date range"
+              className="px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-ring focus:border-ring"
             >
               <option value="7d">Last 7 days</option>
               <option value="30d">Last 30 days</option>
@@ -82,51 +88,89 @@ export default function AnalyticsPage() {
               <option value="custom">Custom range</option>
             </select>
           </div>
-          
-          {dateRange === 'custom' && (
-            <div className="flex items-center gap-2">
+
+          {preset === 'custom' && (
+            <div className="flex flex-wrap items-center gap-2">
               <input
                 type="date"
-                value={customStartDate}
-                onChange={(e) => setCustomStartDate(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
+                value={draftStart}
+                max={draftEnd || undefined}
+                onChange={(e) => setDraftStart(e.target.value)}
+                aria-label="Start date"
+                className={dateInputClass}
               />
               <span className="text-gray-500">to</span>
               <input
                 type="date"
-                value={customEndDate}
-                onChange={(e) => setCustomEndDate(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
+                value={draftEnd}
+                min={draftStart || undefined}
+                onChange={(e) => setDraftEnd(e.target.value)}
+                aria-label="End date"
+                className={dateInputClass}
               />
             </div>
           )}
         </div>
+
+        <nav aria-label="Analytics sections" className="flex items-center gap-2 overflow-x-auto pb-1 -mb-1">
+          {[
+            ['#trips', 'Trips'],
+            ['#financial', 'Financial'],
+            ['#users', 'Users'],
+            ['#drivers-riders', 'Drivers & Riders'],
+            ['#operations', 'Operations'],
+            ['#subscriptions', 'Subscriptions'],
+          ].map(([href, label]) => (
+            <a
+              key={href}
+              href={href}
+              className="shrink-0 whitespace-nowrap rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
       </div>
 
       {/* Analytics Sections */}
-      <div className="space-y-6">
-        {/* Trip Analytics */}
-        <TripAnalytics dateRange={dateRangeValue} />
-
-        {/* Financial Analytics */}
-        <FinancialAnalytics dateRange={dateRangeValue} />
-
-        {/* User Analytics */}
-        <UserAnalytics dateRange={dateRangeValue} />
-
-        {/* Driver & Rider Analytics */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <DriverAnalytics dateRange={dateRangeValue} />
-          <RiderAnalytics dateRange={dateRangeValue} />
+      {'hint' in resolved ? (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center text-gray-500">
+          {resolved.hint}
         </div>
+      ) : (
+        <div className="space-y-8">
+          {/* Trip Analytics */}
+          <section id="trips" className="scroll-mt-32">
+            <TripAnalytics dateRange={resolved.range} />
+          </section>
 
-        {/* Operational Analytics */}
-        <OperationalAnalytics dateRange={dateRangeValue} />
+          {/* Financial Analytics */}
+          <section id="financial" className="scroll-mt-32">
+            <FinancialAnalytics dateRange={resolved.range} />
+          </section>
 
-        {/* Subscription Analytics */}
-        <SubscriptionAnalytics dateRange={dateRangeValue} />
-      </div>
+          {/* User Analytics */}
+          <section id="users" className="scroll-mt-32">
+            <UserAnalytics dateRange={resolved.range} />
+          </section>
+
+          {/* Driver & Rider Analytics (current-state snapshots, not date-filtered) */}
+          <section id="drivers-riders" className="scroll-mt-32 grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <DriverAnalytics />
+            <RiderAnalytics />
+          </section>
+
+          {/* Operational Analytics */}
+          <section id="operations" className="scroll-mt-32">
+            <OperationalAnalytics dateRange={resolved.range} />
+          </section>
+
+          {/* Subscription Analytics */}
+          <section id="subscriptions" className="scroll-mt-32">
+            <SubscriptionAnalytics dateRange={resolved.range} />
+          </section>
+        </div>
+      )}
     </div>
   )
 }
-

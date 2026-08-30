@@ -38,6 +38,24 @@ export function formatGuyana(date: string | Date, formatStr: string): string {
   return formatInTimeZone(d, GUYANA_TIMEZONE, formatStr)
 }
 
+/** Instant at which the Guyana civil day `isoDate` (yyyy-MM-dd) begins. */
+export function guyanaDayStart(isoDate: string): Date {
+  return fromZonedTime(`${isoDate}T00:00:00`, GUYANA_TIMEZONE)
+}
+
+/** Instant at which the Guyana civil day `isoDate` (yyyy-MM-dd) ends. */
+export function guyanaDayEnd(isoDate: string): Date {
+  return fromZonedTime(`${isoDate}T23:59:59.999`, GUYANA_TIMEZONE)
+}
+
+export function startOfDayGuyana(date: Date): Date {
+  return guyanaDayStart(formatInTimeZone(date, GUYANA_TIMEZONE, 'yyyy-MM-dd'))
+}
+
+export function endOfDayGuyana(date: Date): Date {
+  return guyanaDayEnd(formatInTimeZone(date, GUYANA_TIMEZONE, 'yyyy-MM-dd'))
+}
+
 /**
  * `location_history.recorded_at` only: many mobile clients append `Z` to **local** timestamps.
  * Strips the trailing zone and interprets date/time digits as America/Guyana civil time.

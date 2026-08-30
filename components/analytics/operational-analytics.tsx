@@ -2,14 +2,16 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
+import { formatGuyana } from '@/lib/guyana-time'
+import type { AnalyticsDateRange } from '@/types/analytics-date-range'
 import { ChartWrapper } from './chart-wrapper'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Clock, TrendingUp } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/metric-card'
-import { format } from 'date-fns'
 
 interface OperationalAnalyticsProps {
-  dateRange: { start: Date; end: Date }
+  dateRange: AnalyticsDateRange
 }
 
 type TripTimingData = {
@@ -27,43 +29,48 @@ type TripRequestData = {
   status: string
 }
 
-async function fetchOperationalAnalytics(dateRange: { start: Date; end: Date }) {
+async function fetchOperationalAnalytics(dateRange: AnalyticsDateRange) {
   const supabase = createClient()
-  const startDate = dateRange.start.toISOString()
+  const startDate = dateRange.start?.toISOString()
   const endDate = dateRange.end.toISOString()
 
   // Trips with timing data
-  const { data: trips } = await supabase
-    .from('trips')
-    .select('requested_at, accepted_at, completed_at, actual_duration_minutes, estimated_duration_minutes, status')
-    .gte('requested_at', startDate)
-    .lte('requested_at', endDate)
+  const trips = await fetchAllRows<TripTimingData>(() => {
+    let query = supabase
+      .from('trips')
+      .select('requested_at, accepted_at, completed_at, actual_duration_minutes, estimated_duration_minutes, status')
+      .lte('requested_at', endDate)
+      .order('requested_at', { ascending: true })
+    if (startDate) query = query.gte('requested_at', startDate)
+    return query
+  })
 
   // Trip requests (for expiration rate)
-  const { data: requests } = await supabase
-    .from('trip_requests')
-    .select('created_at, expires_at, status')
-    .gte('created_at', startDate)
-    .lte('created_at', endDate)
+  const requests = await fetchAllRows<TripRequestData>(() => {
+    let query = supabase
+      .from('trip_requests')
+      .select('created_at, expires_at, status')
+      .lte('created_at', endDate)
+      .order('created_at', { ascending: true })
+    if (startDate) query = query.gte('created_at', startDate)
+    return query
+  })
 
-  return {
-    trips: (trips as TripTimingData[] | null) || [],
-    requests: (requests as TripRequestData[] | null) || [],
-  }
+  return { trips, requests }
 }
 
 export function OperationalAnalytics({ dateRange }: OperationalAnalyticsProps) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['operational-analytics', dateRange.start, dateRange.end],
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['operational-analytics', dateRange.start?.toISOString() ?? 'all', dateRange.end.toISOString()],
     queryFn: () => fetchOperationalAnalytics(dateRange),
   })
 
-  // Peak hours
+  // Peak hours (Guyana local hour)
   const peakHoursData: any = {}
   data?.trips
     ?.filter(t => t.status === 'completed')
     ?.forEach(trip => {
-      const hour = new Date(trip.requested_at).getHours()
+      const hour = Number(formatGuyana(trip.requested_at, 'H'))
       peakHoursData[hour] = (peakHoursData[hour] || 0) + 1
     })
 
@@ -72,24 +79,26 @@ export function OperationalAnalytics({ dateRange }: OperationalAnalyticsProps) {
     trips: peakHoursData[i] || 0,
   }))
 
-  // Trip duration trends
+  // Trip duration trends (bucketed by Guyana calendar day)
   const durationData: any = {}
   data?.trips
     ?.filter(t => t.status === 'completed' && t.completed_at)
     ?.forEach(trip => {
-      const date = format(new Date(trip.completed_at!), 'MMM d')
-      if (!durationData[date]) {
-        durationData[date] = { date, actual: [], estimated: [] }
+      const day = formatGuyana(trip.completed_at!, 'yyyy-MM-dd')
+      if (!durationData[day]) {
+        durationData[day] = { day, date: formatGuyana(trip.completed_at!, 'MMM d'), actual: [], estimated: [] }
       }
-      if (trip.actual_duration_minutes) durationData[date].actual.push(trip.actual_duration_minutes)
-      if (trip.estimated_duration_minutes) durationData[date].estimated.push(trip.estimated_duration_minutes)
+      if (trip.actual_duration_minutes) durationData[day].actual.push(trip.actual_duration_minutes)
+      if (trip.estimated_duration_minutes) durationData[day].estimated.push(trip.estimated_duration_minutes)
     })
 
-  const durationChart = Object.entries(durationData).map(([date, value]: [string, any]) => ({
-    date,
-    actual: value.actual.length > 0 ? value.actual.reduce((a: number, b: number) => a + b, 0) / value.actual.length : 0,
-    estimated: value.estimated.length > 0 ? value.estimated.reduce((a: number, b: number) => a + b, 0) / value.estimated.length : 0,
-  })).slice(-30)
+  const durationChart = Object.values(durationData as Record<string, any>)
+    .sort((a, b) => a.day.localeCompare(b.day))
+    .map(value => ({
+      date: value.date,
+      actual: value.actual.length > 0 ? value.actual.reduce((a: number, b: number) => a + b, 0) / value.actual.length : 0,
+      estimated: value.estimated.length > 0 ? value.estimated.reduce((a: number, b: number) => a + b, 0) / value.estimated.length : 0,
+    }))
 
   // Response times
   const responseTimes = data?.trips
@@ -124,7 +133,7 @@ export function OperationalAnalytics({ dateRange }: OperationalAnalyticsProps) {
       </h2>
 
       {/* Metrics */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 lg:gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Avg Response Time"
           value={`${avgResponseTime.toFixed(1)} min`}
@@ -152,12 +161,13 @@ export function OperationalAnalytics({ dateRange }: OperationalAnalyticsProps) {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:gap-6 lg:grid-cols-2">
         <ChartWrapper
           title="Peak Hours Analysis"
-          description="Trips by hour of day"
+          description="Trips by hour of day (Guyana time)"
           isLoading={isLoading}
-          isEmpty={peakHoursChart.length === 0}
+          isError={isError}
+          isEmpty={Object.keys(peakHoursData).length === 0}
         >
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={peakHoursChart}>
@@ -174,6 +184,7 @@ export function OperationalAnalytics({ dateRange }: OperationalAnalyticsProps) {
           title="Trip Duration Trends"
           description="Average trip duration: estimated vs actual"
           isLoading={isLoading}
+          isError={isError}
           isEmpty={durationChart.length === 0}
         >
           <ResponsiveContainer width="100%" height={300}>

@@ -5,6 +5,7 @@ interface ChartWrapperProps {
   description?: string
   children: ReactNode
   isLoading?: boolean
+  isError?: boolean
   isEmpty?: boolean
   emptyMessage?: string
 }
@@ -14,11 +15,12 @@ export function ChartWrapper({
   description,
   children,
   isLoading,
+  isError,
   isEmpty,
   emptyMessage = 'No data available',
 }: ChartWrapperProps) {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <div className="min-w-0 bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
         {description && (
@@ -29,6 +31,10 @@ export function ChartWrapper({
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-strong"></div>
+        </div>
+      ) : isError ? (
+        <div className="flex items-center justify-center h-64 text-red-600">
+          <p>Failed to load this data — refresh to retry.</p>
         </div>
       ) : isEmpty ? (
         <div className="flex items-center justify-center h-64 text-gray-500">

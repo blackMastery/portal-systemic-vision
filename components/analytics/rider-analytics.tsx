@@ -2,14 +2,11 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { ChartWrapper } from './chart-wrapper'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Users, Star } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/metric-card'
-
-interface RiderAnalyticsProps {
-  dateRange: { start: Date; end: Date }
-}
 
 const COLORS = ['#10B981', '#3B82F6', '#EF4444', '#6B7280']
 
@@ -20,35 +17,34 @@ type RiderData = {
 
 type SubscriptionData = {
   plan_type: string
-  amount: number
-  status: string
 }
 
-async function fetchRiderAnalytics(dateRange: { start: Date; end: Date }) {
+async function fetchRiderAnalytics() {
   const supabase = createClient()
 
-  // Rider profiles
-  const { data: riders } = await supabase
-    .from('rider_profiles')
-    .select('subscription_status, rating_average')
+  const riders = await fetchAllRows<RiderData>(() =>
+    supabase
+      .from('rider_profiles')
+      .select('subscription_status, rating_average')
+      .order('id', { ascending: true })
+  )
 
-  // Subscriptions
-  const { data: subscriptions } = await supabase
-    .from('subscriptions')
-    .select('plan_type, amount, status')
-    .eq('user_role', 'rider')
-    .eq('status', 'active')
+  const subscriptions = await fetchAllRows<SubscriptionData>(() =>
+    supabase
+      .from('subscriptions')
+      .select('plan_type')
+      .eq('user_role', 'rider')
+      .eq('status', 'active')
+      .order('id', { ascending: true })
+  )
 
-  return {
-    riders: (riders as RiderData[] | null) || [],
-    subscriptions: (subscriptions as SubscriptionData[] | null) || [],
-  }
+  return { riders, subscriptions }
 }
 
-export function RiderAnalytics({ dateRange }: RiderAnalyticsProps) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['rider-analytics', dateRange.start, dateRange.end],
-    queryFn: () => fetchRiderAnalytics(dateRange),
+export function RiderAnalytics() {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['rider-analytics'],
+    queryFn: fetchRiderAnalytics,
   })
 
   // Subscription status
@@ -77,20 +73,27 @@ export function RiderAnalytics({ dateRange }: RiderAnalyticsProps) {
   const totalRiders = data?.riders.length || 0
   const activeSubscribers = data?.riders.filter(r => r.subscription_status === 'active').length || 0
   const trialRiders = data?.riders.filter(r => r.subscription_status === 'trial').length || 0
-  const conversionRate = trialRiders > 0 ? ((activeSubscribers / (trialRiders + activeSubscribers)) * 100).toFixed(1) : '0'
+  const conversionRate = (trialRiders + activeSubscribers) > 0
+    ? ((activeSubscribers / (trialRiders + activeSubscribers)) * 100).toFixed(1)
+    : '0'
   const avgRating = totalRiders > 0 && data?.riders
     ? data.riders.reduce((sum, r) => sum + (r.rating_average || 0), 0) / totalRiders
     : 0
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-        <Users className="h-6 w-6" />
-        Rider Analytics
-      </h2>
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <Users className="h-6 w-6" />
+          Rider Analytics
+        </h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Current rider base — not affected by the date range filter
+        </p>
+      </div>
 
       {/* Metrics */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 lg:gap-6 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-2">
         <MetricCard
           title="Total Riders"
           value={totalRiders}
@@ -118,11 +121,12 @@ export function RiderAnalytics({ dateRange }: RiderAnalyticsProps) {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:gap-6 lg:grid-cols-2 xl:grid-cols-1">
         <ChartWrapper
           title="Subscription Status Distribution"
           description="Distribution of riders by subscription status"
           isLoading={isLoading}
+          isError={isError}
           isEmpty={subscriptionStatusChart.length === 0}
         >
           <ResponsiveContainer width="100%" height={300}>
@@ -150,6 +154,7 @@ export function RiderAnalytics({ dateRange }: RiderAnalyticsProps) {
           title="Subscription Plan Types"
           description="Active subscriptions by plan type"
           isLoading={isLoading}
+          isError={isError}
           isEmpty={planTypesChart.length === 0}
         >
           <ResponsiveContainer width="100%" height={300}>
@@ -166,4 +171,3 @@ export function RiderAnalytics({ dateRange }: RiderAnalyticsProps) {
     </div>
   )
 }
-

@@ -2,63 +2,35 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { ChartWrapper } from './chart-wrapper'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Car, CheckCircle, Star } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/metric-card'
 
-interface DriverAnalyticsProps {
-  dateRange: { start: Date; end: Date }
-}
-
 type DriverData = {
   verification_status: string
   is_online: boolean
-  is_available: boolean
   rating_average: number
-  total_trips: number
-  acceptance_rate: number
-  user: { full_name: string } | null
 }
 
-type DriverTripData = {
-  driver_id: string
-  actual_fare: number | null
-}
-
-async function fetchDriverAnalytics(dateRange: { start: Date; end: Date }) {
+async function fetchDriverAnalytics() {
   const supabase = createClient()
 
-  // Driver profiles
-  const { data: drivers } = await supabase
-    .from('driver_profiles')
-    .select(`
-      verification_status,
-      is_online,
-      is_available,
-      rating_average,
-      total_trips,
-      acceptance_rate,
-      user:user_id (full_name)
-    `)
+  const drivers = await fetchAllRows<DriverData>(() =>
+    supabase
+      .from('driver_profiles')
+      .select('verification_status, is_online, rating_average')
+      .order('id', { ascending: true })
+  )
 
-  // Driver revenue
-  const { data: trips } = await supabase
-    .from('trips')
-    .select('driver_id, actual_fare')
-    .eq('status', 'completed')
-    .not('driver_id', 'is', null)
-
-  return {
-    drivers: (drivers as DriverData[] | null) || [],
-    trips: (trips as DriverTripData[] | null) || [],
-  }
+  return { drivers }
 }
 
-export function DriverAnalytics({ dateRange }: DriverAnalyticsProps) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['driver-analytics', dateRange.start, dateRange.end],
-    queryFn: () => fetchDriverAnalytics(dateRange),
+export function DriverAnalytics() {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['driver-analytics'],
+    queryFn: fetchDriverAnalytics,
   })
 
   // Verification status
@@ -79,19 +51,21 @@ export function DriverAnalytics({ dateRange }: DriverAnalyticsProps) {
   const avgRating = totalDrivers > 0 && data?.drivers
     ? data.drivers.reduce((sum, d) => sum + (d.rating_average || 0), 0) / totalDrivers
     : 0
-  const avgAcceptanceRate = totalDrivers > 0 && data?.drivers
-    ? data.drivers.reduce((sum, d) => sum + (d.acceptance_rate || 0), 0) / totalDrivers
-    : 0
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-        <Car className="h-6 w-6" />
-        Driver Analytics
-      </h2>
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <Car className="h-6 w-6" />
+          Driver Analytics
+        </h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Current driver roster — not affected by the date range filter
+        </p>
+      </div>
 
       {/* Metrics */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 lg:gap-6 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-2">
         <MetricCard
           title="Total Drivers"
           value={totalDrivers}
@@ -123,6 +97,7 @@ export function DriverAnalytics({ dateRange }: DriverAnalyticsProps) {
         title="Driver Verification Status"
         description="Distribution of drivers by verification status"
         isLoading={isLoading}
+        isError={isError}
         isEmpty={verificationChart.length === 0}
       >
         <ResponsiveContainer width="100%" height={300}>
@@ -138,4 +113,3 @@ export function DriverAnalytics({ dateRange }: DriverAnalyticsProps) {
     </div>
   )
 }
-
