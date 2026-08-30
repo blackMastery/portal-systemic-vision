@@ -20,8 +20,10 @@ import {
   MapPin,
   Flag,
   ShieldAlert,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 
@@ -66,9 +68,32 @@ async function fetchOpenIncidentCount(): Promise<number> {
   return count ?? 0
 }
 
+const COLLAPSED_STORAGE_KEY = 'admin-sidebar-collapsed'
+
 export function AdminSidebar() {
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
+
+  // Read after mount so server and client render the same initial markup
+  useEffect(() => {
+    try {
+      setCollapsed(localStorage.getItem(COLLAPSED_STORAGE_KEY) === 'true')
+    } catch {
+      // localStorage unavailable; leave expanded
+    }
+  }, [])
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      try {
+        localStorage.setItem(COLLAPSED_STORAGE_KEY, String(!prev))
+      } catch {
+        // ignore
+      }
+      return !prev
+    })
+  }
 
   const { data: openReviewCount } = useQuery({
     queryKey: ['review-queue-open-count'],
@@ -103,12 +128,33 @@ export function AdminSidebar() {
       <aside
         className={`${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:translate-x-0 fixed md:static inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transition-transform duration-300 ease-in-out`}
+        } md:translate-x-0 fixed md:static inset-y-0 left-0 z-40 w-64 ${
+          collapsed ? 'md:w-20' : 'md:w-64'
+        } bg-white border-r border-gray-200 transition-all duration-300 ease-in-out`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center h-16 px-6 border-b border-gray-200">
-            <h1 className="text-2xl font-bold text-primary-strong">Links</h1>
+          <div
+            className={`flex items-center h-16 border-b border-gray-200 px-6 ${
+              collapsed ? 'md:justify-center md:px-2' : 'md:justify-between'
+            }`}
+          >
+            <h1 className={`text-2xl font-bold text-primary-strong ${collapsed ? 'md:hidden' : ''}`}>
+              Links
+            </h1>
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              className="hidden md:inline-flex p-2 rounded-md text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-colors"
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {collapsed ? (
+                <PanelLeftOpen className="h-5 w-5" />
+              ) : (
+                <PanelLeftClose className="h-5 w-5" />
+              )}
+            </button>
           </div>
 
           {/* Navigation */}
@@ -131,17 +177,26 @@ export function AdminSidebar() {
                   key={item.name}
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                  title={collapsed ? item.name : undefined}
+                  className={`relative flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                    collapsed ? 'md:justify-center md:px-2' : ''
+                  } ${
                     isActive
                       ? 'bg-primary-soft text-primary-strong'
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  <Icon className={`mr-3 h-5 w-5 ${isActive ? 'text-primary-strong' : 'text-gray-400'}`} />
-                  <span className="flex-1">{item.name}</span>
+                  <Icon
+                    className={`mr-3 h-5 w-5 ${collapsed ? 'md:mr-0' : ''} ${
+                      isActive ? 'text-primary-strong' : 'text-gray-400'
+                    }`}
+                  />
+                  <span className={`flex-1 ${collapsed ? 'md:hidden' : ''}`}>{item.name}</span>
                   {showBadge && (
                     <span
-                      className="ml-2 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-semibold"
+                      className={`ml-2 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-semibold ${
+                        collapsed ? 'md:absolute md:top-1 md:right-1 md:ml-0 md:min-w-[1rem] md:h-4 md:px-1 md:text-[10px]' : ''
+                      }`}
                       aria-label={`${badgeCount} open items`}
                     >
                       {(badgeCount ?? 0) > 99 ? '99+' : badgeCount}
@@ -154,7 +209,7 @@ export function AdminSidebar() {
 
           {/* Footer */}
           <div className="p-4 border-t border-gray-200">
-            <p className="text-xs text-gray-500 text-center">
+            <p className={`text-xs text-gray-500 text-center ${collapsed ? 'md:hidden' : ''}`}>
               © 2026 Links Admin
             </p>
           </div>
