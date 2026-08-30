@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { formatGuyana } from '@/lib/guyana-time'
 
 export const PAGE_SIZE_OPTIONS = [25, 50, 100] as const
 const DEFAULT_PAGE_SIZE = 25
@@ -27,20 +28,26 @@ function parseEnum(value: string | null, allowed: readonly string[], fallback: s
   return allowed.includes(value) ? value : fallback
 }
 
-function parseDate(value: string | null): string {
-  if (!value) return ''
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : ''
+// The dates default to today (Guyana time). An absent param means the default;
+// an explicitly empty param (`start=`) means the user cleared the filter.
+function parseDate(value: string | null, fallback: string): string {
+  if (value === null) return fallback
+  if (value === '') return ''
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : fallback
 }
 
 export function useTripFilters() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
+  const today = formatGuyana(new Date(), 'yyyy-MM-dd')
+  const defaults: Record<FilterKey, string> = { ...DEFAULTS, start: today, end: today }
+
   const status = parseEnum(searchParams.get('status'), STATUS_VALUES, 'all')
   const tripType = parseEnum(searchParams.get('type'), TYPE_VALUES, 'all')
   const urlSearch = searchParams.get('q') ?? ''
-  const startDate = parseDate(searchParams.get('start'))
-  const endDate = parseDate(searchParams.get('end'))
+  const startDate = parseDate(searchParams.get('start'), defaults.start)
+  const endDate = parseDate(searchParams.get('end'), defaults.end)
   const page = Math.max(1, Number(searchParams.get('page') ?? '1'))
   const rawSize = Number(searchParams.get('size') ?? String(DEFAULT_PAGE_SIZE))
   const pageSize = (PAGE_SIZE_OPTIONS as readonly number[]).includes(rawSize)
@@ -56,7 +63,7 @@ export function useTripFilters() {
   function applyParams(updates: Partial<Record<FilterKey, string>>, resetPage = true) {
     const next = new URLSearchParams(searchParams.toString())
     for (const [k, v] of Object.entries(updates) as [FilterKey, string][]) {
-      if (v === DEFAULTS[k]) {
+      if (v === defaults[k]) {
         next.delete(k)
       } else {
         next.set(k, v)
@@ -104,10 +111,11 @@ export function useTripFilters() {
     if (status !== 'all') n++
     if (tripType !== 'all') n++
     if (urlSearch !== '') n++
-    if (startDate !== '') n++
-    if (endDate !== '') n++
+    if (startDate !== defaults.start) n++
+    if (endDate !== defaults.end) n++
     return { activeFilterCount: n, hasActiveFilters: n > 0 }
-  }, [status, tripType, urlSearch, startDate, endDate])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, tripType, urlSearch, startDate, endDate, defaults.start, defaults.end])
 
   return {
     status,

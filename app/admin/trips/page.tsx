@@ -17,12 +17,14 @@ import {
   LayoutGrid,
   ChevronLeft,
   ChevronRight,
+  XCircle,
 } from 'lucide-react'
 import Link from 'next/link'
 import type { TripWithDetails } from '@/types/database'
 import { format } from 'date-fns'
 import { PAGE_SIZE_OPTIONS, useTripFilters } from './use-trip-filters'
-import { formatStatus, formatAmount } from '@/lib/format'
+import { formatStatus, formatAmount, formatCurrency } from '@/lib/format'
+import { MetricCard } from '@/components/dashboard/metric-card'
 
 async function fetchTrips(filters: {
   status: string
@@ -116,6 +118,9 @@ function TripsContent() {
     setPageSize,
     clampPage,
     setFilter,
+    clearFilters,
+    hasActiveFilters,
+    activeFilterCount,
   } = useTripFilters()
 
   const [viewMode, setViewMode] = useState<'table' | 'card'>('card')
@@ -163,6 +168,11 @@ function TripsContent() {
   for (const trip of trips ?? []) {
     if (trip.status in statusCounts) statusCounts[trip.status]++
   }
+
+  // Fare totals over completed trips in the current filtered view
+  const completedTripsInView = trips?.filter(t => t.status === 'completed') ?? []
+  const actualFareTotal = completedTripsInView.reduce((sum, t) => sum + (t.actual_fare || 0), 0)
+  const estimatedFareTotal = completedTripsInView.reduce((sum, t) => sum + (t.estimated_fare || 0), 0)
 
   const statusStats = [
     { key: 'total', label: 'Total', color: 'bg-yellow-50 border-yellow-200 text-yellow-800', dot: 'bg-yellow-400' },
@@ -223,8 +233,38 @@ function TripsContent() {
         ))}
       </div>
 
+      {/* Fare Totals (labeled actual vs estimated, over the filtered view) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <MetricCard
+          title="Total Fares (Actual)"
+          value={formatCurrency(actualFareTotal)}
+          description="Final fares charged on completed trips in this view"
+          icon={DollarSign}
+          color="emerald"
+        />
+        <MetricCard
+          title="Total Fares (Estimated)"
+          value={formatCurrency(estimatedFareTotal)}
+          description="Quoted fares on completed trips in this view"
+          icon={DollarSign}
+          color="yellow"
+        />
+      </div>
+
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+        {hasActiveFilters && (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <XCircle className="h-4 w-4 text-gray-400" aria-hidden="true" />
+              Clear filters ({activeFilterCount})
+            </button>
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           {/* Search */}
           <div className="md:col-span-2">
