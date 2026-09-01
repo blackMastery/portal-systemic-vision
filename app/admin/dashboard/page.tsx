@@ -17,11 +17,13 @@ async function fetchDashboardMetrics() {
   const now = new Date()
   const twoDaysFromNow = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000)
   const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000)
+  const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
 
   // Get real-time counts
   const [
     { count: activeDrivers },
-    { count: activeRiders },
+    { data: recentRequestRiders },
+    { data: recentTripRiders },
     { count: activeTrips },
     { count: pendingDrivers },
     { count: approvedDrivers },
@@ -34,9 +36,15 @@ async function fetchDashboardMetrics() {
       .select('*', { count: 'exact', head: true })
       .eq('is_online', true),
     supabase
-      .from('rider_profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('subscription_status', 'active'),
+      .from('trip_requests')
+      .select('rider_id')
+      .gte('created_at', twoWeeksAgo.toISOString())
+      .not('rider_id', 'is', null),
+    supabase
+      .from('trips')
+      .select('rider_id')
+      .gte('requested_at', twoWeeksAgo.toISOString())
+      .not('rider_id', 'is', null),
     supabase
       .from('trips')
       .select('*', { count: 'exact', head: true })
@@ -66,6 +74,13 @@ async function fetchDashboardMetrics() {
       .gte('accepted_at', twoDaysAgo.toISOString())
       .not('driver_id', 'is', null),
   ])
+
+  // Distinct riders with a trip request in the last 2 weeks, across both tables
+  const activeRiders = new Set(
+    [...(recentRequestRiders ?? []), ...(recentTripRiders ?? [])]
+      .map(row => (row as { rider_id: string | null }).rider_id)
+      .filter((id): id is string => !!id)
+  ).size
 
   // Active-subscription drivers with no accepted trip in the last 2 days
   const recentlyActiveDriverIds = [...new Set(
@@ -99,7 +114,7 @@ async function fetchDashboardMetrics() {
 
   return {
     activeDrivers: activeDrivers || 0,
-    activeRiders: activeRiders || 0,
+    activeRiders,
     activeTrips: activeTrips || 0,
     pendingDrivers: pendingDrivers || 0,
     approvedDrivers: approvedDrivers || 0,
@@ -173,7 +188,7 @@ export default function DashboardPage() {
         <MetricCard
           title="Active Riders"
           value={metrics?.activeRiders || 0}
-          description="Riders with an active subscription"
+          description="Riders with a trip request in the last 2 weeks"
           icon={Users}
           color="green"
           href="/admin/riders"
