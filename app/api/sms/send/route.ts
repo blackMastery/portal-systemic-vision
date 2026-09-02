@@ -7,6 +7,7 @@ import {
 } from '@/lib/errors'
 import { logger } from '@/lib/logger'
 import { createSupabaseServiceClient } from '@/lib/firebase/notifications'
+import { isTwilioConfigured, sendTwilioSms } from '@/lib/sms/twilio'
 
 function createSupabaseClientWithToken(accessToken: string) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -96,40 +97,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: statusCode })
     }
 
-    const accountSid = process.env.TWILIO_ACCOUNT_SID
-    const authToken = process.env.TWILIO_AUTH_TOKEN
-    const fromNumber = process.env.TWILIO_FROM_NUMBER
-
-    if (!accountSid || !authToken || !fromNumber) {
+    if (!isTwilioConfigured()) {
       logger.error('Missing Twilio environment variables')
       const { response, statusCode } = handleApiError(new Error('SMS service is not configured.'))
       return NextResponse.json(response, { status: statusCode })
     }
 
-    const credentials = Buffer.from(`${accountSid}:${authToken}`).toString('base64')
-    const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
-
-    const twilioBody = new URLSearchParams({
-      To: to.trim(),
-      From: fromNumber,
-      Body: message.trim(),
-    })
-
-    const twilioResponse = await fetch(twilioUrl, {
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${credentials}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: twilioBody.toString(),
-    })
-
-    const twilioData = await twilioResponse.json() as { sid?: string; message?: string; code?: number }
+    const twilioResult = await sendTwilioSms(to, message)
 
     const serviceSupabase = createSupabaseServiceClient()
 
-    if (!twilioResponse.ok) {
-      logger.error('Twilio API error', { status: twilioResponse.status, data: twilioData })
+    if (!twilioResult.ok) {
       await serviceSupabase.from('message_logs').insert({
         channel: 'sms',
         recipient_phone: to.trim(),
@@ -138,23 +116,23 @@ export async function POST(request: NextRequest) {
         sent_by_user_id: user.id,
       })
       const { response, statusCode } = handleApiError(
-        new Error(twilioData.message || 'Failed to send SMS.')
+        new Error(twilioResult.message || 'Failed to send SMS.')
       )
       return NextResponse.json(response, { status: statusCode })
     }
 
-    logger.info('SMS sent successfully', { to: to.trim(), messageSid: twilioData.sid })
+    logger.info('SMS sent successfully', { to: to.trim(), messageSid: twilioResult.sid })
     await serviceSupabase.from('message_logs').insert({
       channel: 'sms',
       recipient_phone: to.trim(),
       message: message.trim(),
       status: 'sent',
       sent_by_user_id: user.id,
-      external_id: twilioData.sid,
+      external_id: twilioResult.sid,
     })
 
     return NextResponse.json(
-      { success: true, messageSid: twilioData.sid },
+      { success: true, messageSid: twilioResult.sid },
       { status: 200 }
     )
   } catch (error) {

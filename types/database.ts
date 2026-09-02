@@ -10,6 +10,8 @@ export type UserRole = 'rider' | 'driver' | 'admin'
 export type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'suspended'
 export type SubscriptionStatus = 'active' | 'expired' | 'cancelled' | 'trial'
 export type TripStatus = 'requested' | 'accepted' | 'picked_up' | 'completed' | 'cancelled'
+/** The DB enum also contains 'arrived' (unused by the apps today). */
+export type DbTripStatus = TripStatus | 'arrived'
 export type TripType = 'airport' | 'short_drop' | 'market' | 'other'
 export type TripStopStatus = 'pending' | 'completed'
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded'
@@ -33,6 +35,21 @@ export type IncidentStatus = 'open' | 'under_review' | 'resolved' | 'escalated'
 export type IncidentReporterRole = 'driver' | 'rider'
 
 export type DashcamRequestStatus = 'pending' | 'submitted' | 'expired' | 'cancelled'
+
+export type PanicAlertStatus = 'active' | 'resolved' | 'expired'
+
+/** One entry in panic_alerts.recipients (jsonb). */
+export type PanicRecipientResult = {
+  kind: 'support' | 'emergency_contact' | 'test'
+  purpose: 'alert' | 'resolved'
+  phone: string
+  intended_phone?: string
+  status: 'sent' | 'failed' | 'skipped'
+  sid?: string
+  error?: string
+  message_log_id?: string
+  at: string
+}
 
 export interface Database {
   public: {
@@ -527,6 +544,7 @@ export interface Database {
           assigned_admin_id: string | null
           resolved_at: string | null
           resolved_by: string | null
+          is_panic: boolean
           created_at: string
           updated_at: string
         }
@@ -546,6 +564,7 @@ export interface Database {
           assigned_admin_id?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          is_panic?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -564,9 +583,88 @@ export interface Database {
           assigned_admin_id?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          is_panic?: boolean
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
+      }
+      location_history: {
+        Row: {
+          id: string
+          trip_id: string | null
+          driver_id: string | null
+          latitude: number
+          longitude: number
+          accuracy_meters: number | null
+          speed_kmh: number | null
+          heading: number | null
+          recorded_at: string
+          device_id: string | null
+          is_online: boolean | null
+        }
+        Insert: {
+          id?: string
+          trip_id?: string | null
+          driver_id?: string | null
+          latitude: number
+          longitude: number
+          accuracy_meters?: number | null
+          speed_kmh?: number | null
+          heading?: number | null
+          recorded_at?: string
+          device_id?: string | null
+          is_online?: boolean | null
+        }
+        Update: Partial<Database['public']['Tables']['location_history']['Insert']>
+        Relationships: []
+      }
+      panic_alerts: {
+        Row: {
+          id: string
+          trip_id: string
+          user_id: string
+          role: IncidentReporterRole
+          incident_id: string
+          idempotency_key: string
+          latitude: number | null
+          longitude: number | null
+          accuracy_meters: number | null
+          tracking_token: string
+          status: PanicAlertStatus
+          test_mode: boolean
+          recipients: Json
+          sms_dispatched_at: string | null
+          resolved_sms_dispatched_at: string | null
+          created_at: string
+          updated_at: string
+          resolved_at: string | null
+          resolved_by_user_id: string | null
+          expires_at: string
+        }
+        Insert: {
+          id?: string
+          trip_id: string
+          user_id: string
+          role: IncidentReporterRole
+          incident_id: string
+          idempotency_key: string
+          latitude?: number | null
+          longitude?: number | null
+          accuracy_meters?: number | null
+          tracking_token: string
+          status?: PanicAlertStatus
+          test_mode?: boolean
+          recipients?: Json
+          sms_dispatched_at?: string | null
+          resolved_sms_dispatched_at?: string | null
+          created_at?: string
+          updated_at?: string
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          expires_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['panic_alerts']['Insert']>
         Relationships: []
       }
       incident_status_history: {
@@ -619,7 +717,31 @@ export interface Database {
       }
     }
     Views: {}
-    Functions: {}
+    Functions: {
+      create_panic_alert: {
+        Args: {
+          p_trip_id: string
+          p_user_id: string
+          p_role: IncidentReporterRole
+          p_subject_user_id: string | null
+          p_description: string
+          p_idempotency_key: string
+          p_tracking_token: string
+          p_latitude: number | null
+          p_longitude: number | null
+          p_accuracy_meters: number | null
+          p_test_mode: boolean
+        }
+        Returns: {
+          alert: Database['public']['Tables']['panic_alerts']['Row']
+          outcome: 'created' | 'idempotent' | 'already_active'
+        }[]
+      }
+      expire_stale_panic_alerts: {
+        Args: Record<string, never>
+        Returns: number
+      }
+    }
   }
 }
 

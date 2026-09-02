@@ -10,6 +10,9 @@ import {
   parseBuildNumber,
 } from '@/lib/app-version'
 import { sendTripRequestsPausedNotificationToRidersAndDrivers } from '@/lib/firebase/notifications'
+import { loadPanicConfig, PANIC_CONFIG_KEYS } from '@/lib/panic/config'
+import { isTwilioConfigured, normalizeToE164Guyana, sendTwilioSms } from '@/lib/sms/twilio'
+import { formatGuyana } from '@/lib/guyana-time'
 import { APP_VERSION_ROW_ORDER } from './constants'
 import type {
   AppVersionConfigRow,
@@ -18,6 +21,11 @@ import type {
   GetTripRequestsConfigResult,
   SetTripRequestsEnabledResult,
   UpdateAppVersionConfigResult,
+  GetPanicSettingsResult,
+  PanicSettings,
+  PanicSettingsInput,
+  SetPanicSettingsResult,
+  SendPanicTestSmsResult,
 } from './types'
 
 const TRIP_REQUESTS_CONFIG_KEY = 'trip_requests' as const
@@ -254,4 +262,163 @@ export async function setTripRequestsEnabled(
   }
 
   return { ok: true }
+}
+
+// ---------------------------------------------------------------------------
+// Panic button
+// ---------------------------------------------------------------------------
+
+const MAX_PANIC_SUPPORT_NUMBERS = 10
+
+async function readPanicSettings(db: ReturnType<typeof createServiceClient>): Promise<PanicSettings> {
+  const cfg = await loadPanicConfig(db)
+  return {
+    enabled: cfg.enabled,
+    numbers: cfg.supportNumbers,
+    display: cfg.supportDisplay,
+    testMode: cfg.testMode,
+    testNumber: cfg.testNumber,
+    envTestModeForced: (process.env.PANIC_TEST_MODE ?? '').toLowerCase() === 'true',
+    twilioConfigured: isTwilioConfigured(),
+  }
+}
+
+export async function getPanicSettings(): Promise<GetPanicSettingsResult> {
+  const gate = await requireAdmin()
+  if (!gate.ok) {
+    return { ok: false, error: gate.error }
+  }
+  try {
+    return { ok: true, settings: await readPanicSettings(gate.db) }
+  } catch (err) {
+    logger.error('getPanicSettings failed', { err })
+    return { ok: false, error: 'Failed to load panic button settings.' }
+  }
+}
+
+export async function setPanicSettings(input: PanicSettingsInput): Promise<SetPanicSettingsResult> {
+  const gate = await requireAdmin()
+  if (!gate.ok) {
+    return { ok: false, error: gate.error }
+  }
+
+  const rawNumbers = Array.isArray(input.numbers) ? input.numbers : []
+  if (rawNumbers.length > MAX_PANIC_SUPPORT_NUMBERS) {
+    return { ok: false, error: `At most ${MAX_PANIC_SUPPORT_NUMBERS} support numbers are allowed.` }
+  }
+  const numbers: string[] = []
+  for (const raw of rawNumbers) {
+    if (typeof raw !== 'string' || !raw.trim()) continue
+    const n = normalizeToE164Guyana(raw)
+    if (!n) {
+      return { ok: false, error: `"${raw}" is not a valid phone number. Use +592XXXXXXX or 7 local digits.` }
+    }
+    if (!numbers.includes(n)) numbers.push(n)
+  }
+  if (numbers.length === 0) {
+    return { ok: false, error: 'Add at least one support number that will receive panic alerts.' }
+  }
+
+  const display = typeof input.display === 'string' ? input.display.trim().slice(0, 40) : ''
+
+  const testMode = Boolean(input.testMode)
+  let testNumber: string | null = null
+  if (typeof input.testNumber === 'string' && input.testNumber.trim()) {
+    testNumber = normalizeToE164Guyana(input.testNumber)
+    if (!testNumber) {
+      return { ok: false, error: 'The test number is not a valid phone number.' }
+    }
+  }
+  if (testMode && !testNumber) {
+    return { ok: false, error: 'Test mode needs a test number, otherwise every alert SMS would be skipped.' }
+  }
+
+  const now = new Date().toISOString()
+  const rows = [
+    {
+      key: PANIC_CONFIG_KEYS.enabled,
+      value: { enabled: Boolean(input.enabled) },
+      description: 'Panic button kill switch. When enabled is false, POST /api/panic returns 403 PANIC_DISABLED.',
+    },
+    {
+      key: PANIC_CONFIG_KEYS.supportNumbers,
+      value: { numbers, display: display || numbers[0] },
+      description: 'E.164 support numbers that receive panic SMS, plus the display number shown to users.',
+    },
+    {
+      key: PANIC_CONFIG_KEYS.testMode,
+      value: { enabled: testMode, test_number: testNumber },
+      description: 'When enabled, every panic SMS is redirected to test_number instead of real recipients.',
+    },
+  ]
+
+  for (const row of rows) {
+    const { error } = await gate.db
+      .from('system_config')
+      .upsert({ ...row, updated_at: now, updated_by: gate.adminUserId }, { onConflict: 'key' })
+    if (error) {
+      logger.error('setPanicSettings upsert failed', { error, key: row.key })
+      return { ok: false, error: 'Failed to save panic button settings.' }
+    }
+  }
+
+  logger.info('Panic settings updated by admin', {
+    enabled: input.enabled,
+    numbers: numbers.length,
+    testMode,
+    adminUserId: gate.adminUserId,
+  })
+
+  try {
+    return { ok: true, settings: await readPanicSettings(gate.db) }
+  } catch (err) {
+    logger.error('setPanicSettings reload failed', { err })
+    return { ok: false, error: 'Saved, but reloading the settings failed. Refresh the page.' }
+  }
+}
+
+/**
+ * Sends a one-off SMS to the configured test number so admins can verify
+ * Twilio credentials and delivery. Logged to message_logs as `panic_test`.
+ */
+export async function sendPanicTestSms(): Promise<SendPanicTestSmsResult> {
+  const gate = await requireAdmin()
+  if (!gate.ok) {
+    return { ok: false, error: gate.error }
+  }
+
+  if (!isTwilioConfigured()) {
+    return { ok: false, error: 'Twilio is not configured (TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM_NUMBER).' }
+  }
+
+  const cfg = await loadPanicConfig(gate.db)
+  if (!cfg.testNumber) {
+    return { ok: false, error: 'Save a test number first.' }
+  }
+
+  const body = `LINKS PANIC TEST ${formatGuyana(new Date(), 'd MMM HH:mm')}: this is a test of the Links panic alert SMS. No action needed.`
+  const result = await sendTwilioSms(cfg.testNumber, body, { timeoutMs: 10_000 })
+
+  const { error: logErr } = await gate.db.from('message_logs').insert({
+    channel: 'sms',
+    recipient_phone: cfg.testNumber,
+    message: body,
+    status: result.ok ? 'sent' : 'failed',
+    sent_by_user_id: gate.adminUserId,
+    external_id: result.ok ? result.sid : null,
+    notification_type: 'panic_test',
+    audience: 'test',
+    metadata: {
+      test_mode: cfg.testMode,
+      twilio_error: result.ok ? null : result.message,
+      twilio_code: result.ok ? null : (result.code ?? null),
+    },
+  })
+  if (logErr) logger.error('panic_test message_logs insert failed', { error: logErr })
+
+  if (!result.ok) {
+    return { ok: false, error: `Twilio rejected the message: ${result.message}` }
+  }
+  logger.info('Panic test SMS sent', { to: cfg.testNumber, sid: result.sid, adminUserId: gate.adminUserId })
+  return { ok: true, sid: result.sid, to: cfg.testNumber }
 }

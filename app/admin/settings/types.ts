@@ -32,3 +32,36 @@ export type GetTripRequestsConfigResult =
 export type SetTripRequestsEnabledResult =
   | { ok: true }
   | { ok: false; error: string }
+
+export type PanicSettings = {
+  enabled: boolean
+  /** E.164 support numbers that receive the alert SMS. */
+  numbers: string[]
+  /** Human-friendly number shown on the tracking page / in SMS. */
+  display: string
+  testMode: boolean
+  testNumber: string | null
+  /** Env forces test mode on (DB cannot turn it off). */
+  envTestModeForced: boolean
+  twilioConfigured: boolean
+}
+
+export type PanicSettingsInput = {
+  enabled: boolean
+  numbers: string[]
+  display: string
+  testMode: boolean
+  testNumber: string | null
+}
+
+export type GetPanicSettingsResult =
+  | { ok: true; settings: PanicSettings }
+  | { ok: false; error: string }
+
+export type SetPanicSettingsResult =
+  | { ok: true; settings: PanicSettings }
+  | { ok: false; error: string }
+
+export type SendPanicTestSmsResult =
+  | { ok: true; sid: string; to: string }
+  | { ok: false; error: string }

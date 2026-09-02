@@ -13,7 +13,10 @@ import type {
   IncidentReporterRole,
   IncidentStatus,
   DashcamRequestStatus,
+  PanicAlertStatus,
+  PanicRecipientResult,
 } from '@/types/database'
+import { formatGuyana } from '@/lib/guyana-time'
 import {
   ArrowLeft,
   User,
@@ -22,10 +25,19 @@ import {
   History,
   ClipboardList,
   ShieldAlert,
+  Siren,
+  Copy,
+  ExternalLink,
+  Check,
 } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { updateIncidentStatus, assignAdmin, addAdminNote } from '../actions'
+import {
+  updateIncidentStatus,
+  assignAdmin,
+  addAdminNote,
+  resolvePanicAlertAsAdmin,
+} from '../actions'
 
 const categoryLabels: Record<IncidentCategory, string> = {
   safety_concern: 'Safety concern',
@@ -68,6 +80,8 @@ type IncidentDetail = {
   admin_notes: string | null
   assigned_admin_id: string | null
   resolved_at: string | null
+  resolved_by: string | null
+  is_panic: boolean
   created_at: string
   reporter: {
     id: string
@@ -103,6 +117,52 @@ type DashcamRow = {
   requested_at: string
   deadline_at: string
   submitted_at: string | null
+}
+
+type PanicAlertRow = {
+  id: string
+  trip_id: string
+  user_id: string
+  role: IncidentReporterRole
+  latitude: number | null
+  longitude: number | null
+  accuracy_meters: number | null
+  tracking_token: string
+  status: PanicAlertStatus
+  test_mode: boolean
+  recipients: Json
+  sms_dispatched_at: string | null
+  resolved_sms_dispatched_at: string | null
+  created_at: string
+  resolved_at: string | null
+  resolved_by_user_id: string | null
+  expires_at: string
+}
+
+const panicStatusColors: Record<PanicAlertStatus, string> = {
+  active: 'bg-red-600 text-white',
+  resolved: 'bg-success-soft text-success-soft-foreground',
+  expired: 'bg-muted text-secondary-foreground',
+}
+
+const recipientKindLabels: Record<PanicRecipientResult['kind'], string> = {
+  support: 'Support',
+  emergency_contact: 'Emergency contact',
+  test: 'Test',
+}
+
+const recipientStatusColors: Record<PanicRecipientResult['status'], string> = {
+  sent: 'bg-success-soft text-success-soft-foreground',
+  failed: 'bg-danger-soft text-danger-soft-foreground',
+  skipped: 'bg-warning-soft text-warning-soft-foreground',
+}
+
+function parseRecipients(raw: Json | null | undefined): PanicRecipientResult[] {
+  if (!Array.isArray(raw)) return []
+  return raw.filter(
+    (r): r is PanicRecipientResult =>
+      !!r && typeof r === 'object' && !Array.isArray(r) && 'kind' in r && 'status' in r,
+  ) as PanicRecipientResult[]
 }
 
 type HistoryRow = {
@@ -181,7 +241,7 @@ function pointsFromLocationSnapshot(snap: Json): TripRoutePoint[] {
 async function fetchIncidentBundle(id: string) {
   const supabase = createClient()
 
-  const [incRes, dashRes, histRes] = await Promise.all([
+  const [incRes, dashRes, histRes, panicRes] = await Promise.all([
     supabase
       .from('incidents')
       .select(
@@ -211,6 +271,7 @@ async function fetchIncidentBundle(id: string) {
       .select('*, changer:changed_by (full_name)')
       .eq('incident_id', id)
       .order('changed_at', { ascending: false }),
+    supabase.from('panic_alerts').select('*').eq('incident_id', id).maybeSingle(),
   ])
 
   if (incRes.error) throw incRes.error
@@ -219,6 +280,7 @@ async function fetchIncidentBundle(id: string) {
   const incident = incRes.data as unknown as IncidentDetail
   const dashcam = (dashRes.data as DashcamRow | null) ?? null
   const history = (histRes.data ?? []) as unknown as HistoryRow[]
+  const panic = (panicRes.data as unknown as PanicAlertRow | null) ?? null
 
   const evidenceUrls: Record<string, string> = {}
   for (const path of incident.evidence_paths ?? []) {
@@ -228,7 +290,7 @@ async function fetchIncidentBundle(id: string) {
     if (data?.signedUrl) evidenceUrls[path] = data.signedUrl
   }
 
-  return { incident, dashcam, history, evidenceUrls }
+  return { incident, dashcam, history, evidenceUrls, panic }
 }
 
 async function fetchAdminOptions() {
@@ -252,6 +314,12 @@ export default function AdminIncidentDetailPage() {
   const [statusDraft, setStatusDraft] = useState<IncidentStatus>('open')
   const [assignDraft, setAssignDraft] = useState<string>('')
   const [noteDraft, setNoteDraft] = useState('')
+  const [copiedTracking, setCopiedTracking] = useState(false)
+  const [origin, setOrigin] = useState('')
+
+  useEffect(() => {
+    setOrigin(window.location.origin)
+  }, [])
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-incident-detail', params.id],
@@ -314,12 +382,44 @@ export default function AdminIncidentDetailPage() {
     )
   }
 
-  const { incident, dashcam, history, evidenceUrls } = data
+  const { incident, dashcam, history, evidenceUrls, panic } = data
+  const resolvedByReporter =
+    incident.status === 'resolved' &&
+    incident.resolved_by != null &&
+    incident.resolved_by === incident.reporter_user_id
+  const trackingPath = panic ? `/track/${panic.tracking_token}` : null
+  const trackingUrl = trackingPath ? `${origin}${trackingPath}` : null
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['admin-incident-detail', params.id] })
     queryClient.invalidateQueries({ queryKey: ['admin-incidents'] })
     queryClient.invalidateQueries({ queryKey: ['incidents-open-count'] })
+    queryClient.invalidateQueries({ queryKey: ['panic-alerts-active'] })
+  }
+
+  function handleResolvePanic() {
+    if (!panic) return
+    if (!window.confirm('Resolve this panic alert? No SMS will be sent to the recipients.')) return
+    setActionError(null)
+    startTransition(async () => {
+      const r = await resolvePanicAlertAsAdmin(panic.id)
+      if (!r.success) {
+        setActionError(r.error ?? 'Failed to resolve panic alert.')
+        return
+      }
+      invalidate()
+    })
+  }
+
+  async function handleCopyTracking() {
+    if (!trackingUrl) return
+    try {
+      await navigator.clipboard.writeText(trackingUrl)
+      setCopiedTracking(true)
+      setTimeout(() => setCopiedTracking(false), 2000)
+    } catch {
+      setActionError('Could not copy the tracking link.')
+    }
   }
 
   function handleStatusSave() {
@@ -380,19 +480,34 @@ export default function AdminIncidentDetailPage() {
         </Link>
         <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Incident</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-3">
+              Incident
+              {incident.is_panic && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-red-600 text-white px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide">
+                  <Siren className="h-3.5 w-3.5" aria-hidden />
+                  Panic
+                </span>
+              )}
+            </h1>
             <p className="text-sm text-gray-500 mt-1">
               {categoryLabels[incident.category]} ·{' '}
               {format(new Date(incident.created_at), 'MMM d, yyyy h:mm a')}
             </p>
           </div>
-          <span
-            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-              statusColors[incident.status]
-            }`}
-          >
-            {incident.status.replace('_', ' ')}
-          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                statusColors[incident.status]
+              }`}
+            >
+              {incident.status.replace('_', ' ')}
+            </span>
+            {resolvedByReporter && (
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                resolved by reporter
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -439,6 +554,179 @@ export default function AdminIncidentDetailPage() {
           )}
         </section>
       </div>
+
+      {panic && (
+        <section
+          className={`rounded-xl border p-6 space-y-4 ${
+            panic.status === 'active' ? 'bg-red-50 border-red-300' : 'bg-white border-gray-200'
+          }`}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Siren className={`h-5 w-5 ${panic.status === 'active' ? 'text-red-600' : 'text-gray-500'}`} />
+              Panic alert
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                  panicStatusColors[panic.status]
+                }`}
+              >
+                {panic.status}
+              </span>
+              {panic.test_mode && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-900 border border-amber-200">
+                  test mode
+                </span>
+              )}
+            </h2>
+            {panic.status === 'active' && (
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={handleResolvePanic}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-red-700 disabled:opacity-50"
+              >
+                <Check className="h-4 w-4" aria-hidden />
+                Resolve panic alert
+              </button>
+            )}
+          </div>
+
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+            <div>
+              <dt className="text-xs font-medium text-gray-500">Pressed by</dt>
+              <dd className="text-gray-900 capitalize">{panic.role}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium text-gray-500">Pressed at (Guyana time)</dt>
+              <dd className="text-gray-900">{formatGuyana(panic.created_at, 'MMM d, yyyy HH:mm:ss')}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium text-gray-500">Press location</dt>
+              <dd>
+                {panic.latitude != null && panic.longitude != null ? (
+                  <a
+                    href={`https://maps.google.com/?q=${Number(panic.latitude).toFixed(5)},${Number(panic.longitude).toFixed(5)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-primary-strong hover:text-primary-hover"
+                  >
+                    {Number(panic.latitude).toFixed(5)}, {Number(panic.longitude).toFixed(5)}
+                    {panic.accuracy_meters != null && (
+                      <span className="text-gray-500">(±{Math.round(Number(panic.accuracy_meters))} m)</span>
+                    )}
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                  </a>
+                ) : (
+                  <span className="text-gray-500">Unavailable</span>
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium text-gray-500">Tracking link expires</dt>
+              <dd className="text-gray-900">{formatGuyana(panic.expires_at, 'MMM d, yyyy HH:mm')}</dd>
+            </div>
+            {panic.resolved_at && (
+              <div>
+                <dt className="text-xs font-medium text-gray-500">Resolved at</dt>
+                <dd className="text-gray-900">
+                  {formatGuyana(panic.resolved_at, 'MMM d, yyyy HH:mm:ss')}
+                  {panic.resolved_by_user_id != null && panic.resolved_by_user_id === panic.user_id && (
+                    <span className="ml-2 text-xs text-gray-600">(resolved by reporter)</span>
+                  )}
+                </dd>
+              </div>
+            )}
+            <div className="sm:col-span-2">
+              <dt className="text-xs font-medium text-gray-500">Tracking link</dt>
+              <dd className="mt-1 flex flex-wrap items-center gap-2">
+                <code className="text-xs bg-gray-100 border border-gray-200 rounded px-2 py-1 break-all">
+                  {trackingUrl ?? trackingPath}
+                </code>
+                <button
+                  type="button"
+                  onClick={handleCopyTracking}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 border border-gray-300 rounded-lg text-xs bg-white hover:bg-gray-50"
+                >
+                  {copiedTracking ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copiedTracking ? 'Copied' : 'Copy'}
+                </button>
+                <a
+                  href={trackingPath ?? '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 border border-gray-300 rounded-lg text-xs bg-white hover:bg-gray-50"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Open
+                </a>
+              </dd>
+            </div>
+          </dl>
+
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">SMS recipients</h3>
+            {parseRecipients(panic.recipients).length === 0 ? (
+              <p className="text-sm text-gray-500">
+                {panic.sms_dispatched_at ? 'No recipients recorded.' : 'SMS not dispatched yet.'}
+              </p>
+            ) : (
+              <div className="overflow-x-auto border border-gray-200 rounded-lg bg-white">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Kind</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Purpose</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">SID / error</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">At</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {parseRecipients(panic.recipients).map((r, i) => {
+                      const isTest = r.kind === 'test'
+                      return (
+                        <tr key={`${r.kind}-${r.purpose}-${r.at}-${i}`}>
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            {recipientKindLabels[r.kind] ?? r.kind}
+                            {isTest && (
+                              <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-900">
+                                test mode
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap capitalize">{r.purpose}</td>
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            {r.phone || <span className="text-gray-400">—</span>}
+                            {r.intended_phone && r.intended_phone !== r.phone && (
+                              <div className="text-xs text-gray-500">intended: {r.intended_phone}</div>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                recipientStatusColors[r.status] ?? 'bg-muted text-secondary-foreground'
+                              }`}
+                            >
+                              {r.status}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-xs text-gray-600 break-all max-w-xs">
+                            {r.sid ?? r.error ?? '—'}
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
+                            {formatGuyana(r.at, 'MMM d, HH:mm:ss')}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {incident.trip_id && (
         <section className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">

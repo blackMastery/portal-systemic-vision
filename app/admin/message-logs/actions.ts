@@ -7,6 +7,7 @@ import type { Database, UserRole } from '@/types/database'
 import type { FirebaseProjectType } from '@/lib/firebase/admin'
 import { logger } from '@/lib/logger'
 import { sendNotificationsToUsers } from '@/lib/firebase/notifications'
+import { sendTwilioSms } from '@/lib/sms/twilio'
 
 function createServiceClient() {
   return createClient<Database>(
@@ -42,50 +43,6 @@ async function requireAdmin(): Promise<
   }
 
   return { ok: true, db, adminUserId: userRow.id }
-}
-
-async function sendTwilioSms(
-  to: string,
-  body: string
-): Promise<{ ok: true; sid: string } | { ok: false; message: string }> {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID
-  const authToken = process.env.TWILIO_AUTH_TOKEN
-  const fromNumber = process.env.TWILIO_FROM_NUMBER
-
-  if (!accountSid || !authToken || !fromNumber) {
-    return { ok: false, message: 'SMS service is not configured.' }
-  }
-
-  const credentials = Buffer.from(`${accountSid}:${authToken}`).toString('base64')
-  const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
-
-  const twilioBody = new URLSearchParams({
-    To: to.trim(),
-    From: fromNumber,
-    Body: body.trim(),
-  })
-
-  const twilioResponse = await fetch(twilioUrl, {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${credentials}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: twilioBody.toString(),
-  })
-
-  const twilioData = (await twilioResponse.json()) as {
-    sid?: string
-    message?: string
-    code?: number
-  }
-
-  if (!twilioResponse.ok) {
-    logger.error('Twilio API error on resend', { status: twilioResponse.status, data: twilioData })
-    return { ok: false, message: twilioData.message || 'Failed to send SMS.' }
-  }
-
-  return { ok: true, sid: twilioData.sid! }
 }
 
 export type ResendMessageLogResult =

@@ -63,7 +63,7 @@ async function fetchOpenIncidentCount(): Promise<number> {
   const { count, error } = await supabase
     .from('incidents')
     .select('id', { count: 'exact', head: true })
-    .in('status', ['open', 'under_review'])
+    .in('status', ['open', 'under_review', 'escalated'])
   if (error) return 0
   return count ?? 0
 }

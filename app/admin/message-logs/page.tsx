@@ -5,7 +5,27 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Search, MessageSquare, List, LayoutGrid, X, RefreshCw } from 'lucide-react'
 import { format } from 'date-fns'
+import Link from 'next/link'
 import { resendMessageLog } from './actions'
+
+const PANIC_NOTIFICATION_TYPES = [
+  { value: 'panic_alert', label: 'Panic alert' },
+  { value: 'panic_resolved', label: 'Panic resolved' },
+  { value: 'panic_test', label: 'Panic test' },
+] as const
+
+/** Incident id a log is attached to via panic metadata, if any. */
+function incidentIdFromMetadata(metadata: Record<string, unknown> | null): string | null {
+  if (!metadata) return null
+  const id = metadata.incident_id
+  return typeof id === 'string' && id ? id : null
+}
+
+function panicAlertIdFromMetadata(metadata: Record<string, unknown> | null): string | null {
+  if (!metadata) return null
+  const id = metadata.panic_alert_id
+  return typeof id === 'string' && id ? id : null
+}
 
 type MessageLog = {
   id: string
@@ -28,6 +48,7 @@ type MessageLog = {
 async function fetchMessageLogs(filters: {
   channel: string
   status: string
+  notificationType: string
   dateRange: string
   searchQuery: string
 }) {
@@ -49,6 +70,10 @@ async function fetchMessageLogs(filters: {
 
   if (filters.status !== 'all') {
     query = query.eq('status', filters.status)
+  }
+
+  if (filters.notificationType !== 'all') {
+    query = query.eq('notification_type', filters.notificationType)
   }
 
   if (filters.dateRange !== 'all') {
@@ -91,6 +116,7 @@ async function fetchMessageLogs(filters: {
 function MessageLogsContent() {
   const [channel, setChannel] = useState('all')
   const [status, setStatus] = useState('all')
+  const [notificationType, setNotificationType] = useState('all')
   const [dateRange, setDateRange] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table')
@@ -123,8 +149,8 @@ function MessageLogsContent() {
   }, [selectedLog?.id])
 
   const { data: logs, isLoading } = useQuery({
-    queryKey: ['message_logs', channel, status, dateRange, searchQuery],
-    queryFn: () => fetchMessageLogs({ channel, status, dateRange, searchQuery }),
+    queryKey: ['message_logs', channel, status, notificationType, dateRange, searchQuery],
+    queryFn: () => fetchMessageLogs({ channel, status, notificationType, dateRange, searchQuery }),
   })
 
   return (
@@ -180,8 +206,25 @@ function MessageLogsContent() {
             </select>
           </div>
 
+          {/* Notification type */}
+          <div>
+            <select
+              value={notificationType}
+              onChange={(e) => setNotificationType(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
+              aria-label="Notification type"
+            >
+              <option value="all">All Types</option>
+              {PANIC_NOTIFICATION_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Date Range */}
-          <div className="md:col-span-2">
+          <div>
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
@@ -352,6 +395,22 @@ function MessageLogsContent() {
                         <div className="text-sm text-gray-500 truncate max-w-[280px]">
                           {log.message.length > 80 ? log.message.slice(0, 80) + '…' : log.message}
                         </div>
+                        {(incidentIdFromMetadata(log.metadata) || panicAlertIdFromMetadata(log.metadata)) && (
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-bold uppercase">
+                              Panic
+                            </span>
+                            {incidentIdFromMetadata(log.metadata) && (
+                              <Link
+                                href={`/admin/incidents/${incidentIdFromMetadata(log.metadata)}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-xs text-primary-strong hover:text-primary-hover"
+                              >
+                                Open incident →
+                              </Link>
+                            )}
+                          </div>
+                        )}
                       </td>
 
                       {/* Status */}
@@ -462,6 +521,17 @@ function MessageLogsContent() {
                     <p>{selectedLog.sent_by?.full_name ?? 'Unknown sender'}</p>
                     <p className="text-xs text-gray-500">Sender user ID: {selectedLog.sent_by_user_id ?? 'N/A'}</p>
                     <p className="text-xs text-gray-500">Notification type: {selectedLog.notification_type ?? 'N/A'}</p>
+                    {incidentIdFromMetadata(selectedLog.metadata) && (
+                      <Link
+                        href={`/admin/incidents/${incidentIdFromMetadata(selectedLog.metadata)}`}
+                        className="inline-block text-xs text-primary-strong hover:text-primary-hover"
+                      >
+                        Open linked incident →
+                      </Link>
+                    )}
+                    {!incidentIdFromMetadata(selectedLog.metadata) && panicAlertIdFromMetadata(selectedLog.metadata) && (
+                      <p className="text-xs text-gray-500">Panic alert: {panicAlertIdFromMetadata(selectedLog.metadata)}</p>
+                    )}
                   </div>
                 </div>
               </div>

@@ -370,3 +370,28 @@ export function safeValidate<T>(
     throw error
   }
 }
+
+/**
+ * Panic button (SOS) schemas
+ */
+export const panicTriggerSchema = z
+  .object({
+    trip_id: z.string().uuid('trip_id must be a valid UUID'),
+    idempotency_key: z.string().uuid('idempotency_key must be a valid UUID'),
+    latitude: latitudeSchema.optional(),
+    longitude: longitudeSchema.optional(),
+    accuracy_meters: z.number().min(0).max(99999).optional(),
+    pressed_at: z.string().datetime({ offset: true }).optional(),
+    role: z.enum(['driver', 'rider']).optional(),
+  })
+  .strict()
+
+export type PanicTriggerRequest = z.infer<typeof panicTriggerSchema>
+
+export const panicResolveSchema = z
+  .object({
+    reason: z.enum(['safe', 'false_alarm']).default('safe'),
+  })
+  .strict()
+
+export type PanicResolveRequest = z.infer<typeof panicResolveSchema>
