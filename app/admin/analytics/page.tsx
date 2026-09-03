@@ -12,6 +12,10 @@ import { RiderAnalytics } from '@/components/analytics/rider-analytics'
 import { FinancialAnalytics } from '@/components/analytics/financial-analytics'
 import { OperationalAnalytics } from '@/components/analytics/operational-analytics'
 import { SubscriptionAnalytics } from '@/components/analytics/subscription-analytics'
+import { CancellationAnalytics } from '@/components/analytics/cancellation-analytics'
+import { RatingAnalytics } from '@/components/analytics/rating-analytics'
+import { MatchingAnalytics } from '@/components/analytics/matching-analytics'
+import { GeographyAnalytics } from '@/components/analytics/geography-analytics'
 
 type DateRangePreset = '7d' | '30d' | '90d' | 'all' | 'custom'
 
@@ -115,10 +119,14 @@ export default function AnalyticsPage() {
         <nav aria-label="Analytics sections" className="flex items-center gap-2 overflow-x-auto pb-1 -mb-1">
           {[
             ['#trips', 'Trips'],
+            ['#cancellations', 'Cancellations'],
             ['#financial', 'Financial'],
             ['#users', 'Users'],
             ['#drivers-riders', 'Drivers & Riders'],
+            ['#ratings', 'Ratings'],
             ['#operations', 'Operations'],
+            ['#matching', 'Matching'],
+            ['#geography', 'Geography'],
             ['#subscriptions', 'Subscriptions'],
           ].map(([href, label]) => (
             <a
@@ -144,6 +152,11 @@ export default function AnalyticsPage() {
             <TripAnalytics dateRange={resolved.range} />
           </section>
 
+          {/* Cancellation Analytics */}
+          <section id="cancellations" className="scroll-mt-32">
+            <CancellationAnalytics dateRange={resolved.range} />
+          </section>
+
           {/* Financial Analytics */}
           <section id="financial" className="scroll-mt-32">
             <FinancialAnalytics dateRange={resolved.range} />
@@ -160,9 +173,24 @@ export default function AnalyticsPage() {
             <RiderAnalytics />
           </section>
 
+          {/* Rating Quality */}
+          <section id="ratings" className="scroll-mt-32">
+            <RatingAnalytics dateRange={resolved.range} />
+          </section>
+
           {/* Operational Analytics */}
           <section id="operations" className="scroll-mt-32">
             <OperationalAnalytics dateRange={resolved.range} />
+          </section>
+
+          {/* Supply & Demand Matching */}
+          <section id="matching" className="scroll-mt-32">
+            <MatchingAnalytics dateRange={resolved.range} />
+          </section>
+
+          {/* Geography & Demand */}
+          <section id="geography" className="scroll-mt-32">
+            <GeographyAnalytics dateRange={resolved.range} />
           </section>
 
           {/* Subscription Analytics */}

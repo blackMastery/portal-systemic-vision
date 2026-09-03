@@ -510,6 +510,144 @@ export interface Database {
           },
         ]
       }
+      driver_request_blocks: {
+        Row: {
+          id: string
+          driver_id: string
+          request_id: string
+          blocked_at: string
+          cancellation_reason: string | null
+          source_trip_id: string | null
+        }
+        Insert: {
+          id?: string
+          driver_id: string
+          request_id: string
+          blocked_at?: string
+          cancellation_reason?: string | null
+          source_trip_id?: string | null
+        }
+        Update: {
+          cancellation_reason?: string | null
+          source_trip_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'driver_request_blocks_driver_id_fkey'
+            columns: ['driver_id']
+            isOneToOne: false
+            referencedRelation: 'driver_profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'driver_request_blocks_request_id_fkey'
+            columns: ['request_id']
+            isOneToOne: false
+            referencedRelation: 'trip_requests'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'driver_request_blocks_source_trip_id_fkey'
+            columns: ['source_trip_id']
+            isOneToOne: false
+            referencedRelation: 'trips'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      saved_places: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          address: string
+          latitude: number
+          longitude: number
+          place_type: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          address: string
+          latitude: number
+          longitude: number
+          place_type?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          name?: string
+          address?: string
+          latitude?: number
+          longitude?: number
+          place_type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'saved_places_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      rating_review_queue: {
+        Row: {
+          id: string
+          trip_id: string
+          rider_id: string
+          rating: number | null
+          feedback: string | null
+          flag_source: 'auto_low_rating' | 'manual'
+          flagged_by_user_id: string | null
+          status: 'open' | 'resolved' | 'dismissed'
+          resolution_note: string | null
+          resolved_by: string | null
+          resolved_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          trip_id: string
+          rider_id: string
+          rating?: number | null
+          feedback?: string | null
+          flag_source: 'auto_low_rating' | 'manual'
+          flagged_by_user_id?: string | null
+          status?: 'open' | 'resolved' | 'dismissed'
+          resolution_note?: string | null
+          resolved_by?: string | null
+          resolved_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          status?: 'open' | 'resolved' | 'dismissed'
+          resolution_note?: string | null
+          resolved_by?: string | null
+          resolved_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'rating_review_queue_trip_id_fkey'
+            columns: ['trip_id']
+            isOneToOne: false
+            referencedRelation: 'trips'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'rating_review_queue_rider_id_fkey'
+            columns: ['rider_id']
+            isOneToOne: false
+            referencedRelation: 'rider_profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       incidents: {
         Row: {
           id: string
