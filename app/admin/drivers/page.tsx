@@ -18,16 +18,175 @@ import {
   List,
   LayoutGrid,
   Megaphone,
+  AlertTriangle,
+  Star,
 } from 'lucide-react'
 import Link from 'next/link'
-import type { DriverWithDetails } from '@/types/database'
+import { format, formatDistanceToNowStrict } from 'date-fns'
+import type { Database, DriverWithDetails } from '@/types/database'
 import { SendNotificationModal } from './send-notification-modal'
+import { ImageLightbox } from '@/components/ui/image-lightbox'
 import { formatStatus } from '@/lib/format'
+import { formatGuyana, parseApiTimestamptz } from '@/lib/guyana-time'
 
 const SELECT_CLASS =
   'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring'
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const
+
+const MS_PER_DAY = 1000 * 60 * 60 * 24
+
+/** Days after which a license/subscription counts as "expiring soon" rather than valid. */
+const LICENSE_WARN_DAYS = 30
+const REGISTRATION_WARN_DAYS = 30
+const SUBSCRIPTION_WARN_DAYS = 7
+
+type Vehicle = Database['public']['Tables']['vehicles']['Row']
+
+type Tone = 'ok' | 'warn' | 'danger' | 'info' | 'muted'
+
+const TONE_CLASS: Record<Tone, string> = {
+  ok: 'bg-success-soft text-success-soft-foreground',
+  warn: 'bg-warning-soft text-warning-soft-foreground',
+  danger: 'bg-danger-soft text-danger-soft-foreground',
+  info: 'bg-info-soft text-info-soft-foreground',
+  muted: 'bg-muted text-secondary-foreground',
+}
+
+function Pill({
+  tone,
+  title,
+  children,
+}: {
+  tone: Tone
+  title?: string
+  children: ReactNode
+}) {
+  return (
+    <span
+      title={title}
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ${TONE_CLASS[tone]}`}
+    >
+      {children}
+    </span>
+  )
+}
+
+/** Expiry columns are calendar dates — read them as local days, not UTC instants. */
+function parseDay(value: string | null | undefined): Date | null {
+  if (!value) return null
+  const parsed = new Date(value.length <= 10 ? `${value}T00:00:00` : value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function formatDay(value: string | null | undefined): string | null {
+  const parsed = parseDay(value)
+  return parsed ? format(parsed, 'dd MMM yyyy') : null
+}
+
+/** Whole days from now until `value`; negative once it is in the past. */
+function daysUntil(value: string | null | undefined): number | null {
+  const parsed = parseDay(value)
+  return parsed ? Math.ceil((parsed.getTime() - Date.now()) / MS_PER_DAY) : null
+}
+
+/** How urgent an expiry is, plus a long and a compact way to say it. */
+function expiryMeta(value: string | null | undefined, warnWithinDays: number) {
+  const days = daysUntil(value)
+  const date = formatDay(value)
+  if (days === null || !date) {
+    return { tone: 'muted' as Tone, label: 'No expiry on file', short: 'No expiry' }
+  }
+  if (days < 0) return { tone: 'danger' as Tone, label: `Expired ${date}`, short: 'Expired' }
+  if (days === 0) return { tone: 'danger' as Tone, label: `Expires today (${date})`, short: 'Expires today' }
+  if (days <= warnWithinDays) {
+    return { tone: 'warn' as Tone, label: `Expires in ${days}d (${date})`, short: `${days}d left` }
+  }
+  return { tone: 'ok' as Tone, label: `Valid until ${date}`, short: date }
+}
+
+function relativeTime(value: string | null | undefined): string | null {
+  if (!value) return null
+  const parsed = parseApiTimestamptz(value)
+  return Number.isNaN(parsed.getTime()) ? null : `${formatDistanceToNowStrict(parsed)} ago`
+}
+
+function driverName(driver: DriverWithDetails): string {
+  return driver.user?.full_name?.trim() || 'Unnamed driver'
+}
+
+/** Blank strings come back from the app as often as nulls — treat both as missing. */
+function driverContacts(driver: DriverWithDetails) {
+  return {
+    phone: driver.user?.phone_number?.trim() || null,
+    email: driver.user?.email?.trim() || null,
+  }
+}
+
+function driverInitial(driver: DriverWithDetails): string {
+  return driver.user?.full_name?.trim()?.charAt(0).toUpperCase() || '?'
+}
+
+/** The vehicle an admin should see first: primary, else active, else whatever exists. */
+function primaryVehicle(driver: DriverWithDetails): Vehicle | null {
+  const vehicles = driver.vehicles ?? []
+  return vehicles.find(v => v.is_primary) ?? vehicles.find(v => v.is_active) ?? vehicles[0] ?? null
+}
+
+function vehicleTitle(vehicle: Vehicle): string {
+  return [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(' ') || 'Vehicle'
+}
+
+function subscriptionMeta(driver: DriverWithDetails) {
+  const tone: Tone =
+    driver.subscription_status === 'active'
+      ? 'ok'
+      : driver.subscription_status === 'trial'
+        ? 'info'
+        : 'danger'
+  const date = formatDay(driver.subscription_end_date)
+  const days = daysUntil(driver.subscription_end_date)
+
+  let detail = 'No end date'
+  if (date && days !== null) {
+    if (days <= 0) detail = `Ended ${date}`
+    else if (days <= SUBSCRIPTION_WARN_DAYS) detail = `${days}d left · ${date}`
+    else detail = `Renews ${date}`
+  }
+
+  return { tone, detail, isLapsing: days !== null && days <= SUBSCRIPTION_WARN_DAYS }
+}
+
+/** The vetting checklist: what still has to land before this driver can be approved. */
+function missingForApproval(driver: DriverWithDetails): string[] {
+  const missing: string[] = []
+  if (!driver.user?.full_name?.trim()) missing.push('Name')
+  if (!driver.user?.phone_number?.trim()) missing.push('Phone')
+  if (!driver.national_id_url?.trim()) missing.push('ID photo')
+  if (!driver.drivers_license_url?.trim()) missing.push('License photo')
+  if (!driver.insurance_document_url?.trim()) missing.push('Insurance')
+  if (!driver.drivers_license_number?.trim()) missing.push('License #')
+  if (!driver.drivers_license_expiry) missing.push('License expiry')
+  const vehicle = primaryVehicle(driver)
+  if (!vehicle) missing.push('Vehicle')
+  else {
+    if (!vehicle.vehicle_photo_url?.trim()) missing.push('Vehicle photo')
+    if (!vehicle.registration_url?.trim()) missing.push('Registration')
+  }
+  return missing
+}
+
+function OnlineDot({ isOnline }: { isOnline: boolean }) {
+  return (
+    <span className={`inline-flex items-center ${isOnline ? 'text-green-600' : 'text-gray-400'}`}>
+      <span
+        className={`mr-1.5 h-2 w-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}
+        aria-hidden
+      />
+      {isOnline ? 'Online' : 'Offline'}
+    </span>
+  )
+}
 
 function FilterField({
   id,
@@ -75,7 +234,7 @@ async function fetchDrivers(filters: {
       .select(`
       *,
       user:user_id (full_name, email, phone_number),
-      vehicles (id)
+      vehicles (id, make, model, year, color, license_plate, is_primary, is_active, vehicle_photo_url, registration_url, registration_number, registration_expiry, insurance_expiry)
     `)
 
     if (filters.verificationStatus !== 'all') {
@@ -246,21 +405,42 @@ const verificationBadgeColors = {
   suspended: 'bg-muted text-secondary-foreground',
 }
 
+const THUMB_SIZE = {
+  sm: 'h-12 w-16',
+  md: 'h-16 w-24',
+} as const
+
+/**
+ * A driver document rendered as a clickable thumbnail. Images open in a lightbox so an
+ * admin can read an ID without leaving the list; anything that is not an image falls back
+ * to a link. Missing documents keep the same footprint so rows and cards stay aligned.
+ */
 function DocumentThumb({
   url,
   label,
+  size = 'md',
 }: {
   url: string | null | undefined
   label: string
+  size?: keyof typeof THUMB_SIZE
 }) {
   const [imgError, setImgError] = useState(false)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const box = THUMB_SIZE[size]
 
   useEffect(() => {
     setImgError(false)
   }, [url])
 
   if (!url?.trim()) {
-    return <span className="text-xs text-gray-400">—</span>
+    return (
+      <div
+        className={`${box} flex items-center justify-center rounded-md border border-dashed border-gray-300 bg-gray-50 text-[10px] font-medium uppercase tracking-wide text-gray-400`}
+        title={`${label} not uploaded`}
+      >
+        Missing
+      </div>
+    )
   }
 
   if (imgError) {
@@ -269,32 +449,74 @@ function DocumentThumb({
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 rounded border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs font-medium text-primary-strong hover:bg-gray-100"
+        className={`${box} flex flex-col items-center justify-center gap-1 rounded-md border border-gray-200 bg-gray-50 text-[10px] font-medium text-primary-strong hover:bg-gray-100`}
         title={`Open ${label}`}
       >
-        <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        File
+        <FileText className="h-4 w-4 shrink-0" aria-hidden />
+        Open
       </a>
     )
   }
 
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="block rounded border border-gray-200 bg-gray-50 overflow-hidden hover:ring-2 hover:ring-ring hover:ring-offset-1"
-      title={`Open ${label}`}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+    <>
+      <button
+        type="button"
+        onClick={() => setLightboxOpen(true)}
+        className={`${box} block overflow-hidden rounded-md border border-gray-200 bg-gray-50 hover:ring-2 hover:ring-ring hover:ring-offset-1`}
+        title={`View ${label}`}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={url}
+          alt={label}
+          className={`${box} object-cover`}
+          loading="lazy"
+          onError={() => setImgError(true)}
+        />
+      </button>
+      <ImageLightbox
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
         src={url}
-        alt={label}
-        className="h-14 w-[3.5rem] object-cover"
-        loading="lazy"
-        onError={() => setImgError(true)}
+        title={label}
       />
-    </a>
+    </>
+  )
+}
+
+/**
+ * Every document an admin reviews before approving, in review order. Registration lives on
+ * the vehicle rather than the profile, so it only appears once a vehicle is registered.
+ */
+function DocumentStrip({
+  driver,
+  size = 'md',
+}: {
+  driver: DriverWithDetails
+  size?: keyof typeof THUMB_SIZE
+}) {
+  const vehicle = primaryVehicle(driver)
+  const docs = [
+    { label: 'National ID', short: 'ID', url: driver.national_id_url },
+    { label: 'Driver license', short: 'License', url: driver.drivers_license_url },
+    { label: 'Insurance', short: 'Insurance', url: driver.insurance_document_url },
+    ...(vehicle
+      ? [{ label: 'Vehicle registration', short: 'Registration', url: vehicle.registration_url }]
+      : []),
+  ]
+
+  return (
+    <div className="flex flex-wrap items-start gap-3">
+      {docs.map((doc) => (
+        <div key={doc.label}>
+          <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-gray-500">
+            {doc.short}
+          </p>
+          <DocumentThumb url={doc.url} label={doc.label} size={size} />
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -784,138 +1006,168 @@ function DriversContent() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Driver
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        License #
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        National ID / License
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Vehicle
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Verification
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Subscription
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Stats
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
+                      {[
+                        'Driver',
+                        'Verification',
+                        'License',
+                        'Documents',
+                        'Vehicle',
+                        'Subscription',
+                        'Activity',
+                      ].map((heading) => (
+                        <th
+                          key={heading}
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                        >
+                          {heading}
+                        </th>
+                      ))}
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {paginatedDrivers.map((driver) => (
-                      <tr key={driver.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="h-10 w-10 flex-shrink-0">
-                              <div className="h-10 w-10 bg-primary-soft-deep rounded-full flex items-center justify-center">
-                                <span className="text-primary-strong font-medium">
-                                  {driver.user?.full_name?.charAt(0) || '?'}
-                                </span>
-                              </div>
+                    {paginatedDrivers.map((driver) => {
+                      const { phone, email } = driverContacts(driver)
+                      const vehicle = primaryVehicle(driver)
+                      const extraVehicles = (driver.vehicles?.length ?? 0) - (vehicle ? 1 : 0)
+                      const license = expiryMeta(driver.drivers_license_expiry, LICENSE_WARN_DAYS)
+                      const registration = expiryMeta(vehicle?.registration_expiry, REGISTRATION_WARN_DAYS)
+                      const subscription = subscriptionMeta(driver)
+                      const missing = missingForApproval(driver)
+                      const lastSeen = relativeTime(driver.location_updated_at)
+
+                      return (
+                      <tr key={driver.id} className="hover:bg-gray-50 align-top">
+                        <td className="px-6 py-4">
+                          <div className="flex items-start gap-3">
+                            <div className="h-10 w-10 shrink-0 bg-primary-soft-deep rounded-full flex items-center justify-center">
+                              <span className="text-primary-strong font-medium">
+                                {driverInitial(driver)}
+                              </span>
                             </div>
-                            <div className="ml-4">
+                            <div className="min-w-0">
                               <div className="text-sm font-medium text-gray-900">
-                                {driver.user?.full_name ?? '—'}
+                                {driverName(driver)}
                               </div>
-                              <div className="text-sm text-gray-500">
-                                {driver.user?.email ?? driver.user?.phone_number ?? '—'}
+                              {phone && (
+                                <div className="text-sm text-gray-500 tabular-nums">{phone}</div>
+                              )}
+                              {email && (
+                                <div className="max-w-[16rem] truncate text-xs text-gray-500" title={email}>
+                                  {email}
+                                </div>
+                              )}
+                              <div className="mt-1 text-xs text-gray-400">
+                                Joined {formatGuyana(driver.created_at, 'dd MMM yyyy')}
                               </div>
                             </div>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm text-gray-900 font-mono tabular-nums">
-                            {driver.drivers_license_number?.trim()
-                              ? driver.drivers_license_number
-                              : '—'}
-                          </span>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex flex-wrap items-start gap-4">
-                            <div className="min-w-0">
-                              <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-gray-500">
-                                National ID
-                              </p>
-                              <DocumentThumb url={driver.national_id_url} label="National ID" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-gray-500">
-                                License
-                              </p>
-                              <DocumentThumb
-                                url={driver.drivers_license_url}
-                                label="Driver license"
-                              />
-                            </div>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            verificationBadgeColors[driver.verification_status]
+                          }`}>
+                            {formatStatus(driver.verification_status)}
+                          </span>
+                          {driver.verified_at ? (
+                            <p className="mt-1 text-xs text-gray-500">
+                              {formatGuyana(driver.verified_at, 'dd MMM yyyy')}
+                            </p>
+                          ) : missing.length > 0 ? (
+                            <p
+                              className="mt-1 inline-flex items-center gap-1 text-xs text-amber-700"
+                              title={`Missing: ${missing.join(', ')}`}
+                            >
+                              <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                              {missing.length} missing
+                            </p>
+                          ) : (
+                            <p className="mt-1 text-xs text-gray-500">Complete</p>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-mono tabular-nums text-gray-900">
+                            {driver.drivers_license_number?.trim() || '—'}
+                          </div>
+                          <div className="mt-1">
+                            <Pill tone={license.tone} title={license.label}>
+                              {license.short}
+                            </Pill>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {driver.vehicles && driver.vehicles[0] ? (
-                            <div className="text-sm">
-                              <div className="text-gray-900">
-                                {driver.vehicles[0].make} {driver.vehicles[0].model}
-                              </div>
-                              <div className="text-gray-500">
-                                {driver.vehicles[0].license_plate}
+                        <td className="px-6 py-4">
+                          <DocumentStrip driver={driver} size="sm" />
+                        </td>
+                        <td className="px-6 py-4">
+                          {vehicle ? (
+                            <div className="flex items-start gap-3 text-sm">
+                              <DocumentThumb
+                                url={vehicle.vehicle_photo_url}
+                                label={`${vehicleTitle(vehicle)} photo`}
+                                size="sm"
+                              />
+                              <div className="min-w-0">
+                                <div className="text-gray-900">{vehicleTitle(vehicle)}</div>
+                                <div className="font-mono text-xs uppercase tracking-wide text-gray-700">
+                                  {vehicle.license_plate}
+                                </div>
+                                {vehicle.color && (
+                                  <div className="text-xs text-gray-500">{vehicle.color}</div>
+                                )}
+                                <div className="mt-1 text-xs text-gray-500">
+                                  Reg{' '}
+                                  <span className="font-mono">
+                                    {vehicle.registration_number?.trim() || '—'}
+                                  </span>
+                                </div>
+                                <div className="mt-1">
+                                  <Pill
+                                    tone={registration.tone}
+                                    title={`Registration: ${registration.label}`}
+                                  >
+                                    {registration.short}
+                                  </Pill>
+                                </div>
+                                {extraVehicles > 0 && (
+                                  <div className="mt-1 text-xs text-gray-400">
+                                    +{extraVehicles} more
+                                  </div>
+                                )}
                               </div>
                             </div>
                           ) : (
                             <span className="text-sm text-gray-400">No vehicle</span>
                           )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-6 py-4">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            verificationBadgeColors[driver.verification_status]
+                            TONE_CLASS[subscription.tone]
                           }`}>
-                            {formatStatus(driver.verification_status)}
+                            {formatStatus(driver.subscription_status)}
                           </span>
+                          <p className={`mt-1 text-xs ${
+                            subscription.isLapsing ? 'text-amber-700' : 'text-gray-500'
+                          }`}>
+                            {subscription.detail}
+                          </p>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="space-y-1">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              driver.subscription_status === 'active'
-                                ? 'bg-success-soft text-success-soft-foreground'
-                                : driver.subscription_status === 'trial'
-                                  ? 'bg-info-soft text-info-soft-foreground'
-                                  : 'bg-danger-soft text-danger-soft-foreground'
-                            }`}>
-                              {formatStatus(driver.subscription_status)}
-                            </span>
-                            <p className="text-xs text-gray-500">
-                              Ends:{' '}
-                              {driver.subscription_end_date
-                                ? new Date(driver.subscription_end_date).toLocaleDateString()
-                                : 'N/A'}
-                            </p>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          <OnlineDot isOnline={driver.is_online} />
+                          <div className="mt-1 text-xs text-gray-500">
+                            {driver.total_trips} trips · {driver.acceptance_rate.toFixed(0)}% accepted
                           </div>
+                          <div className="mt-0.5 inline-flex items-center gap-1 text-xs text-gray-500">
+                            <Star className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-400" aria-hidden />
+                            {driver.rating_average.toFixed(1)}
+                            <span className="text-gray-400">({driver.rating_count})</span>
+                          </div>
+                          {lastSeen && (
+                            <div className="mt-0.5 text-xs text-gray-400">Seen {lastSeen}</div>
+                          )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <div>{driver.total_trips} trips</div>
-                          <div>⭐ {driver.rating_average.toFixed(1)}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center ${
-                            driver.is_online ? 'text-green-600' : 'text-gray-400'
-                          }`}>
-                            <span className={`mr-2 h-2 w-2 rounded-full ${
-                              driver.is_online ? 'bg-green-500' : 'bg-gray-400'
-                            }`}></span>
-                            {driver.is_online ? 'Online' : 'Offline'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <td className="px-6 py-4 text-right text-sm font-medium">
                           <Link
                             href={`/admin/drivers/${driver.id}`}
                             className="text-primary-strong hover:text-primary-hover"
@@ -924,68 +1176,157 @@ function DriversContent() {
                           </Link>
                         </td>
                       </tr>
-                    ))}
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 xl:grid-cols-3">
-                {paginatedDrivers.map((driver) => (
-                  <div key={driver.id} className="rounded-xl border border-gray-200 p-4">
-                    <div className="mb-3 flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-gray-900">
-                          {driver.user?.full_name ?? '—'}
-                        </p>
-                        <p className="truncate text-xs text-gray-500">
-                          {driver.user?.email ?? driver.user?.phone_number ?? '—'}
-                        </p>
+              <div className="grid grid-cols-1 items-stretch gap-4 p-4 sm:grid-cols-2 xl:grid-cols-3">
+                {paginatedDrivers.map((driver) => {
+                  const { phone, email } = driverContacts(driver)
+                  const vehicle = primaryVehicle(driver)
+                  const extraVehicles = (driver.vehicles?.length ?? 0) - (vehicle ? 1 : 0)
+                  const license = expiryMeta(driver.drivers_license_expiry, LICENSE_WARN_DAYS)
+                  const registration = expiryMeta(vehicle?.registration_expiry, REGISTRATION_WARN_DAYS)
+                  const subscription = subscriptionMeta(driver)
+                  const missing = missingForApproval(driver)
+                  const lastSeen = relativeTime(driver.location_updated_at)
+
+                  return (
+                  <div
+                    key={driver.id}
+                    className="flex h-full flex-col rounded-xl border border-gray-200 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <div className="h-10 w-10 shrink-0 rounded-full bg-primary-soft-deep flex items-center justify-center">
+                          <span className="font-medium text-primary-strong">
+                            {driverInitial(driver)}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-gray-900">
+                            {driverName(driver)}
+                          </p>
+                          <p className="truncate text-xs text-gray-500 tabular-nums">
+                            {phone ?? email ?? 'No contact on file'}
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-gray-400">
+                            Joined {formatGuyana(driver.created_at, 'dd MMM yyyy')}
+                          </p>
+                        </div>
                       </div>
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      <span className={`shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                         verificationBadgeColors[driver.verification_status]
                       }`}>
                         {formatStatus(driver.verification_status)}
                       </span>
                     </div>
 
-                    <div className="space-y-2 text-sm">
-                      <p className="text-gray-700">
-                        <span className="text-gray-500">License:</span>{' '}
-                        <span className="font-mono">{driver.drivers_license_number?.trim() || '—'}</span>
-                      </p>
-                      <p className="text-gray-700">
-                        <span className="text-gray-500">Vehicle:</span>{' '}
-                        {driver.vehicles && driver.vehicles[0]
-                          ? `${driver.vehicles[0].make} ${driver.vehicles[0].model} (${driver.vehicles[0].license_plate})`
-                          : 'No vehicle'}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-gray-600">
-                        <span className={`inline-flex items-center ${
-                          driver.is_online ? 'text-green-600' : 'text-gray-400'
-                        }`}>
-                          <span className={`mr-1.5 h-2 w-2 rounded-full ${
-                            driver.is_online ? 'bg-green-500' : 'bg-gray-400'
-                          }`}></span>
-                          {driver.is_online ? 'Online' : 'Offline'}
-                        </span>
-                        <span>•</span>
-                        <span>{driver.total_trips} trips</span>
-                        <span>•</span>
-                        <span>⭐ {driver.rating_average.toFixed(1)}</span>
-                      </div>
-                      <div className="flex flex-wrap items-start gap-3 pt-1">
-                        <div>
-                          <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-gray-500">ID</p>
-                          <DocumentThumb url={driver.national_id_url} label="National ID" />
-                        </div>
-                        <div>
-                          <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-gray-500">License</p>
-                          <DocumentThumb url={driver.drivers_license_url} label="Driver license" />
-                        </div>
-                      </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-y border-gray-100 py-2 text-xs text-gray-600">
+                      <OnlineDot isOnline={driver.is_online} />
+                      <span>{driver.total_trips} trips</span>
+                      <span className="inline-flex items-center gap-1">
+                        <Star className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-400" aria-hidden />
+                        {driver.rating_average.toFixed(1)}
+                        <span className="text-gray-400">({driver.rating_count})</span>
+                      </span>
+                      <span>{driver.acceptance_rate.toFixed(0)}% accepted</span>
+                      {lastSeen && <span className="text-gray-400">Seen {lastSeen}</span>}
                     </div>
 
-                    <div className="mt-4 border-t border-gray-100 pt-3">
+                    <dl className="mt-3 space-y-2 text-sm">
+                      <div className="flex gap-3">
+                        <dt className="w-16 shrink-0 pt-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                          License
+                        </dt>
+                        <dd className="flex min-w-0 flex-wrap items-center gap-2">
+                          <span className="font-mono tabular-nums text-gray-900">
+                            {driver.drivers_license_number?.trim() || '—'}
+                          </span>
+                          <Pill tone={license.tone} title={license.label}>
+                            {license.short}
+                          </Pill>
+                        </dd>
+                      </div>
+                      <div className="flex gap-3">
+                        <dt className="w-16 shrink-0 pt-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                          Vehicle
+                        </dt>
+                        <dd className="min-w-0 flex-1 text-gray-700">
+                          {vehicle ? (
+                            <div className="flex items-start gap-2">
+                              <DocumentThumb
+                                url={vehicle.vehicle_photo_url}
+                                label={`${vehicleTitle(vehicle)} photo`}
+                                size="sm"
+                              />
+                              <div className="min-w-0">
+                                <p className="truncate text-gray-900">{vehicleTitle(vehicle)}</p>
+                                <p className="font-mono text-xs uppercase text-gray-600">
+                                  {vehicle.license_plate}
+                                </p>
+                                {vehicle.color && (
+                                  <p className="text-xs text-gray-500">{vehicle.color}</p>
+                                )}
+                                {extraVehicles > 0 && (
+                                  <p className="text-xs text-gray-400">+{extraVehicles} more</p>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">No vehicle registered</span>
+                          )}
+                        </dd>
+                      </div>
+                      {vehicle && (
+                        <div className="flex gap-3">
+                          <dt className="w-16 shrink-0 pt-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                            Reg
+                          </dt>
+                          <dd className="flex min-w-0 flex-wrap items-center gap-2">
+                            <span className="font-mono tabular-nums text-gray-900">
+                              {vehicle.registration_number?.trim() || '—'}
+                            </span>
+                            <Pill
+                              tone={registration.tone}
+                              title={`Registration: ${registration.label}`}
+                            >
+                              {registration.short}
+                            </Pill>
+                          </dd>
+                        </div>
+                      )}
+                      <div className="flex gap-3">
+                        <dt className="w-16 shrink-0 pt-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                          Plan
+                        </dt>
+                        <dd className="flex min-w-0 flex-wrap items-center gap-2">
+                          <Pill tone={subscription.tone}>
+                            {formatStatus(driver.subscription_status)}
+                          </Pill>
+                          <span className={`text-xs ${
+                            subscription.isLapsing ? 'text-amber-700' : 'text-gray-500'
+                          }`}>
+                            {subscription.detail}
+                          </span>
+                        </dd>
+                      </div>
+                    </dl>
+
+                    <div className="mt-3">
+                      <DocumentStrip driver={driver} />
+                    </div>
+
+                    {missing.length > 0 && (
+                      <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-warning-soft px-2.5 py-1.5 text-xs text-warning-soft-foreground">
+                        <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+                        <span>Missing: {missing.join(', ')}</span>
+                      </p>
+                    )}
+
+                    <div className="mt-auto border-t border-gray-100 pt-3">
                       <Link
                         href={`/admin/drivers/${driver.id}`}
                         className="text-sm font-medium text-primary-strong hover:text-primary-hover"
@@ -994,7 +1335,8 @@ function DriversContent() {
                       </Link>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             )}
             <div className="border-t border-gray-200 px-4 py-3 sm:px-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-gray-50/80">

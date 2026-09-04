@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { fetchTripRoute } from '@/lib/admin/fetch-trip-route'
 import { TripRouteMap } from '@/components/drivers/trip-route-map'
+import { ImageLightbox } from '@/components/ui/image-lightbox'
 import type { TripRoutePoint } from '@/types/trip-route-point'
 import type { Json } from '@/types/database'
 import type {
@@ -252,6 +253,7 @@ export default function AdminIncidentDetailPage() {
   const [statusDraft, setStatusDraft] = useState<IncidentStatus>('open')
   const [assignDraft, setAssignDraft] = useState<string>('')
   const [noteDraft, setNoteDraft] = useState('')
+  const [lightbox, setLightbox] = useState<{ src: string; title: string } | null>(null)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-incident-detail', params.id],
@@ -478,11 +480,23 @@ export default function AdminIncidentDetailPage() {
             {incident.evidence_paths.map((path) => {
               const url = evidenceUrls[path]
               const isImg = /\.(jpe?g|png|gif|webp)$/i.test(path)
+              const fileName = path.split('/').pop() || path
               return (
                 <div key={path} className="border rounded-lg p-2 max-w-xs">
                   {url && isImg ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={url} alt="" className="max-h-48 rounded" />
+                    <button
+                      type="button"
+                      onClick={() => setLightbox({ src: url, title: fileName })}
+                      className="block rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-strong"
+                      aria-label={`View ${fileName} full screen`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt={fileName}
+                        className="max-h-48 rounded cursor-zoom-in transition-opacity hover:opacity-90"
+                      />
+                    </button>
                   ) : url ? (
                     <a
                       href={url}
@@ -645,6 +659,13 @@ export default function AdminIncidentDetailPage() {
           Back to list
         </button>
       </section>
+
+      <ImageLightbox
+        open={lightbox !== null}
+        onClose={() => setLightbox(null)}
+        src={lightbox?.src ?? ''}
+        title={lightbox?.title ?? ''}
+      />
     </div>
   )
 }
