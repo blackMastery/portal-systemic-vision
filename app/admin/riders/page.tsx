@@ -90,8 +90,11 @@ const subscriptionBadgeColors = {
   cancelled: 'bg-muted text-secondary-foreground',
 }
 
+// in_review is driver-only in the UI (the enum is shared with driver_profiles), but the
+// column can hold it, so every map stays exhaustive and renders it correctly.
 const verificationBadgeColors: Record<VerificationStatus, string> = {
   pending: 'bg-warning-soft text-warning-soft-foreground',
+  in_review: 'bg-info-soft text-info-soft-foreground',
   approved: 'bg-success-soft text-success-soft-foreground',
   rejected: 'bg-danger-soft text-danger-soft-foreground',
   suspended: 'bg-muted text-secondary-foreground',

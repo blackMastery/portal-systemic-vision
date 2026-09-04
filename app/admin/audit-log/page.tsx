@@ -28,6 +28,7 @@ const AUDITED_TABLES = [
   'payment_transactions',
   'notifications',
   'verification_logs',
+  'driver_admin_notes',
 ] as const
 
 type AuditLogRow = Database['public']['Tables']['audit_logs']['Row']

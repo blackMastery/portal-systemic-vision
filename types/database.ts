@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type UserRole = 'rider' | 'driver' | 'admin'
-export type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'suspended'
+export type VerificationStatus = 'pending' | 'in_review' | 'approved' | 'rejected' | 'suspended'
 export type SubscriptionStatus = 'active' | 'expired' | 'cancelled' | 'trial'
 export type TripStatus = 'requested' | 'accepted' | 'picked_up' | 'completed' | 'cancelled'
 export type TripType = 'airport' | 'short_drop' | 'market' | 'other'
@@ -248,6 +248,24 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['verification_logs']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['verification_logs']['Insert']>
+        Relationships: []
+      }
+      driver_admin_notes: {
+        Row: {
+          id: string
+          driver_id: string
+          admin_id: string
+          note: string
+          created_at: string
+          updated_at: string
+          edited_at: string | null
+        }
+        // edited_at is owned by the DB guard trigger, so no caller can spoof it.
+        Insert: Omit<
+          Database['public']['Tables']['driver_admin_notes']['Row'],
+          'id' | 'created_at' | 'updated_at' | 'edited_at'
+        >
+        Update: Partial<Database['public']['Tables']['driver_admin_notes']['Insert']>
         Relationships: []
       }
       trip_requests: {
@@ -771,6 +789,14 @@ export type DriverWithDetails = Database['public']['Tables']['driver_profiles'][
   user: Database['public']['Tables']['users']['Row'] | null
   vehicles?: Database['public']['Tables']['vehicles']['Row'][]
 }
+
+export type DriverAdminNoteWithAuthor =
+  Database['public']['Tables']['driver_admin_notes']['Row'] & {
+    author: Pick<
+      Database['public']['Tables']['users']['Row'],
+      'id' | 'full_name' | 'email'
+    > | null
+  }
 
 export type RiderWithDetails = Database['public']['Tables']['rider_profiles']['Row'] & {
   user: Database['public']['Tables']['users']['Row']

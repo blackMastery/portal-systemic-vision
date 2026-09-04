@@ -29,7 +29,9 @@ import {
   ChevronRight,
   FileText,
   Flag,
+  Eye,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { useState, useEffect, useCallback, useTransition } from 'react'
@@ -131,15 +133,19 @@ async function fetchRiderDetail(riderId: string): Promise<RiderDetailData> {
   }
 }
 
-const verificationBadgeColors = {
+// in_review is driver-only in the UI (the enum is shared with driver_profiles), but the
+// column can hold it, so every map stays exhaustive and renders it correctly.
+const verificationBadgeColors: Record<VerificationStatus, string> = {
   pending: 'bg-warning-soft text-warning-soft-foreground',
+  in_review: 'bg-info-soft text-info-soft-foreground',
   approved: 'bg-success-soft text-success-soft-foreground',
   rejected: 'bg-danger-soft text-danger-soft-foreground',
   suspended: 'bg-muted text-secondary-foreground',
 }
 
-const verificationIcons = {
+const verificationIcons: Record<VerificationStatus, LucideIcon> = {
   pending: Clock,
+  in_review: Eye,
   approved: CheckCircle,
   rejected: XCircle,
   suspended: Ban,

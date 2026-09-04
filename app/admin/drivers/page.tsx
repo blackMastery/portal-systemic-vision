@@ -20,10 +20,12 @@ import {
   Megaphone,
   AlertTriangle,
   Star,
+  MessageSquare,
+  Eye,
 } from 'lucide-react'
 import Link from 'next/link'
 import { format, formatDistanceToNowStrict } from 'date-fns'
-import type { Database, DriverWithDetails } from '@/types/database'
+import type { Database, DriverWithDetails, VerificationStatus } from '@/types/database'
 import { SendNotificationModal } from './send-notification-modal'
 import { ImageLightbox } from '@/components/ui/image-lightbox'
 import { formatStatus } from '@/lib/format'
@@ -69,6 +71,17 @@ function Pill({
     >
       {children}
     </span>
+  )
+}
+
+function NoteCountBadge({ count }: { count: number }) {
+  // Nothing at zero — a "0 notes" pill on every row would be noise, not signal.
+  if (count <= 0) return null
+  return (
+    <Pill tone="info" title={`${count} admin note${count === 1 ? '' : 's'}`}>
+      <MessageSquare className="mr-1 h-3 w-3 shrink-0" aria-hidden />
+      {count}
+    </Pill>
   )
 }
 
@@ -398,8 +411,42 @@ async function fetchDrivers(filters: {
   return results
 }
 
-const verificationBadgeColors = {
+/**
+ * Note counts for the list badge. Notes are sparse relative to drivers, so one scan of
+ * the driver_id column and a client-side tally beats a per-driver count (N+1). Kept out
+ * of `fetchDrivers` deliberately: that query key carries 13 filters, so folding this in
+ * would re-run the scan on every keystroke and filter flip.
+ */
+async function fetchDriverNoteCounts(): Promise<Map<string, number>> {
+  const supabase = createClient()
+  const counts = new Map<string, number>()
+  const batchSize = 1000
+  let from = 0
+
+  // Same paged-fetch shape as fetchDrivers — PostgREST caps response size.
+  while (true) {
+    const { data, error } = await supabase
+      .from('driver_admin_notes')
+      .select('driver_id')
+      .range(from, from + batchSize - 1)
+
+    if (error) throw error
+
+    const batch = (data ?? []) as Array<{ driver_id: string }>
+    for (const row of batch) {
+      counts.set(row.driver_id, (counts.get(row.driver_id) ?? 0) + 1)
+    }
+
+    if (batch.length < batchSize) break
+    from += batchSize
+  }
+
+  return counts
+}
+
+const verificationBadgeColors: Record<VerificationStatus, string> = {
   pending: 'bg-warning-soft text-warning-soft-foreground',
+  in_review: 'bg-info-soft text-info-soft-foreground',
   approved: 'bg-success-soft text-success-soft-foreground',
   rejected: 'bg-danger-soft text-danger-soft-foreground',
   suspended: 'bg-muted text-secondary-foreground',
@@ -580,7 +627,15 @@ function DriversContent() {
       }),
   })
 
+  const { data: noteCounts } = useQuery({
+    queryKey: ['driver-note-counts'],
+    queryFn: fetchDriverNoteCounts,
+    staleTime: 60_000,
+  })
+
+  // "Pending" stays untouched-only: the point of in_review is that it has been picked up.
   const pendingCount = drivers?.filter(d => d.verification_status === 'pending').length || 0
+  const inReviewCount = drivers?.filter(d => d.verification_status === 'in_review').length || 0
 
   const totalCount = drivers?.length ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
@@ -615,6 +670,7 @@ function DriversContent() {
             >
               <option value="all">All</option>
               <option value="pending">Pending</option>
+              <option value="in_review">In Review</option>
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
               <option value="suspended">Suspended</option>
@@ -796,6 +852,15 @@ function DriversContent() {
             >
               <Clock className="h-5 w-5 mr-2" />
               {pendingCount} Pending Verification
+            </Link>
+          )}
+          {inReviewCount > 0 && (
+            <Link
+              href="/admin/drivers?status=in_review"
+              className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition-colors"
+            >
+              <Eye className="h-5 w-5 mr-2" />
+              {inReviewCount} In Review
             </Link>
           )}
           <button
@@ -1037,6 +1102,7 @@ function DriversContent() {
                       const subscription = subscriptionMeta(driver)
                       const missing = missingForApproval(driver)
                       const lastSeen = relativeTime(driver.location_updated_at)
+                      const noteCount = noteCounts?.get(driver.id) ?? 0
 
                       return (
                       <tr key={driver.id} className="hover:bg-gray-50 align-top">
@@ -1062,6 +1128,11 @@ function DriversContent() {
                               <div className="mt-1 text-xs text-gray-400">
                                 Joined {formatGuyana(driver.created_at, 'dd MMM yyyy')}
                               </div>
+                              {noteCount > 0 && (
+                                <div className="mt-1">
+                                  <NoteCountBadge count={noteCount} />
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>
@@ -1192,6 +1263,7 @@ function DriversContent() {
                   const subscription = subscriptionMeta(driver)
                   const missing = missingForApproval(driver)
                   const lastSeen = relativeTime(driver.location_updated_at)
+                  const noteCount = noteCounts?.get(driver.id) ?? 0
 
                   return (
                   <div
@@ -1234,6 +1306,7 @@ function DriversContent() {
                       </span>
                       <span>{driver.acceptance_rate.toFixed(0)}% accepted</span>
                       {lastSeen && <span className="text-gray-400">Seen {lastSeen}</span>}
+                      <NoteCountBadge count={noteCount} />
                     </div>
 
                     <dl className="mt-3 space-y-2 text-sm">

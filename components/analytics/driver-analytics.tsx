@@ -7,6 +7,7 @@ import { ChartWrapper } from './chart-wrapper'
 import { BarChart } from './charts/bar-chart'
 import { Car, CheckCircle, Star } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/metric-card'
+import { formatStatus } from '@/lib/format'
 
 type DriverData = {
   verification_status: string
@@ -40,7 +41,7 @@ export function DriverAnalytics() {
   }, {}) || {}
 
   const verificationChart = Object.entries(verificationData).map(([name, value]) => ({
-    name: name.charAt(0).toUpperCase() + name.slice(1),
+    name: formatStatus(name),
     value,
   }))
 

@@ -3,8 +3,9 @@
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, formatStatus } from '@/lib/format'
 import { sendDriverPushNotification } from './actions'
+import { AdminNotesSection } from './admin-notes-section'
 import Image from 'next/image'
 import { ImageLightbox } from '@/components/ui/image-lightbox'
 import {
@@ -30,8 +31,10 @@ import {
   History,
   Shield,
   MessageSquare,
-  Bell
+  Bell,
+  Eye
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { useState, useCallback, useEffect } from 'react'
@@ -170,8 +173,9 @@ async function fetchDriverDetail(driverId: string): Promise<DriverDetailData> {
   }
 }
 
-const verificationBadgeColors = {
+const verificationBadgeColors: Record<VerificationStatus, string> = {
   pending: 'bg-warning-soft text-warning-soft-foreground',
+  in_review: 'bg-info-soft text-info-soft-foreground',
   approved: 'bg-success-soft text-success-soft-foreground',
   rejected: 'bg-danger-soft text-danger-soft-foreground',
   suspended: 'bg-muted text-secondary-foreground',
@@ -184,11 +188,56 @@ const subscriptionBadgeColors = {
   cancelled: 'bg-muted text-secondary-foreground',
 }
 
-const verificationIcons = {
+const verificationIcons: Record<VerificationStatus, LucideIcon> = {
   pending: Clock,
+  in_review: Eye,
   approved: CheckCircle,
   rejected: XCircle,
   suspended: Ban,
+}
+
+/** Verification-history entry colours. Keyed exhaustively so a new status can never
+ *  silently inherit another one's colour (in_review used to render as pending-yellow). */
+const verificationLogTone: Record<
+  VerificationStatus,
+  { chip: string; icon: string; text: string }
+> = {
+  pending: { chip: 'bg-yellow-100', icon: 'text-yellow-600', text: 'text-yellow-600' },
+  in_review: { chip: 'bg-blue-100', icon: 'text-blue-600', text: 'text-blue-600' },
+  approved: { chip: 'bg-green-100', icon: 'text-green-600', text: 'text-green-600' },
+  rejected: { chip: 'bg-red-100', icon: 'text-red-600', text: 'text-red-600' },
+  suspended: { chip: 'bg-gray-100', icon: 'text-gray-600', text: 'text-gray-600' },
+}
+
+// new_status comes from the DB, so degrade to neutral rather than throw on an unknown label.
+const VERIFICATION_LOG_TONE_FALLBACK = {
+  chip: 'bg-gray-100',
+  icon: 'text-gray-600',
+  text: 'text-gray-600',
+}
+
+/** In-app + push copy per verification status. */
+const VERIFICATION_NOTIFICATION: Record<VerificationStatus, { title: string; body: string }> = {
+  pending: {
+    title: 'Verification Status Updated',
+    body: 'Your verification status has been updated.',
+  },
+  in_review: {
+    title: 'Application Under Review',
+    body: 'An admin is reviewing your driver application. We will let you know as soon as a decision is made.',
+  },
+  approved: {
+    title: 'Verification Approved!',
+    body: 'Your driver account is now active. You can start accepting trips.',
+  },
+  rejected: {
+    title: 'Verification Rejected',
+    body: 'Your verification application has been rejected. Please review the reason and resubmit.',
+  },
+  suspended: {
+    title: 'Account Suspended',
+    body: 'Your driver account has been suspended. Please contact support for more information.',
+  },
 }
 
 function DriverDocumentPreview({
@@ -393,7 +442,7 @@ export default function DriverDetailPage() {
           <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium sm:px-3 sm:py-1.5 sm:text-sm ${
             verificationBadgeColors[driver.verification_status]
           }`}>
-            {driver.verification_status}
+            {formatStatus(driver.verification_status)}
           </span>
           <button
             onClick={() => setShowSmsModal(true)}
@@ -600,7 +649,7 @@ export default function DriverDetailPage() {
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
               verificationBadgeColors[driver.verification_status]
             }`}>
-              {driver.verification_status}
+              {formatStatus(driver.verification_status)}
             </span>
           </div>
           {driver.verified_at && (
@@ -857,6 +906,9 @@ export default function DriverDetailPage() {
         )}
       </div>
 
+      {/* Admin Notes */}
+      <AdminNotesSection driverId={driverId} />
+
       {/* Verification History */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Verification History</h2>
@@ -864,33 +916,27 @@ export default function DriverDetailPage() {
           <div className="space-y-4">
             {verificationLogs.map((log) => {
               const Icon = verificationIcons[log.new_status as VerificationStatus] || AlertCircle
+              const tone =
+                verificationLogTone[log.new_status as VerificationStatus] ??
+                VERIFICATION_LOG_TONE_FALLBACK
               return (
                 <div key={log.id} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-start gap-4">
-                    <div className={`p-2 rounded-lg ${
-                      log.new_status === 'approved' ? 'bg-green-100' :
-                      log.new_status === 'rejected' ? 'bg-red-100' :
-                      log.new_status === 'suspended' ? 'bg-gray-100' :
-                      'bg-yellow-100'
-                    }`}>
-                      <Icon className={`h-5 w-5 ${
-                        log.new_status === 'approved' ? 'text-green-600' :
-                        log.new_status === 'rejected' ? 'text-red-600' :
-                        log.new_status === 'suspended' ? 'text-gray-600' :
-                        'text-yellow-600'
-                      }`} />
+                    <div className={`p-2 rounded-lg ${tone.chip}`}>
+                      <Icon className={`h-5 w-5 ${tone.icon}`} />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
                         <div>
                           <p className="font-medium text-gray-900">
-                            Status changed from <span className="text-gray-600">{log.previous_status || 'N/A'}</span> to{' '}
-                            <span className={`font-semibold ${
-                              log.new_status === 'approved' ? 'text-green-600' :
-                              log.new_status === 'rejected' ? 'text-red-600' :
-                              log.new_status === 'suspended' ? 'text-gray-600' :
-                              'text-yellow-600'
-                            }`}>{log.new_status}</span>
+                            Status changed from{' '}
+                            <span className="text-gray-600">
+                              {formatStatus(log.previous_status)}
+                            </span>{' '}
+                            to{' '}
+                            <span className={`font-semibold ${tone.text}`}>
+                              {formatStatus(log.new_status)}
+                            </span>
                           </p>
                           {log.admin && (
                             <p className="text-sm text-gray-500 mt-1">
@@ -1218,6 +1264,14 @@ function SendSmsModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+
+    // Re-submitting the same status would write a no-op log row and push the driver a
+    // second identical notification. More likely now that In Review is a resting state.
+    if (status === driver.verification_status) {
+      setError('That is already the current status.')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
@@ -1645,22 +1699,7 @@ function VerificationUpdateModal({
 
       // In-app notification + FCM push (push failure does not block status update)
       if (userId) {
-        const title =
-          status === 'approved'
-            ? 'Verification Approved!'
-            : status === 'rejected'
-              ? 'Verification Rejected'
-              : status === 'suspended'
-                ? 'Account Suspended'
-                : 'Verification Status Updated'
-        const body =
-          status === 'approved'
-            ? 'Your driver account is now active. You can start accepting trips.'
-            : status === 'rejected'
-              ? 'Your verification application has been rejected. Please review the reason and resubmit.'
-              : status === 'suspended'
-                ? 'Your driver account has been suspended. Please contact support for more information.'
-                : 'Your verification status has been updated.'
+        const { title, body } = VERIFICATION_NOTIFICATION[status]
 
         const { error: notifError } = await (supabase.from('notifications') as any).insert({
           user_id: userId,
@@ -1702,6 +1741,7 @@ function VerificationUpdateModal({
               required
             >
               <option value="pending">Pending</option>
+              <option value="in_review">In Review</option>
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
               <option value="suspended">Suspended</option>
