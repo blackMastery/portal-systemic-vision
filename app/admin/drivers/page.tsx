@@ -285,6 +285,42 @@ async function fetchDrivers(filters: {
     from += batchSize
   }
 
+  // driver_profiles.total_trips is never maintained by the database, so count
+  // completed trips per driver from the trips table instead.
+  const completedTripCounts = new Map<string, number>()
+  let countFrom = 0
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('trips')
+      .select('driver_id')
+      .eq('status', 'completed')
+      .not('driver_id', 'is', null)
+      .range(countFrom, countFrom + batchSize - 1)
+
+    if (error) {
+      throw error
+    }
+
+    const batch = (data ?? []) as Array<{ driver_id: string | null }>
+    for (const trip of batch) {
+      if (!trip.driver_id) continue
+      completedTripCounts.set(trip.driver_id, (completedTripCounts.get(trip.driver_id) ?? 0) + 1)
+    }
+
+    if (batch.length < batchSize) break
+    countFrom += batchSize
+  }
+
+  for (const driver of allRows) {
+    driver.total_trips = completedTripCounts.get(driver.id) ?? 0
+  }
+
+  if (filters.sortBy === 'trips') {
+    // The database sort used the stale column; re-sort on the live count.
+    allRows.sort((a, b) => b.total_trips - a.total_trips)
+  }
+
   // Client-side filtering
   let results = allRows
 
