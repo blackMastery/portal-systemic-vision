@@ -11,6 +11,10 @@ const DEFAULTS = {
   status:  'all',
   sub:     'all',
   subexpiry: 'all',
+  ssfrom:  '',
+  ssto:    '',
+  sefrom:  '',
+  seto:    '',
   q:       '',
   online:  'all',
   sort:    'newest',
@@ -27,6 +31,11 @@ const DEFAULTS = {
 
 type FilterKey = keyof typeof DEFAULTS
 
+/** Only accept YYYY-MM-DD so a malformed URL param can't break the query. */
+function parseDate(value: string | null): string {
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : ''
+}
+
 export function useDriverFilters() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -35,6 +44,10 @@ export function useDriverFilters() {
   const verificationStatus = searchParams.get('status') ?? 'all'
   const subscriptionStatus  = searchParams.get('sub')    ?? 'all'
   const subscriptionExpiry  = searchParams.get('subexpiry') ?? 'all'
+  const subStartFrom        = parseDate(searchParams.get('ssfrom'))
+  const subStartTo          = parseDate(searchParams.get('ssto'))
+  const subEndFrom          = parseDate(searchParams.get('sefrom'))
+  const subEndTo            = parseDate(searchParams.get('seto'))
   const urlSearch           = searchParams.get('q')      ?? ''
   const onlineStatus        = searchParams.get('online') ?? 'all'
   const sortBy              = searchParams.get('sort')   ?? 'newest'
@@ -106,6 +119,10 @@ export function useDriverFilters() {
     if (verificationStatus !== 'all') n++
     if (subscriptionStatus !== 'all') n++
     if (subscriptionExpiry !== 'all') n++
+    if (subStartFrom !== '') n++
+    if (subStartTo !== '') n++
+    if (subEndFrom !== '') n++
+    if (subEndTo !== '') n++
     if (urlSearch !== '') n++
     if (onlineStatus !== 'all') n++
     if (licenseExpiry !== 'all') n++
@@ -118,14 +135,19 @@ export function useDriverFilters() {
     if (sortBy !== 'newest') n++
     return { activeFilterCount: n, hasActiveFilters: n > 0 }
   }, [
-    verificationStatus, subscriptionStatus, subscriptionExpiry, urlSearch, onlineStatus,
-    licenseExpiry, hasVehicle, licenseDoc, nationalIdDoc, insuranceDoc, tripsFilter, tripActivity, sortBy,
+    verificationStatus, subscriptionStatus, subscriptionExpiry, subStartFrom, subStartTo, subEndFrom, subEndTo,
+    urlSearch, onlineStatus, licenseExpiry, hasVehicle, licenseDoc, nationalIdDoc, insuranceDoc,
+    tripsFilter, tripActivity, sortBy,
   ])
 
   return {
     verificationStatus,
     subscriptionStatus,
     subscriptionExpiry,
+    subStartFrom,
+    subStartTo,
+    subEndFrom,
+    subEndTo,
     onlineStatus,
     sortBy,
     licenseExpiry,

@@ -220,10 +220,22 @@ function FilterField({
   )
 }
 
+function startOfDayIso(day: string): string {
+  return new Date(`${day}T00:00:00`).toISOString()
+}
+
+function endOfDayIso(day: string): string {
+  return new Date(`${day}T23:59:59.999`).toISOString()
+}
+
 async function fetchDrivers(filters: {
   verificationStatus: string
   subscriptionStatus: string
   subscriptionExpiry: string
+  subStartFrom: string
+  subStartTo: string
+  subEndFrom: string
+  subEndTo: string
   searchQuery: string
   onlineStatus: string
   sortBy: string
@@ -260,6 +272,20 @@ async function fetchDrivers(filters: {
 
     if (filters.onlineStatus !== 'all') {
       query = query.eq('is_online', filters.onlineStatus === 'online')
+    }
+
+    // Date-range filters on subscription dates; whole local days, same convention as the trips page.
+    if (filters.subStartFrom) {
+      query = query.gte('subscription_start_date', startOfDayIso(filters.subStartFrom))
+    }
+    if (filters.subStartTo) {
+      query = query.lte('subscription_start_date', endOfDayIso(filters.subStartTo))
+    }
+    if (filters.subEndFrom) {
+      query = query.gte('subscription_end_date', startOfDayIso(filters.subEndFrom))
+    }
+    if (filters.subEndTo) {
+      query = query.lte('subscription_end_date', endOfDayIso(filters.subEndTo))
     }
 
     if (filters.sortBy === 'oldest') {
@@ -608,6 +634,7 @@ function DriversContent() {
 
   const {
     verificationStatus, subscriptionStatus, subscriptionExpiry, onlineStatus, sortBy, licenseExpiry,
+    subStartFrom, subStartTo, subEndFrom, subEndTo,
     hasVehicle, licenseDoc, nationalIdDoc, insuranceDoc, tripsFilter, tripActivity,
     searchInput, setSearchInput, debouncedSearch,
     page, pageSize, setPage, setPageSize, clampPage,
@@ -634,6 +661,10 @@ function DriversContent() {
       verificationStatus,
       subscriptionStatus,
       subscriptionExpiry,
+      subStartFrom,
+      subStartTo,
+      subEndFrom,
+      subEndTo,
       debouncedSearch,
       onlineStatus,
       sortBy,
@@ -650,6 +681,10 @@ function DriversContent() {
         verificationStatus,
         subscriptionStatus,
         subscriptionExpiry,
+        subStartFrom,
+        subStartTo,
+        subEndFrom,
+        subEndTo,
         searchQuery: debouncedSearch,
         onlineStatus,
         sortBy,
@@ -750,6 +785,52 @@ function DriversContent() {
               <option value="online">Online</option>
               <option value="offline">Offline</option>
             </select>
+          </FilterField>
+        </div>
+      </div>
+
+      <div className="border-t border-gray-100 pt-6">
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">Subscription dates</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <FilterField id={fid('sub-start-from')} label="Start date from">
+            <input
+              id={fid('sub-start-from')}
+              type="date"
+              value={subStartFrom}
+              max={subStartTo || undefined}
+              onChange={(e) => setFilter('ssfrom', e.target.value)}
+              className={SELECT_CLASS}
+            />
+          </FilterField>
+          <FilterField id={fid('sub-start-to')} label="Start date to">
+            <input
+              id={fid('sub-start-to')}
+              type="date"
+              value={subStartTo}
+              min={subStartFrom || undefined}
+              onChange={(e) => setFilter('ssto', e.target.value)}
+              className={SELECT_CLASS}
+            />
+          </FilterField>
+          <FilterField id={fid('sub-end-from')} label="End date from">
+            <input
+              id={fid('sub-end-from')}
+              type="date"
+              value={subEndFrom}
+              max={subEndTo || undefined}
+              onChange={(e) => setFilter('sefrom', e.target.value)}
+              className={SELECT_CLASS}
+            />
+          </FilterField>
+          <FilterField id={fid('sub-end-to')} label="End date to">
+            <input
+              id={fid('sub-end-to')}
+              type="date"
+              value={subEndTo}
+              min={subEndFrom || undefined}
+              onChange={(e) => setFilter('seto', e.target.value)}
+              className={SELECT_CLASS}
+            />
           </FilterField>
         </div>
       </div>

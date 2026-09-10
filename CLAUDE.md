@@ -26,7 +26,11 @@ node scripts/migration/color-signature.js       # per-file colour signature; --d
 
 Env vars are documented in `.env.example` (local file is `.env`, gitignored). `types/database.ts` is hand-maintained, not generated; update it by hand when the schema changes.
 
-Database schema and migrations live in the sibling repo `../links592db/supabase/migrations` (also `schema.sql` there). Write migration files there when a change needs schema; the user applies them themselves, so never run `supabase db push` / `db reset`.
+Database schema and migrations live in the sibling repo `../links592db/supabase/migrations` (also `schema.sql` there). Write migration files there when a change needs schema.
+
+## Never run Supabase database commands
+
+Do not run any Supabase CLI or database command against the project: no `supabase db push`, `db reset`, `db pull`, `db diff`, `migration up`, `supabase link`, and no ad-hoc SQL against the remote database. The user applies migrations and runs database commands themselves. Your job ends at writing the migration file (and updating `types/database.ts` to match) and telling the user which file to apply.
 
 ## Architecture
 
