@@ -29,6 +29,7 @@ import {
   CreditCard,
   Flag,
   Info,
+  ExternalLink,
 } from 'lucide-react'
 import type { Database, TripType, TripStatus } from '@/types/database'
 import { TripRouteMap } from '@/components/drivers/trip-route-map'
@@ -104,6 +105,20 @@ function formatCoords(lat: number | null | undefined, lng: number | null | undef
 
 function mapsUrl(lat: number, lng: number): string {
   return `https://www.google.com/maps?q=${lat},${lng}`
+}
+
+function MapsLink({ lat, lng }: { lat: number; lng: number }) {
+  return (
+    <a
+      href={mapsUrl(lat, lng)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 text-sm font-medium text-primary-strong hover:text-primary-hover hover:underline"
+    >
+      <ExternalLink className="h-3.5 w-3.5" />
+      View on Google Maps
+    </a>
+  )
 }
 
 function Field({
@@ -497,18 +512,8 @@ export default function TripDetailPage() {
               Pickup
             </p>
             <Field label="Address">{trip.pickup_address}</Field>
-            <Field label="Coordinates" mono>
-              {pickupCoords ? (
-                <a
-                  href={mapsUrl(trip.pickup_latitude, trip.pickup_longitude)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary-strong hover:underline"
-                >
-                  {pickupCoords}
-                </a>
-              ) : null}
-            </Field>
+            <Field label="Coordinates" mono>{pickupCoords}</Field>
+            {pickupCoords && <MapsLink lat={trip.pickup_latitude} lng={trip.pickup_longitude} />}
           </div>
           <div className="rounded-lg border border-border p-4 space-y-3">
             <p className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -516,36 +521,20 @@ export default function TripDetailPage() {
               Destination
             </p>
             <Field label="Address">{trip.destination_address || null}</Field>
-            <Field label="Coordinates" mono>
-              {destinationCoords ? (
-                <a
-                  href={mapsUrl(trip.destination_latitude, trip.destination_longitude)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary-strong hover:underline"
-                >
-                  {destinationCoords}
-                </a>
-              ) : null}
-            </Field>
+            <Field label="Coordinates" mono>{destinationCoords}</Field>
+            {destinationCoords && (
+              <MapsLink lat={trip.destination_latitude} lng={trip.destination_longitude} />
+            )}
           </div>
           <div className="rounded-lg border border-border p-4 space-y-3">
             <p className="text-sm font-semibold text-foreground flex items-center gap-2">
               <Flag className="h-4 w-4 text-info" />
               Completed at
             </p>
-            <Field label="Coordinates" mono>
-              {completedCoords && trip.completed_latitude != null && trip.completed_longitude != null ? (
-                <a
-                  href={mapsUrl(trip.completed_latitude, trip.completed_longitude)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary-strong hover:underline"
-                >
-                  {completedCoords}
-                </a>
-              ) : null}
-            </Field>
+            <Field label="Coordinates" mono>{completedCoords}</Field>
+            {trip.completed_latitude != null && trip.completed_longitude != null && (
+              <MapsLink lat={trip.completed_latitude} lng={trip.completed_longitude} />
+            )}
             <Field label="Current stop index">{String(trip.current_stop_index ?? 0)}</Field>
           </div>
         </div>

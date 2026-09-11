@@ -402,6 +402,7 @@ async function fetchDrivers(filters: {
       const daysRemaining = Math.ceil(
         (new Date(driver.subscription_end_date).getTime() - now) / msPerDay
       )
+      if (filters.subscriptionExpiry === 'valid') return daysRemaining >= 1
       if (filters.subscriptionExpiry === '3plus') return daysRemaining >= 3
       if (filters.subscriptionExpiry === 'expiring') return daysRemaining >= 1 && daysRemaining <= 2
       if (filters.subscriptionExpiry === 'ended') return daysRemaining <= 0
@@ -768,6 +769,7 @@ function DriversContent() {
               className={SELECT_CLASS}
             >
               <option value="all">All</option>
+              <option value="valid">Not ended</option>
               <option value="3plus">3+ days left</option>
               <option value="expiring">Expiring soon (1–2 days)</option>
               <option value="ended">Ended</option>

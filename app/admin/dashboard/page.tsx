@@ -82,7 +82,8 @@ async function fetchDashboardMetrics() {
       .filter((id): id is string => !!id)
   ).size
 
-  // Active-subscription drivers with no accepted trip in the last 2 days
+  // Drivers whose subscription is active AND not yet past its end date,
+  // with no accepted trip in the last 2 days
   const recentlyActiveDriverIds = [...new Set(
     ((recentAcceptedTrips ?? []) as Array<{ driver_id: string | null }>)
       .map(trip => trip.driver_id)
@@ -93,6 +94,7 @@ async function fetchDashboardMetrics() {
     .from('driver_profiles')
     .select('*', { count: 'exact', head: true })
     .eq('subscription_status', 'active')
+    .gt('subscription_end_date', now.toISOString())
   if (recentlyActiveDriverIds.length > 0) {
     idleQuery = idleQuery.not('id', 'in', `(${recentlyActiveDriverIds.join(',')})`)
   }
@@ -218,10 +220,10 @@ export default function DashboardPage() {
         <MetricCard
           title="Subscribed Drivers Idle 2+ Days"
           value={metrics?.idleSubscribedDrivers || 0}
-          description="Subscribed but no accepted trip in 2+ days"
+          description="Unexpired subscription but no accepted trip in 2+ days"
           icon={UserX}
           color="yellow"
-          href="/admin/drivers?sub=active&activity=idle"
+          href="/admin/drivers?sub=active&subexpiry=valid&activity=idle"
         />
         <MetricCard
           title="Today's Trips"
