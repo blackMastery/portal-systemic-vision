@@ -27,6 +27,8 @@ import {
   Ban,
   Users,
   CreditCard,
+  Flag,
+  Info,
 } from 'lucide-react'
 import type { Database, TripType, TripStatus } from '@/types/database'
 import { TripRouteMap } from '@/components/drivers/trip-route-map'
@@ -38,22 +40,7 @@ import {
   type TripStopRow,
 } from '@/lib/admin/trip-stops'
 
-// Extended row types to cover DB columns not yet in the TS type
-type TripRow = Database['public']['Tables']['trips']['Row'] & {
-  request_id?: string | null
-  currency?: string | null
-  payment_method?: string | null
-  driver_arrived_at?: string | null
-  cancelled_by_user_id?: string | null
-  completed_latitude?: number | null
-  completed_longitude?: number | null
-  rider_feedback?: string | null
-  driver_feedback?: string | null
-  driver_rating_friendly?: number | null
-  driver_rating_clean?: number | null
-  driver_rating_safe?: number | null
-  driver_rating_communicated_fairly?: number | null
-}
+type TripRow = Database['public']['Tables']['trips']['Row']
 
 type TripDetailData = {
   trip: TripRow & {
@@ -110,8 +97,43 @@ const tripTypeColors: Record<TripType, string> = {
   other: 'bg-muted text-secondary-foreground',
 }
 
+function formatCoords(lat: number | null | undefined, lng: number | null | undefined): string | null {
+  if (lat == null || lng == null) return null
+  return `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`
+}
+
+function mapsUrl(lat: number, lng: number): string {
+  return `https://www.google.com/maps?q=${lat},${lng}`
+}
+
+function Field({
+  label,
+  children,
+  mono,
+}: {
+  label: string
+  children: React.ReactNode
+  mono?: boolean
+}) {
+  return (
+    <div className="min-w-0">
+      <p className="text-xs text-foreground-muted mb-1">{label}</p>
+      <div className={`text-sm font-medium text-foreground break-words ${mono ? 'font-mono text-xs' : ''}`}>
+        {children ?? <span className="text-foreground-faint font-normal">—</span>}
+      </div>
+    </div>
+  )
+}
+
 function StarRating({ value, label }: { value: number | null | undefined; label: string }) {
-  if (!value) return null
+  if (!value) {
+    return (
+      <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2">
+        <span className="text-sm text-gray-500 sm:w-40">{label}</span>
+        <span className="text-sm text-foreground-faint">Not rated</span>
+      </div>
+    )
+  }
   return (
     <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2">
       <span className="text-sm text-gray-500 sm:w-40">{label}</span>
@@ -231,8 +253,29 @@ export default function TripDetailPage() {
 
   const { trip } = data
 
-  const distance = trip.actual_distance_km ?? trip.estimated_distance_km
-  const duration = trip.actual_duration_minutes ?? trip.estimated_duration_minutes
+  const pickupCoords = formatCoords(trip.pickup_latitude, trip.pickup_longitude)
+  const destinationCoords = formatCoords(trip.destination_latitude, trip.destination_longitude)
+  const completedCoords = formatCoords(trip.completed_latitude, trip.completed_longitude)
+
+  const hasRatingData =
+    trip.rider_rating != null ||
+    trip.driver_rating != null ||
+    trip.driver_rating_friendly != null ||
+    trip.driver_rating_clean != null ||
+    trip.driver_rating_safe != null ||
+    trip.driver_rating_communicated_fairly != null ||
+    !!trip.rider_feedback ||
+    !!trip.driver_feedback
+
+  const hasCancellationData =
+    trip.status === 'cancelled' ||
+    !!trip.cancelled_at ||
+    !!trip.cancellation_reason ||
+    !!trip.cancelled_by_user_id
+
+  const routeWaypointsJson =
+    trip.route_waypoints != null ? JSON.stringify(trip.route_waypoints, null, 2) : null
+  const routeWaypointCount = Array.isArray(trip.route_waypoints) ? trip.route_waypoints.length : null
 
   // Timeline events in order
   const timelineEvents = [
@@ -254,7 +297,6 @@ export default function TripDetailPage() {
           </Link>
           <div className="min-w-0">
             <h1 className="text-2xl sm:text-3xl font-bold leading-tight text-gray-900">Trip Details</h1>
-            <p className="mt-1 text-sm text-gray-500 font-mono break-all">{trip.id}</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
@@ -300,37 +342,72 @@ export default function TripDetailPage() {
           </div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
-          <div className="flex items-center gap-3 mb-1">
+          <div className="flex items-center gap-3 mb-2">
             <Route className="h-5 w-5 text-primary-strong" />
             <span className="text-sm text-gray-500">Distance</span>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-gray-900">
-            {distance ? `${Number(distance).toFixed(2)} km` : 'N/A'}
-          </p>
-          {!trip.actual_distance_km && trip.estimated_distance_km && (
-            <p className="text-xs text-gray-400 mt-1">Estimated</p>
-          )}
+          <div className="space-y-2">
+            <div>
+              <p className="text-xs font-medium text-gray-500">Estimated</p>
+              <p className="text-lg sm:text-xl font-bold tabular-nums text-gray-900">
+                {trip.estimated_distance_km != null
+                  ? `${Number(trip.estimated_distance_km).toFixed(2)} km`
+                  : 'N/A'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500">Actual</p>
+              <p className="text-lg sm:text-xl font-bold tabular-nums text-gray-900">
+                {trip.actual_distance_km != null
+                  ? `${Number(trip.actual_distance_km).toFixed(2)} km`
+                  : 'N/A'}
+              </p>
+            </div>
+          </div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
-          <div className="flex items-center gap-3 mb-1">
+          <div className="flex items-center gap-3 mb-2">
             <Clock className="h-5 w-5 text-purple-600" />
             <span className="text-sm text-gray-500">Duration</span>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-gray-900">
-            {duration ? `${duration} min` : 'N/A'}
-          </p>
-          {!trip.actual_duration_minutes && trip.estimated_duration_minutes && (
-            <p className="text-xs text-gray-400 mt-1">Estimated</p>
-          )}
+          <div className="space-y-2">
+            <div>
+              <p className="text-xs font-medium text-gray-500">Estimated</p>
+              <p className="text-lg sm:text-xl font-bold tabular-nums text-gray-900">
+                {trip.estimated_duration_minutes != null
+                  ? `${trip.estimated_duration_minutes} min`
+                  : 'N/A'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500">Actual</p>
+              <p className="text-lg sm:text-xl font-bold tabular-nums text-gray-900">
+                {trip.actual_duration_minutes != null
+                  ? `${trip.actual_duration_minutes} min`
+                  : 'N/A'}
+              </p>
+            </div>
+          </div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
-          <div className="flex items-center gap-3 mb-1">
+          <div className="flex items-center gap-3 mb-2">
             <CreditCard className="h-5 w-5 text-orange-600" />
             <span className="text-sm text-gray-500">Payment</span>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-gray-900 capitalize">
-            {trip.payment_method ?? 'Cash'}
-          </p>
+          <div className="space-y-2">
+            <div>
+              <p className="text-xs font-medium text-gray-500">Method</p>
+              <p className="text-lg sm:text-xl font-bold text-gray-900 capitalize">
+                {trip.payment_method ?? 'Cash'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500">Currency</p>
+              <p className="text-lg sm:text-xl font-bold text-gray-900">
+                {trip.currency ?? 'GYD'}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -405,6 +482,73 @@ export default function TripDetailPage() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Locations */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <Navigation className="h-5 w-5 text-gray-500" />
+          Locations
+        </h2>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="rounded-lg border border-border p-4 space-y-3">
+            <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-success" />
+              Pickup
+            </p>
+            <Field label="Address">{trip.pickup_address}</Field>
+            <Field label="Coordinates" mono>
+              {pickupCoords ? (
+                <a
+                  href={mapsUrl(trip.pickup_latitude, trip.pickup_longitude)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary-strong hover:underline"
+                >
+                  {pickupCoords}
+                </a>
+              ) : null}
+            </Field>
+          </div>
+          <div className="rounded-lg border border-border p-4 space-y-3">
+            <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-danger" />
+              Destination
+            </p>
+            <Field label="Address">{trip.destination_address || null}</Field>
+            <Field label="Coordinates" mono>
+              {destinationCoords ? (
+                <a
+                  href={mapsUrl(trip.destination_latitude, trip.destination_longitude)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary-strong hover:underline"
+                >
+                  {destinationCoords}
+                </a>
+              ) : null}
+            </Field>
+          </div>
+          <div className="rounded-lg border border-border p-4 space-y-3">
+            <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <Flag className="h-4 w-4 text-info" />
+              Completed at
+            </p>
+            <Field label="Coordinates" mono>
+              {completedCoords && trip.completed_latitude != null && trip.completed_longitude != null ? (
+                <a
+                  href={mapsUrl(trip.completed_latitude, trip.completed_longitude)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary-strong hover:underline"
+                >
+                  {completedCoords}
+                </a>
+              ) : null}
+            </Field>
+            <Field label="Current stop index">{String(trip.current_stop_index ?? 0)}</Field>
+          </div>
+        </div>
       </div>
 
       {/* Participants */}
@@ -541,10 +685,6 @@ export default function TripDetailPage() {
           </h2>
           {trip.trip_request ? (
             <div className="space-y-3">
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Request ID</p>
-                <p className="text-xs font-mono text-gray-700">{trip.trip_request.id}</p>
-              </div>
               <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2">
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Status</p>
@@ -609,7 +749,7 @@ export default function TripDetailPage() {
       </div>
 
       {/* Ratings & Feedback */}
-      {(trip.rider_rating || trip.driver_rating) && (
+      {hasRatingData && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Star className="h-5 w-5 text-gray-500" />
@@ -652,7 +792,7 @@ export default function TripDetailPage() {
       )}
 
       {/* Cancellation Info */}
-      {trip.status === 'cancelled' && (
+      {hasCancellationData && (
         <div className="bg-red-50 rounded-xl border border-red-200 p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-red-900 mb-4 flex items-center gap-2">
             <Ban className="h-5 w-5 text-red-500" />
@@ -667,14 +807,14 @@ export default function TripDetailPage() {
                 </p>
               </div>
             )}
-            {trip.cancelled_by_user && (
+            {trip.cancelled_by_user ? (
               <div>
                 <p className="text-xs text-red-700 mb-0.5">Cancelled by</p>
                 <p className="text-sm font-medium text-red-900">
                   {trip.cancelled_by_user.full_name} ({trip.cancelled_by_user.role})
                 </p>
               </div>
-            )}
+            ) : null}
             {trip.cancellation_reason && (
               <div>
                 <p className="text-xs text-red-700 mb-0.5">Reason</p>
@@ -684,6 +824,82 @@ export default function TripDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Trip Record (raw columns) */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <Info className="h-5 w-5 text-gray-500" />
+          Trip Record
+        </h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Field label="Trip type">{trip.trip_type.replace('_', ' ')}</Field>
+          <Field label="Status">{trip.status.replace('_', ' ')}</Field>
+          <Field label="Night trip">{trip.is_night_trip ? 'Yes' : 'No'}</Field>
+          <Field label="Created">
+            {formatGuyana(trip.created_at, 'MMM d, yyyy • h:mm:ss a')}
+          </Field>
+          <Field label="Updated">
+            {formatGuyana(trip.updated_at, 'MMM d, yyyy • h:mm:ss a')}
+          </Field>
+          <Field label="Requested">
+            {formatGuyana(trip.requested_at, 'MMM d, yyyy • h:mm:ss a')}
+          </Field>
+          <Field label="Accepted">
+            {trip.accepted_at ? formatGuyana(trip.accepted_at, 'MMM d, yyyy • h:mm:ss a') : null}
+          </Field>
+          <Field label="Driver arrived">
+            {trip.driver_arrived_at ? formatGuyana(trip.driver_arrived_at, 'MMM d, yyyy • h:mm:ss a') : null}
+          </Field>
+          <Field label="Picked up">
+            {trip.picked_up_at ? formatGuyana(trip.picked_up_at, 'MMM d, yyyy • h:mm:ss a') : null}
+          </Field>
+          <Field label="Completed">
+            {trip.completed_at ? formatGuyana(trip.completed_at, 'MMM d, yyyy • h:mm:ss a') : null}
+          </Field>
+          <Field label="Cancelled">
+            {trip.cancelled_at ? formatGuyana(trip.cancelled_at, 'MMM d, yyyy • h:mm:ss a') : null}
+          </Field>
+          <Field label="Cancellation reason">{trip.cancellation_reason}</Field>
+        </div>
+
+        <div className="mt-6 space-y-4">
+          <details className="rounded-lg border border-border">
+            <summary className="cursor-pointer select-none px-4 py-2 text-sm font-medium text-foreground">
+              Route waypoints
+              <span className="ml-2 text-xs font-normal text-foreground-muted">
+                {routeWaypointsJson == null
+                  ? 'none'
+                  : routeWaypointCount != null
+                    ? `${routeWaypointCount} waypoint${routeWaypointCount === 1 ? '' : 's'}`
+                    : 'object'}
+              </span>
+            </summary>
+            {routeWaypointsJson != null ? (
+              <pre className="max-h-72 overflow-auto border-t border-border bg-muted px-4 py-3 text-xs text-foreground">
+                {routeWaypointsJson}
+              </pre>
+            ) : (
+              <p className="border-t border-border px-4 py-3 text-sm text-foreground-faint">No waypoints stored</p>
+            )}
+          </details>
+
+          <details className="rounded-lg border border-border">
+            <summary className="cursor-pointer select-none px-4 py-2 text-sm font-medium text-foreground">
+              Route polyline
+              <span className="ml-2 text-xs font-normal text-foreground-muted">
+                {trip.route_polyline ? `${trip.route_polyline.length} chars` : 'none'}
+              </span>
+            </summary>
+            {trip.route_polyline ? (
+              <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all border-t border-border bg-muted px-4 py-3 font-mono text-xs text-foreground">
+                {trip.route_polyline}
+              </pre>
+            ) : (
+              <p className="border-t border-border px-4 py-3 text-sm text-foreground-faint">No polyline stored</p>
+            )}
+          </details>
+        </div>
+      </div>
     </div>
   )
 }

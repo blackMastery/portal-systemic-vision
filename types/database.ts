@@ -141,6 +141,7 @@ export interface Database {
           rider_id: string | null
           driver_id: string | null
           vehicle_id: string | null
+          request_id: string | null
           pickup_latitude: number
           pickup_longitude: number
           pickup_address: string
@@ -155,15 +156,27 @@ export interface Database {
           actual_duration_minutes: number | null
           estimated_fare: number | null
           actual_fare: number | null
+          currency: string | null
+          payment_method: string | null
           requested_at: string
           accepted_at: string | null
+          driver_arrived_at: string | null
           picked_up_at: string | null
           completed_at: string | null
           cancelled_at: string | null
           cancellation_reason: string | null
+          cancelled_by_user_id: string | null
+          completed_latitude: number | null
+          completed_longitude: number | null
           is_night_trip: boolean
           rider_rating: number | null
           driver_rating: number | null
+          driver_rating_friendly: number | null
+          driver_rating_clean: number | null
+          driver_rating_safe: number | null
+          driver_rating_communicated_fairly: number | null
+          rider_feedback: string | null
+          driver_feedback: string | null
           created_at: string
           updated_at: string
           current_stop_index: number
