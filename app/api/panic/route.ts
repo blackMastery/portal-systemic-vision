@@ -15,7 +15,7 @@ import { assertUserIsTripParticipant } from '@/lib/incidents/verify-trip-partici
 import { logger } from '@/lib/logger'
 import { loadPanicConfig } from '@/lib/panic/config'
 import { loadPanicTripBundle } from '@/lib/panic/trip-bundle'
-import { buildIncidentDescription } from '@/lib/panic/messages'
+import { buildIncidentDescription, requestOrigin } from '@/lib/panic/messages'
 import { isActiveTripStatus } from '@/lib/panic/tracking'
 import {
   claimDispatch,
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
 
     let results = parseRecipients(alert.recipients)
     if (await claimDispatch(service, alert.id, 'sms_dispatched_at')) {
-      results = await dispatchPanicSms(service, alert, bundle, cfg, 'alert')
+      results = await dispatchPanicSms(service, alert, bundle, cfg, 'alert', requestOrigin(request))
     } else {
       // Another request already dispatched (or is dispatching); re-read.
       const { data: fresh } = await service.from('panic_alerts').select('*').eq('id', alert.id).maybeSingle()
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
     logger.info('panic alert', { alertId: alert.id, outcome, userId: user.id, role })
     return NextResponse.json(
       {
-        alert: publicAlert(alert),
+        alert: publicAlert(alert, requestOrigin(request)),
         outcome,
         sms: summarizeRecipients(results, 'alert'),
         support_phone: cfg.supportDisplay,
@@ -218,7 +218,7 @@ export async function GET(request: NextRequest) {
 
     const cfg = await loadPanicConfig(service)
     return NextResponse.json({
-      alert: publicAlert(alert),
+      alert: publicAlert(alert, requestOrigin(request)),
       outcome: alert.status,
       sms: summarizeRecipients(parseRecipients(alert.recipients), 'alert'),
       support_phone: cfg.supportDisplay,

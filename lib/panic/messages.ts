@@ -23,22 +23,50 @@ export type PanicMessageContext = {
   incidentId: string
   supportDisplay: string
   pressedAt: Date
+  /** Origin the portal was reached on (see [requestOrigin]); links are built from it. */
+  baseUrl: string
 }
 
+const HOST_RE = /^[A-Za-z0-9.-]+(:\d{1,5})?$/
+
+/** Fallback when no request is available: NEXT_PUBLIC_APP_URL, then localhost. */
 export function baseUrl(): string {
   return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/+$/, '')
+}
+
+/**
+ * The address this request reached the portal on (e.g. `https://portal.example.com`),
+ * so SMS and API links point at the deployment that is actually serving.
+ * Honors the proxy's `x-forwarded-host` / `x-forwarded-proto` (Vercel sets both).
+ */
+export function requestOrigin(request: Request): string {
+  const headers = request.headers
+  const host = (headers.get('x-forwarded-host') ?? headers.get('host') ?? '').split(',')[0].trim()
+  if (host && HOST_RE.test(host)) {
+    const forwardedProto = (headers.get('x-forwarded-proto') ?? '').split(',')[0].trim()
+    const proto =
+      forwardedProto === 'http' || forwardedProto === 'https'
+        ? forwardedProto
+        : new URL(request.url).protocol.replace(':', '')
+    return `${proto}://${host}`
+  }
+  try {
+    return new URL(request.url).origin
+  } catch {
+    return baseUrl()
+  }
 }
 
 export function mapsPinUrl(lat: number, lng: number): string {
   return `https://maps.google.com/?q=${lat.toFixed(5)},${lng.toFixed(5)}`
 }
 
-export function trackingUrl(token: string): string {
-  return `${baseUrl()}/track/${token}`
+export function trackingUrl(token: string, origin: string = baseUrl()): string {
+  return `${origin.replace(/\/+$/, '')}/track/${token}`
 }
 
-export function adminIncidentUrl(incidentId: string): string {
-  return `${baseUrl()}/admin/incidents/${incidentId}`
+export function adminIncidentUrl(incidentId: string, origin: string = baseUrl()): string {
+  return `${origin.replace(/\/+$/, '')}/admin/incidents/${incidentId}`
 }
 
 export function guyanaStamp(d: Date): string {
@@ -90,8 +118,8 @@ export function buildAlertSmsForSupport(c: PanicMessageContext): string {
   const to = clip(c.destinationAddress, 40)
   if (from || to) lines.push([from && `From: ${from}.`, to && `To: ${to}.`].filter(Boolean).join(' '))
   if (c.latitude != null && c.longitude != null) lines.push(`Pin: ${mapsPinUrl(c.latitude, c.longitude)}`)
-  lines.push(`Track: ${trackingUrl(c.trackingToken)}`)
-  lines.push(`Admin: ${adminIncidentUrl(c.incidentId)}`)
+  lines.push(`Track: ${trackingUrl(c.trackingToken, c.baseUrl)}`)
+  lines.push(`Admin: ${adminIncidentUrl(c.incidentId, c.baseUrl)}`)
   return ascii(lines.join('\n'))
 }
 
@@ -104,19 +132,19 @@ export function buildAlertSmsForContact(c: PanicMessageContext): string {
   const veh = vehicleLine(c)
   const driverParts = [c.driverName, veh, c.vehiclePlate ? `plate ${c.vehiclePlate}` : ''].filter(Boolean)
   if (driverParts.length) lines.push(`Driver: ${driverParts.join(', ')}.`)
-  lines.push(`Live location: ${trackingUrl(c.trackingToken)}`)
+  lines.push(`Live location: ${trackingUrl(c.trackingToken, c.baseUrl)}`)
   if (c.supportDisplay) lines.push(`Links support: ${c.supportDisplay}`)
   return ascii(lines.join('\n'))
 }
 
 export function buildSafeSms(
-  c: Pick<PanicMessageContext, 'presserName' | 'tripId' | 'trackingToken'>,
+  c: Pick<PanicMessageContext, 'presserName' | 'tripId' | 'trackingToken' | 'baseUrl'>,
   audience: 'support' | 'emergency_contact',
   resolvedAt: Date
 ): string {
   const tripPart = audience === 'support' ? ` (trip ${trip8(c.tripId)})` : ''
   return ascii(
-    `LINKS: ${c.presserName} marked themselves SAFE at ${guyanaStamp(resolvedAt)}${tripPart}. Alert resolved. Location link stays available for 1 hour: ${trackingUrl(c.trackingToken)}`
+    `LINKS: ${c.presserName} marked themselves SAFE at ${guyanaStamp(resolvedAt)}${tripPart}. Alert resolved. Location link stays available for 1 hour: ${trackingUrl(c.trackingToken, c.baseUrl)}`
   )
 }
 

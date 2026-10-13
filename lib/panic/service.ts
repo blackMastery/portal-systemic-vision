@@ -53,7 +53,8 @@ export function parseRecipients(raw: Json | null | undefined): PanicRecipientRes
 export function buildMessageContext(
   alert: PanicAlertRow,
   bundle: PanicTripBundle,
-  cfg: PanicConfig
+  cfg: PanicConfig,
+  origin: string
 ): PanicMessageContext {
   const presser = alert.role === 'rider' ? bundle.rider : bundle.driver
   return {
@@ -78,6 +79,7 @@ export function buildMessageContext(
     incidentId: alert.incident_id,
     supportDisplay: cfg.supportDisplay,
     pressedAt: new Date(alert.created_at),
+    baseUrl: origin,
   }
 }
 
@@ -140,15 +142,17 @@ function buildRecipients(
  * Sends the alert / resolved SMS to every recipient in parallel, logs each
  * attempt to `message_logs`, and appends the outcomes to
  * `panic_alerts.recipients`. Must be awaited inside the request (Vercel).
+ * `origin` is the portal address used for the tracking and admin links.
  */
 export async function dispatchPanicSms(
   service: SupabaseClient<Database>,
   alert: PanicAlertRow,
   bundle: PanicTripBundle,
   cfg: PanicConfig,
-  purpose: 'alert' | 'resolved'
+  purpose: 'alert' | 'resolved',
+  origin: string
 ): Promise<PanicRecipientResult[]> {
-  const ctx = buildMessageContext(alert, bundle, cfg)
+  const ctx = buildMessageContext(alert, bundle, cfg, origin)
   const { recipients, skipped } = buildRecipients(alert, bundle, cfg, purpose)
   const resolvedAt = alert.resolved_at ? new Date(alert.resolved_at) : new Date()
 

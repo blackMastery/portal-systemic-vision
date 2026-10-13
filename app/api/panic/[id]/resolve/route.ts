@@ -13,6 +13,7 @@ import { logger } from '@/lib/logger'
 import { loadPanicConfig } from '@/lib/panic/config'
 import { loadPanicTripBundle } from '@/lib/panic/trip-bundle'
 import { computeTrackingState } from '@/lib/panic/tracking'
+import { requestOrigin } from '@/lib/panic/messages'
 import {
   claimDispatch,
   dispatchPanicSms,
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json(response, { status: statusCode })
     }
     const { user } = resolved
+    const origin = requestOrigin(request)
 
     const alertId = params.id
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(alertId)) {
@@ -75,7 +77,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     if (alert.status === 'resolved') {
       return NextResponse.json({
-        alert: publicAlert(alert),
+        alert: publicAlert(alert, origin),
         outcome: 'already_resolved',
         sms: summarizeRecipients(parseRecipients(alert.recipients), 'resolved'),
         support_phone: cfg.supportDisplay,
@@ -116,13 +118,13 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     let results = parseRecipients(current.recipients)
     if (bundle && (await claimDispatch(service, current.id, 'resolved_sms_dispatched_at'))) {
-      results = await dispatchPanicSms(service, { ...current, resolved_at: now }, bundle, cfg, 'resolved')
+      results = await dispatchPanicSms(service, { ...current, resolved_at: now }, bundle, cfg, 'resolved', origin)
     }
 
     const tracking = bundle ? computeTrackingState({ ...current, resolved_at: now, status: 'resolved' }, bundle.trip) : null
     logger.info('panic alert resolved', { alertId: current.id, userId: user.id, reason: input.reason })
     return NextResponse.json({
-      alert: { ...publicAlert({ ...current, status: 'resolved', resolved_at: now }), tracking_grace_until: tracking?.graceEndsAt?.toISOString() ?? null },
+      alert: { ...publicAlert({ ...current, status: 'resolved', resolved_at: now }, origin), tracking_grace_until: tracking?.graceEndsAt?.toISOString() ?? null },
       outcome: 'resolved',
       sms: summarizeRecipients(results, 'resolved'),
       support_phone: cfg.supportDisplay,

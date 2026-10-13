@@ -38,7 +38,7 @@ Content-Type: application/json
 | env | `PANIC_SUPPORT_NUMBERS` | Comma-separated fallback when the `system_config` row is missing. |
 | env | `PANIC_TEST_MODE`, `PANIC_TEST_NUMBER` | Env equivalents of `panic_test_mode`. |
 | env | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` | Twilio credentials. |
-| env | `NEXT_PUBLIC_APP_URL` | Base for tracking and admin links in the SMS. |
+| env | `NEXT_PUBLIC_APP_URL` | Fallback only. Tracking and admin links in the SMS and `tracking_url` use the address the request reached the portal on (`x-forwarded-host` / `Host`). |
 
 All of these are editable in **Admin → Settings → Panic button**.
 
