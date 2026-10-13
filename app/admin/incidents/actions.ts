@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/logger'
-import type { Database, IncidentStatus } from '@/types/database'
+import type { Database, IncidentStatus, PanicAlertStatus } from '@/types/database'
 
 function createTypedServiceClient() {
   return createClient<Database>(
@@ -151,5 +151,77 @@ export async function addAdminNote(
 
   revalidatePath('/admin/incidents')
   revalidatePath(`/admin/incidents/${incidentId}`)
+  return { success: true }
+}
+
+/**
+ * Admin-side resolution of a panic alert. Marks the alert and its linked
+ * incident resolved. Unlike the app's "I'm safe" flow this sends NO SMS.
+ */
+export async function resolvePanicAlertAsAdmin(alertId: string): Promise<IncidentActionResult> {
+  const admin = await getAdminUserId()
+  if (!admin.ok) return { success: false, error: admin.error }
+
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(alertId)) {
+    return { success: false, error: 'Invalid alert id.' }
+  }
+
+  const db = createTypedServiceClient()
+  const { data: alert, error: fetchErr } = await db
+    .from('panic_alerts')
+    .select('id, incident_id, status')
+    .eq('id', alertId)
+    .maybeSingle()
+
+  if (fetchErr || !alert) {
+    return { success: false, error: 'Panic alert not found.' }
+  }
+  const current = alert as { id: string; incident_id: string; status: PanicAlertStatus }
+  if (current.status === 'resolved') {
+    return { success: false, error: 'This panic alert is already resolved.' }
+  }
+
+  const now = new Date().toISOString()
+  const { error: alertErr } = await db
+    .from('panic_alerts')
+    .update({ status: 'resolved', resolved_at: now, resolved_by_user_id: admin.id })
+    .eq('id', current.id)
+
+  if (alertErr) {
+    logger.error('Failed to resolve panic alert (admin)', alertErr, { alertId })
+    return { success: false, error: alertErr.message }
+  }
+
+  const { data: incidentRow } = await db
+    .from('incidents')
+    .select('admin_notes, status')
+    .eq('id', current.incident_id)
+    .maybeSingle()
+
+  const inc = incidentRow as { admin_notes: string | null; status: IncidentStatus } | null
+  const note = `Panic alert resolved by admin from the portal at ${now} (no SMS sent).`
+  const nextNotes = inc?.admin_notes ? `${inc.admin_notes}\n\n--- ${now}\n${note}` : note
+
+  const { error: incErr } = await db
+    .from('incidents')
+    .update({
+      status: 'resolved',
+      resolved_at: now,
+      resolved_by: admin.id,
+      admin_notes: nextNotes,
+    })
+    .eq('id', current.incident_id)
+
+  if (incErr) {
+    logger.error('Panic alert resolved but incident update failed', incErr, {
+      alertId,
+      incidentId: current.incident_id,
+    })
+    return { success: false, error: `Alert resolved, but the incident could not be updated: ${incErr.message}` }
+  }
+
+  logger.info('Panic alert resolved by admin', { alertId, incidentId: current.incident_id, adminId: admin.id })
+  revalidatePath('/admin/incidents')
+  revalidatePath(`/admin/incidents/${current.incident_id}`)
   return { success: true }
 }

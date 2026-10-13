@@ -10,6 +10,7 @@ import {
   updateAppVersionConfig,
 } from './actions'
 import { AgreementSettingsSection } from './agreement-section'
+import { PanicSettingsSection } from './panic-section'
 import { APP_VERSION_UI_ROWS } from './constants'
 import type { AppVersionConfigInput } from './types'
 import type { AppVersionAppType, AppVersionPlatform } from '@/types/database'
@@ -198,6 +199,8 @@ export default function AdminSettingsPage() {
 
       {!loading && (
         <>
+          <PanicSettingsSection />
+
           <AgreementSettingsSection />
 
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-4">

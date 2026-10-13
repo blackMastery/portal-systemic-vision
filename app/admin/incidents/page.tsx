@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { Filter, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Filter, AlertTriangle, ChevronLeft, ChevronRight, Siren } from 'lucide-react'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import type { IncidentCategory, IncidentReporterRole, IncidentStatus } from '@/types/database'
@@ -18,6 +18,7 @@ type IncidentListRow = {
   category: IncidentCategory
   status: IncidentStatus
   description: string
+  is_panic: boolean
   created_at: string
   reporter: { full_name: string | null; phone_number: string | null } | null
   trip: {
@@ -52,6 +53,7 @@ async function fetchIncidents(filters: {
   reporterRole: string
   dateFrom: string
   dateTo: string
+  panicOnly: boolean
   page: number
 }) {
   const supabase = createClient()
@@ -69,6 +71,7 @@ async function fetchIncidents(filters: {
       category,
       status,
       description,
+      is_panic,
       created_at,
       reporter:reporter_user_id (full_name, phone_number),
       trip:trip_id (id, pickup_address, destination_address)
@@ -86,6 +89,9 @@ async function fetchIncidents(filters: {
   }
   if (filters.reporterRole !== 'all') {
     query = query.eq('reporter_role', filters.reporterRole)
+  }
+  if (filters.panicOnly) {
+    query = query.eq('is_panic', true)
   }
   if (filters.dateFrom) {
     query = query.gte('created_at', new Date(filters.dateFrom).toISOString())
@@ -107,10 +113,11 @@ export default function AdminIncidentsPage() {
   const [reporterRole, setReporterRole] = useState<string>('all')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [panicOnly, setPanicOnly] = useState(false)
   const [page, setPage] = useState(0)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-incidents', status, category, reporterRole, dateFrom, dateTo, page],
+    queryKey: ['admin-incidents', status, category, reporterRole, dateFrom, dateTo, panicOnly, page],
     queryFn: () =>
       fetchIncidents({
         status,
@@ -118,6 +125,7 @@ export default function AdminIncidentsPage() {
         reporterRole,
         dateFrom,
         dateTo,
+        panicOnly,
         page,
       }),
   })
@@ -142,7 +150,7 @@ export default function AdminIncidentsPage() {
           <Filter className="h-5 w-5 text-gray-500" />
           <span className="text-sm font-medium text-gray-700">Filters</span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
             <select
@@ -217,6 +225,21 @@ export default function AdminIncidentsPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
             />
           </div>
+          <div className="flex items-end">
+            <label className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm w-full cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={panicOnly}
+                onChange={(e) => {
+                  setPanicOnly(e.target.checked)
+                  setPage(0)
+                }}
+                className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+              />
+              <Siren className="h-4 w-4 text-red-600" aria-hidden />
+              <span className="text-gray-700">Panic only</span>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -269,7 +292,15 @@ export default function AdminIncidentsPage() {
                         )}
                       </td>
                       <td className="px-4 md:px-6 py-3 text-sm text-gray-700">
-                        {categoryLabels[row.category]}
+                        <span className="inline-flex items-center gap-2">
+                          {categoryLabels[row.category]}
+                          {row.is_panic && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-red-600 text-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">
+                              <Siren className="h-3 w-3" aria-hidden />
+                              Panic
+                            </span>
+                          )}
+                        </span>
                       </td>
                       <td className="px-4 md:px-6 py-3 whitespace-nowrap">
                         <Link
