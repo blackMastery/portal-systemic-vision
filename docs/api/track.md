@@ -10,8 +10,8 @@ The page polls `GET /api/track/<token>` every 5 seconds while the alert is live 
 
 | State | Meaning |
 |-------|---------|
-| `live` | Alert is active and the trip is in progress. Positions keep updating. |
-| `grace` | Alert was resolved, or the trip completed/cancelled. Last known positions stay visible for **1 hour**. |
+| `live` | Alert is active and the trip is in progress. Positions keep updating. For **rider** alerts the rider's phone streams its own location, so the link stays live while the alert is active even after the trip ends. |
+| `grace` | Alert was resolved, or (driver alerts only) the trip completed/cancelled. Last known positions stay visible for **1 hour**. |
 | `expired` | Grace ended, or 6 hours passed since the press (`panic_alerts.expires_at`). The page shows "expired". |
 
 ## `GET /api/track/<token>`
@@ -36,10 +36,15 @@ The page polls `GET /api/track/<token>` every 5 seconds while the alert is live 
   "support_phone_display": "+592 764 1700",
   "positions": [ { "lat": 6.80, "lng": -58.15, "recorded_at": "…", "speed_kmh": 32, "heading": 180 } ],
   "last_position": { "lat": 6.80, "lng": -58.15, "recorded_at": "…", "speed_kmh": 32, "heading": 180 },
+  "presser_streams": true,
+  "presser_positions": [ { "lat": 6.80, "lng": -58.15, "recorded_at": "…", "speed_kmh": 4.3, "heading": 270 } ],
+  "presser_last_position": { "lat": 6.80, "lng": -58.15, "recorded_at": "…", "speed_kmh": 4.3, "heading": 270 },
   "generated_at": "…"
 }
 ```
 
 Deliberately excluded: phone numbers, full names, addresses, trip id, incident id, admin links.
 
-`positions.recorded_at` is written by the driver app as Guyana wall time with a trailing `Z`; use `parseLocationHistoryRecordedAt` (`lib/guyana-time.ts`) when computing "updated X ago".
+`positions` / `last_position` are the vehicle (driver app `location_history`). `presser_positions` / `presser_last_position` are the presser's own phone (`panic_location_points`, last 120 points); empty for driver alerts, where `presser_streams` is `false`.
+
+`positions.recorded_at` is written by the driver app as Guyana wall time with a trailing `Z`; use `parseLocationHistoryRecordedAt` (`lib/guyana-time.ts`) when computing "updated X ago". `presser_positions.recorded_at` is a real timestamptz; use `parseApiTimestamptz`.

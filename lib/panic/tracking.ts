@@ -27,12 +27,18 @@ type TripLike = {
  *   alert resolution / trip completion / trip cancellation
  * - live while the alert is active and the trip is still in progress
  * - grace otherwise (last known positions, no more updates)
+ *
+ * With `presserStreams` (the presser's phone sends its own location, i.e.
+ * rider alerts) the trip ending does not stop tracking: the link stays live
+ * until the alert is resolved or hits its hard cap.
  */
 export function computeTrackingState(
   alert: AlertLike,
   trip: TripLike | null,
-  now: Date = new Date()
+  now: Date = new Date(),
+  opts: { presserStreams?: boolean } = {}
 ): { state: TrackingState; graceEndsAt: Date | null } {
+  const presserStreams = opts.presserStreams === true
   const t = now.getTime()
   if (t >= new Date(alert.expires_at).getTime()) {
     return { state: 'expired', graceEndsAt: null }
@@ -40,11 +46,13 @@ export function computeTrackingState(
 
   const graceStarts: number[] = []
   if (alert.resolved_at) graceStarts.push(new Date(alert.resolved_at).getTime())
-  if (trip?.completed_at) graceStarts.push(new Date(trip.completed_at).getTime())
-  if (trip?.cancelled_at) graceStarts.push(new Date(trip.cancelled_at).getTime())
+  if (!presserStreams) {
+    if (trip?.completed_at) graceStarts.push(new Date(trip.completed_at).getTime())
+    if (trip?.cancelled_at) graceStarts.push(new Date(trip.cancelled_at).getTime())
+  }
   if (alert.status === 'expired') graceStarts.push(t - TRACKING_GRACE_MS)
 
-  const tripActive = trip ? isActiveTripStatus(trip.status) : false
+  const tripActive = presserStreams || (trip ? isActiveTripStatus(trip.status) : false)
   const alertActive = alert.status === 'active'
 
   if (graceStarts.length === 0 && alertActive && tripActive) {

@@ -30,8 +30,14 @@ export type TrackingSnapshot = {
     vehicle: { make: string | null; model: string | null; color: string | null; plate: string | null } | null
   }
   support_phone_display: string
+  /** Vehicle trail (driver app `location_history`). */
   positions: TrackingPosition[]
   last_position: TrackingPosition | null
+  /** True when the presser's phone streams its own location (rider alerts). */
+  presser_streams: boolean
+  /** Presser's phone trail (`panic_location_points`); empty for driver alerts. */
+  presser_positions: TrackingPosition[]
+  presser_last_position: TrackingPosition | null
   generated_at: string
 }
 
@@ -39,6 +45,17 @@ export type TrackingLoadResult =
   | { kind: 'not_found' }
   | { kind: 'expired'; expires_at: string }
   | { kind: 'ok'; snapshot: TrackingSnapshot }
+
+/** Phone trail points returned per poll (~10 min at one fix every 5s). */
+const PRESSER_POINTS_LIMIT = 120
+
+type PresserRow = {
+  latitude: number
+  longitude: number
+  recorded_at: string
+  speed_mps: number | null
+  heading: number | null
+}
 
 function firstName(full: string | null | undefined): string {
   const f = (full ?? '').trim().split(/\s+/)[0]
@@ -64,16 +81,27 @@ export async function loadTrackingSnapshot(token: string): Promise<TrackingLoadR
   if (!alert) return { kind: 'not_found' }
 
   const bundle = await loadPanicTripBundle(service, alert.trip_id)
-  const { state, graceEndsAt } = computeTrackingState(alert, bundle?.trip ?? null)
+  const presserStreams = alert.role === 'rider'
+  const { state, graceEndsAt } = computeTrackingState(alert, bundle?.trip ?? null, new Date(), {
+    presserStreams,
+  })
   if (state === 'expired') return { kind: 'expired', expires_at: alert.expires_at }
 
-  const [{ data: rows }, cfg] = await Promise.all([
+  const [{ data: rows }, { data: presserRows }, cfg] = await Promise.all([
     service
       .from('location_history')
       .select('latitude, longitude, recorded_at, speed_kmh, heading')
       .eq('trip_id', alert.trip_id)
       .order('recorded_at', { ascending: false })
       .limit(60),
+    presserStreams
+      ? service
+          .from('panic_location_points')
+          .select('latitude, longitude, recorded_at, speed_mps, heading')
+          .eq('alert_id', alert.id)
+          .order('recorded_at', { ascending: false })
+          .limit(PRESSER_POINTS_LIMIT)
+      : Promise.resolve({ data: [] as PresserRow[] }),
     loadPanicConfig(service),
   ])
 
@@ -83,6 +111,17 @@ export async function loadTrackingSnapshot(token: string): Promise<TrackingLoadR
       lng: Number(r.longitude),
       recorded_at: r.recorded_at,
       speed_kmh: r.speed_kmh == null ? null : Number(r.speed_kmh),
+      heading: r.heading == null ? null : Number(r.heading),
+    }))
+    .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
+    .reverse()
+
+  const presserPositions: TrackingPosition[] = (presserRows ?? [])
+    .map((r) => ({
+      lat: Number(r.latitude),
+      lng: Number(r.longitude),
+      recorded_at: r.recorded_at,
+      speed_kmh: r.speed_mps == null ? null : Number(r.speed_mps) * 3.6,
       heading: r.heading == null ? null : Number(r.heading),
     }))
     .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
@@ -121,6 +160,9 @@ export async function loadTrackingSnapshot(token: string): Promise<TrackingLoadR
       support_phone_display: cfg.supportDisplay,
       positions,
       last_position: positions.length ? positions[positions.length - 1] : null,
+      presser_streams: presserStreams,
+      presser_positions: presserPositions,
+      presser_last_position: presserPositions.length ? presserPositions[presserPositions.length - 1] : null,
       generated_at: new Date().toISOString(),
     },
   }

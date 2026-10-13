@@ -395,3 +395,28 @@ export const panicResolveSchema = z
   .strict()
 
 export type PanicResolveRequest = z.infer<typeof panicResolveSchema>
+
+/** Max points per `POST /api/panic/{id}/locations` call. */
+export const PANIC_LOCATIONS_MAX_POINTS = 50
+
+export const panicLocationPointSchema = z
+  .object({
+    latitude: latitudeSchema,
+    longitude: longitudeSchema,
+    accuracy_meters: z.number().min(0).max(99999).optional(),
+    speed_mps: z.number().min(0).max(9999).optional(),
+    heading: z.number().min(0).max(360).optional(),
+    recorded_at: z.string().datetime({ offset: true }),
+  })
+  .strict()
+
+export const panicLocationsSchema = z
+  .object({
+    points: z
+      .array(panicLocationPointSchema)
+      .min(1, 'At least one point is required')
+      .max(PANIC_LOCATIONS_MAX_POINTS, `At most ${PANIC_LOCATIONS_MAX_POINTS} points per request`),
+  })
+  .strict()
+
+export type PanicLocationsRequest = z.infer<typeof panicLocationsSchema>

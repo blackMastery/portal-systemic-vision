@@ -112,6 +112,20 @@ Returns the caller's most recent alert on that trip in the same envelope (or `{ 
 
 The user may press the button again on the same trip afterwards, creating a new alert.
 
+## `POST /api/panic/{id}/locations`
+
+The presser's phone streams its own GPS while the alert is active (the rider app does this, including in the background). Stored in `panic_location_points` and shown on the tracking page as the presser's trail.
+
+```json
+{ "points": [ { "latitude": 6.8013, "longitude": -58.1551, "accuracy_meters": 8.5, "speed_mps": 1.2, "heading": 270, "recorded_at": "2026-10-13T12:00:05.000Z" } ] }
+```
+
+- 1–50 points per call; `latitude`, `longitude`, `recorded_at` required. Unknown keys are rejected.
+- `recorded_at` more than 5 minutes before the press or 2 minutes in the future (phone clock skew) is replaced with server time.
+- `200 { accepted, status: "active" }`.
+- `404 ALERT_NOT_FOUND`: not this caller's alert.
+- `409 ALERT_NOT_ACTIVE` with `status` (`resolved` | `expired`): the alert has ended; the app stops streaming.
+
 ## `GET /api/panic/config` (public)
 
 ```json

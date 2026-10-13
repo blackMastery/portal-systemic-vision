@@ -121,7 +121,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       results = await dispatchPanicSms(service, { ...current, resolved_at: now }, bundle, cfg, 'resolved', origin)
     }
 
-    const tracking = bundle ? computeTrackingState({ ...current, resolved_at: now, status: 'resolved' }, bundle.trip) : null
+    const tracking = bundle ? computeTrackingState({ ...current, resolved_at: now, status: 'resolved' }, bundle.trip, new Date(), {
+          presserStreams: current.role === 'rider',
+        }) : null
     logger.info('panic alert resolved', { alertId: current.id, userId: user.id, reason: input.reason })
     return NextResponse.json({
       alert: { ...publicAlert({ ...current, status: 'resolved', resolved_at: now }, origin), tracking_grace_until: tracking?.graceEndsAt?.toISOString() ?? null },

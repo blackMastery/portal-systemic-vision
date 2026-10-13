@@ -667,6 +667,33 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['panic_alerts']['Insert']>
         Relationships: []
       }
+      panic_location_points: {
+        Row: {
+          id: number
+          alert_id: string
+          user_id: string
+          latitude: number
+          longitude: number
+          accuracy_meters: number | null
+          speed_mps: number | null
+          heading: number | null
+          recorded_at: string
+          received_at: string
+        }
+        Insert: {
+          alert_id: string
+          user_id: string
+          latitude: number
+          longitude: number
+          accuracy_meters?: number | null
+          speed_mps?: number | null
+          heading?: number | null
+          recorded_at: string
+          received_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['panic_location_points']['Insert']>
+        Relationships: []
+      }
       incident_status_history: {
         Row: {
           id: string

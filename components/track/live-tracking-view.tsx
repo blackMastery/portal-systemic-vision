@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Phone, Car, AlertTriangle } from 'lucide-react'
 import type { TrackingSnapshot } from '@/lib/panic/tracking-loader'
-import { formatGuyana, parseLocationHistoryRecordedAt } from '@/lib/guyana-time'
+import { formatGuyana, parseApiTimestamptz, parseLocationHistoryRecordedAt } from '@/lib/guyana-time'
 import { TrackingMap } from './tracking-map'
 
 type ExpiredData = { state: 'expired'; expires_at: string | null }
@@ -47,6 +47,19 @@ function relativeAgo(from: Date, now: Date): string {
   if (h < 24) return `${h} h ${m % 60} min ago`
   const d = Math.floor(h / 24)
   return `${d} day${d === 1 ? '' : 's'} ago`
+}
+
+function validDate(d: Date | null): Date | null {
+  return d != null && !Number.isNaN(d.getTime()) ? d : null
+}
+
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} aria-hidden />
+      {label}
+    </span>
+  )
 }
 
 function StatusPill({ state }: { state: TrackingData['state'] }) {
@@ -114,9 +127,17 @@ export function LiveTrackingView({
   const supportPhone = snapshot?.support_phone_display ?? initial.support_phone_display
   const positions = snapshot?.positions ?? initial.positions
   const lastPosition = snapshot?.last_position ?? initial.last_position
+  const presserStreams = snapshot?.presser_streams ?? initial.presser_streams ?? false
+  const presserPositions = snapshot?.presser_positions ?? initial.presser_positions ?? []
+  const presserLastPosition = snapshot?.presser_last_position ?? initial.presser_last_position ?? null
 
-  const lastUpdate = lastPosition ? parseLocationHistoryRecordedAt(lastPosition.recorded_at) : null
-  const lastUpdateValid = lastUpdate != null && !Number.isNaN(lastUpdate.getTime())
+  const vehicleUpdate = validDate(
+    lastPosition ? parseLocationHistoryRecordedAt(lastPosition.recorded_at) : null
+  )
+  const presserUpdate = validDate(
+    presserLastPosition ? parseApiTimestamptz(presserLastPosition.recorded_at) : null
+  )
+  const presserLabel = alert.role === 'rider' ? `${alert.presser_first_name}'s phone` : 'Phone'
 
   const vehicle = driver.vehicle
   const vehicleLine = vehicle
@@ -144,11 +165,21 @@ export function LiveTrackingView({
       <div className="max-w-2xl mx-auto w-full flex-1 flex flex-col gap-4 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <StatusPill state={state} />
-          <p className="text-xs text-gray-600">
-            {lastUpdateValid && lastUpdate
-              ? `Updated ${relativeAgo(lastUpdate, now)}`
-              : 'No location received yet'}
-          </p>
+          {presserStreams ? (
+            <div className="text-xs text-gray-600 text-right space-y-0.5">
+              <p>
+                {presserLabel}:{' '}
+                {presserUpdate ? `updated ${relativeAgo(presserUpdate, now)}` : 'no location received yet'}
+              </p>
+              <p>
+                Vehicle: {vehicleUpdate ? `updated ${relativeAgo(vehicleUpdate, now)}` : 'no location received yet'}
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-600">
+              {vehicleUpdate ? `Updated ${relativeAgo(vehicleUpdate, now)}` : 'No location received yet'}
+            </p>
+          )}
         </div>
 
         {state === 'expired' && (
@@ -160,7 +191,9 @@ export function LiveTrackingView({
           <div className="rounded-lg bg-amber-50 border border-amber-100 px-3 py-2 text-sm text-amber-900">
             {alert.status === 'resolved'
               ? `${alert.presser_first_name} marked this alert as resolved. `
-              : 'The trip has ended. '}
+              : presserStreams
+                ? 'This alert has ended. '
+                : 'The trip has ended. '}
             This link stays available until {formatGuyana(snapshot.grace_ends_at, 'HH:mm')}.
           </div>
         )}
@@ -175,7 +208,17 @@ export function LiveTrackingView({
           positions={positions}
           lastPosition={lastPosition}
           pressLocation={alert.press_location}
+          presserPositions={presserPositions}
+          presserLastPosition={presserLastPosition}
         />
+
+        {presserStreams && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 -mt-2">
+            <LegendDot color="#16A34A" label={presserLabel} />
+            <LegendDot color="#2563EB" label="Vehicle" />
+            <LegendDot color="#DC2626" label="Where the button was pressed" />
+          </div>
+        )}
 
         <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-2">
           <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">

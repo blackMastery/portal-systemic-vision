@@ -29,33 +29,41 @@ export function roundFare(amount: number): number {
   return Math.round(rounded / 100) * 100;
 }
 
-// // ── Zone classification from coordinates (fallback) ──
-// export function classifyZoneFromCoords(lat: number, lng: number): string {
-//   if (Math.abs(lat - 6.4986) < 0.05 && Math.abs(lng + 58.2541) < 0.05) return "AIRPORT";
-//   if (lng > -57.9) return "BERBICE";
-//   if (lng < -58.45 && lat > 6.9) return "ESSEQUIBO";
-//   if (lat < 5.5) return "INTERIOR";
-//   if (lat < 6.55) return "LINDEN";
-//   if (lat >= 6.795 && lat <= 6.828 && lng >= -58.17 && lng <= -58.13) return "CENTRAL";
-//   if (lng < -58.185) return lat >= 6.78 ? "WEST_COAST" : "WEST_BANK";
-//   if (lat < 6.795) return "EAST_BANK";
-//   return "EAST_COAST";
-// }
-
 // ── Zone classification from coordinates (fallback) ──
 export function classifyZoneFromCoords(lat: number, lng: number): string {
-  if (Math.abs(lat - 6.4986) < 0.05 && Math.abs(lng + 58.2541) < 0.05) return 'AIRPORT';
-  if (lng > -57.9) return 'BERBICE';
-  if (lng < -58.45 && lat > 6.9) return 'ESSEQUIBO';
-  if (lat < 5.5) return 'INTERIOR';
-  if (lat < 6.55) return 'LINDEN';
-  if (lat >= 6.785 && lat <= 6.828 && lng >= -58.175 && lng <= -58.125) return 'CENTRAL';
-  if (lng < -58.185) return lat >= 6.78 ? 'WEST_COAST' : 'WEST_BANK';
-  // East Bank corridor: anywhere west of central polygon (lng < -58.175) AND on east side of river (lng > -58.185)
-  // This catches Houston, McDoom, Agricola which sit between central GT and the river
-  if (lng < -58.175 && lat < 6.795) return 'EAST_BANK';
-  if (lat < 6.785) return 'EAST_BANK';
-  return 'EAST_COAST';
+  // Airport (CJIA) — specific location
+  if (Math.abs(lat - 6.4986) < 0.05 && Math.abs(lng + 58.2541) < 0.05) return "AIRPORT";
+
+  // Deep interior (Lethem, Mahdia) — far south
+  if (lat < 5.5) return "INTERIOR";
+
+  // Essequibo Coast — west of Essequibo River
+  if (lng < -58.45 && lat > 6.9) return "ESSEQUIBO";
+
+  // Berbice — east of Mahaica River (lng > -57.75)
+  // Checked BEFORE lat-based LINDEN rule so east-side villages don't fall into LINDEN
+  if (lng > -57.75) return "BERBICE";
+
+  // Linden corridor — south of Soesdyke on the EB highway (south-west of GT)
+  // Only trigger when BOTH south of 6.55 AND still west of Berbice longitude band
+  if (lat < 6.55 && lng < -58.0) return "LINDEN";
+
+  // Central Georgetown polygon
+  if (lat >= 6.785 && lat <= 6.828 && lng >= -58.175 && lng <= -58.125) return "CENTRAL";
+
+  // West of Demerara River
+  if (lng < -58.185) return lat >= 6.78 ? "WEST_COAST" : "WEST_BANK";
+
+  // East Bank corridor: anywhere west of central polygon (lng < -58.175) AND east of river
+  // Catches Houston, McDoom, Agricola — strip between central GT and the river
+  if (lng < -58.175) return "EAST_BANK";
+
+  // South of Central polygon — East Bank corridor
+  // But only when still close to central (lng > -58.0) — further east is East Coast
+  if (lat < 6.785 && lng < -58.0) return "EAST_BANK";
+
+  // Default: East Coast Demerara
+  return "EAST_COAST";
 }
 
 export function crossesDemeraraRiver(zoneA: string, zoneB: string): boolean {
@@ -68,7 +76,7 @@ export function crossesDemeraraRiver(zoneA: string, zoneB: string): boolean {
 function eastBankBrackets(distanceKm: number): number {
   const brackets = [
     { upToKm: 4, rate: 350 }, // first 4km
-    { upToKm: 9,        rate: 300 },  // km 5-9
+    { upToKm: 9, rate: 300 }, // km 5-9
     { upToKm: 20, rate: 120 }, // km 10-20 (highway entry)
     { upToKm: 30, rate: 200 }, // km 21-30 (climbing)
     { upToKm: Infinity, rate: 380 }, // km 31+
@@ -84,6 +92,59 @@ function eastBankBrackets(distanceKm: number): number {
     prev = upToKm;
   }
   return charge;
+}
+
+// ── Haversine (straight-line) distance in km ──────────────
+// Used as a sanity check against Google's driving distance.
+// Normal road routing produces 1.1x–1.5x the straight-line distance.
+// If Google returns something much higher, likely GPS error or routing anomaly.
+export function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ── Distance sanity check ─────────────────────────────────
+// Takes the Google-reported distance and the straight-line distance,
+// returns a sanity-checked distance plus a flag if adjustment was needed.
+// Rules:
+//   - If Google distance ≤ 1.5× straight-line → use Google as-is (normal routing)
+//   - If Google distance > 1.5× straight-line → likely GPS/routing anomaly,
+//     cap at 1.5× straight-line (passengers shouldn't pay for routing errors)
+//   - If Google distance < straight-line → use straight-line (impossible otherwise)
+export const SANITY_MULTIPLIER = 1.5;
+
+export function sanityCheckDistance(
+  googleKm: number,
+  straightLineKm: number | null,
+): { km: number; adjusted: boolean; reason: string | null } {
+  if (straightLineKm == null || straightLineKm <= 0) {
+    return { km: googleKm, adjusted: false, reason: null };
+  }
+  const maxExpected = straightLineKm * SANITY_MULTIPLIER;
+  if (googleKm > maxExpected) {
+    return {
+      km: maxExpected,
+      adjusted: true,
+      reason: `Google distance (${googleKm.toFixed(2)}km) exceeded ${SANITY_MULTIPLIER}× straight-line (${
+        straightLineKm.toFixed(2)
+      }km); capped at ${maxExpected.toFixed(2)}km`,
+    };
+  }
+  if (googleKm < straightLineKm) {
+    return {
+      km: straightLineKm,
+      adjusted: true,
+      reason: `Google distance (${googleKm.toFixed(2)}km) less than straight-line (${
+        straightLineKm.toFixed(2)
+      }km); using straight-line`,
+    };
+  }
+  return { km: googleKm, adjusted: false, reason: null };
 }
 
 // ───────────────────────────────────────────────────────────
@@ -108,6 +169,21 @@ export function calculateFare({
       breakdown: null,
       zones: { pickup: pickupZone, dropoff: dropoffZone },
       distanceKm: null,
+    };
+  }
+
+  // Absurdly long distance — likely coordinate error or trip to deep interior
+  // Max realistic coastal road distance in Guyana is ~300km (GT → Corriverton border)
+  // Georgetown → Lethem via Linden-Lethem road is ~560km but should route via INTERIOR zone
+  if (distanceKm > 300) {
+    return {
+      status: "NEGOTIATE",
+      total: null,
+      message:
+        "This route is too long for automatic pricing. Please agree on a fare directly with your driver.",
+      breakdown: null,
+      zones: { pickup: pickupZone, dropoff: dropoffZone },
+      distanceKm,
     };
   }
 
@@ -184,20 +260,6 @@ export function calculateFare({
     };
   }
 
-
-
-  // if (pickupZone === "CENTRAL" || dropoffZone === "CENTRAL") {
-  //   return {
-  //     status: "PRICED",
-  //     total: roundFare(1500),
-  //     message: null,
-  //     breakdown: "Airport flat rate $1,500",
-  //     zones: { pickup: pickupZone, dropoff: dropoffZone },
-  //     distanceKm,
-  //   };
-  // }
-
-
   // ── Both Central — original confirmed formula ──────────
   if (pickupZone === "CENTRAL" && dropoffZone === "CENTRAL") {
     const total = roundFare(Math.max(MINIMUM_FARE, 1050 + (distanceKm - 3) * 100));
@@ -230,46 +292,41 @@ export function calculateFare({
   }
 
   // ── Linden corridor — Matrix calibrated ───────────────
+  // Floor at $2,000 so short trips never go below city rates
   if (pickupZone === "LINDEN" || dropoffZone === "LINDEN") {
-    const total = roundFare(distanceKm * 130);
+    const total = roundFare(Math.max(2000, distanceKm * 130));
     return {
       status: "PRICED",
       total,
       message: null,
-      breakdown: `${distanceKm}km × $130 (Linden highway) = $${total.toLocaleString()}`,
+      breakdown: total === 2000
+        ? `Minimum Linden fare $2,000`
+        : `${distanceKm}km × $130 (Linden highway) = $${total.toLocaleString()}`,
       zones: { pickup: pickupZone, dropoff: dropoffZone },
       distanceKm,
     };
   }
 
   // ── Berbice corridor — Matrix calibrated ──────────────
+  // Floor at $2,000 so short trips never go below city rates
   if (pickupZone === "BERBICE" || dropoffZone === "BERBICE") {
-    const total = roundFare(distanceKm * 180);
+    const total = roundFare(Math.max(2000, distanceKm * 180));
     return {
       status: "PRICED",
       total,
       message: null,
-      breakdown: `${distanceKm}km × $180 (Berbice corridor) = $${total.toLocaleString()}`,
-      zones: { pickup: pickupZone, dropoff: dropoffZone },
-      distanceKm,
-    };
-  }
-
-  // ── Long East Coast (15km+) — rural highway rate ──────
-  const touchesEastCoast = pickupZone === "EAST_COAST" || dropoffZone === "EAST_COAST";
-  if (touchesEastCoast && distanceKm >= 15) {
-    const total = roundFare(Math.max(2000, distanceKm * 160));
-    return {
-      status: "PRICED",
-      total,
-      message: null,
-      breakdown: `Long East Coast: ${distanceKm}km × $160 = $${total.toLocaleString()}`,
+      breakdown: total === 2000
+        ? `Minimum Berbice fare $2,000`
+        : `${distanceKm}km × $180 (Berbice corridor) = $${total.toLocaleString()}`,
       zones: { pickup: pickupZone, dropoff: dropoffZone },
       distanceKm,
     };
   }
 
   // ── East Bank (any distance) — original bracket formula ───
+  // Used for CENTRAL ↔ EAST_BANK specifically, where we have strong
+  // calibration (Camp→Diamond 14km = $3,500 etc.)
+  const touchesEastCoast = pickupZone === "EAST_COAST" || dropoffZone === "EAST_COAST";
   const isEastBankRoute =
     (pickupZone === "EAST_BANK" || dropoffZone === "EAST_BANK") &&
     !touchesEastCoast;
@@ -286,14 +343,23 @@ export function calculateFare({
     };
   }
 
-  // ── Default: East corridor (Central ↔ East Coast short) ───
-  const total = roundFare(Math.max(MINIMUM_FARE, 1050 + (distanceKm - 3) * 220));
+  // ── Default: East corridor (CENTRAL ↔ EAST_COAST, any distance) ───
+  // Two-bracket smooth curve, no cliffs:
+  //   3km base:        $1,050
+  //   3km → 7km:       +$220/km (steep town-adjacent rate)
+  //   7km+:            +$130/km (flatter highway rate)
+  // Monotonic: longer trips always cost more.
+  const charge = distanceKm <= 7
+    ? 1050 + (distanceKm - 3) * 220
+    : 1050 + 4 * 220 + (distanceKm - 7) * 130;
+  const total = roundFare(Math.max(MINIMUM_FARE, charge));
   return {
     status: "PRICED",
     total,
     message: null,
-    breakdown:
-      `$1,050 base + ${(distanceKm - 3).toFixed(2)}km × $220 = $${total.toLocaleString()}`,
+    breakdown: distanceKm <= 7
+      ? `$1,050 base + ${(distanceKm - 3).toFixed(2)}km × $220 = $${total.toLocaleString()}`
+      : `$1,930 (@ 7km) + ${(distanceKm - 7).toFixed(2)}km × $130 = $${total.toLocaleString()}`,
     zones: { pickup: pickupZone, dropoff: dropoffZone },
     distanceKm,
   };
