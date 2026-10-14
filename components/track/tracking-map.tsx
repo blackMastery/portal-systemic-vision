@@ -31,6 +31,8 @@ interface TrackingMapProps {
   /** Presser's phone trail (rider alerts). */
   presserPositions?: TrackingPosition[]
   presserLastPosition?: TrackingPosition | null
+  /** Rider's trip trail shortly before the press (drawn lighter, dashed). */
+  presserPreAlertPositions?: TrackingPosition[]
 }
 
 const VEHICLE_COLOR = '#2563EB'
@@ -42,6 +44,7 @@ export function TrackingMap({
   pressLocation,
   presserPositions = [],
   presserLastPosition = null,
+  presserPreAlertPositions = [],
 }: TrackingMapProps) {
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY || '',
@@ -61,6 +64,11 @@ export function TrackingMap({
     [presserPositions]
   )
 
+  const prePath = useMemo<LatLng[]>(
+    () => presserPreAlertPositions.map((p) => ({ lat: p.lat, lng: p.lng })),
+    [presserPreAlertPositions]
+  )
+
   const initialCenter = useMemo<LatLng>(() => {
     if (presserLastPosition) return { lat: presserLastPosition.lat, lng: presserLastPosition.lng }
     if (lastPosition) return { lat: lastPosition.lat, lng: lastPosition.lng }
@@ -71,7 +79,7 @@ export function TrackingMap({
   const fitOnce = useCallback(
     (map: google.maps.Map) => {
       if (didFitRef.current) return
-      const pts: LatLng[] = [...path, ...presserPath]
+      const pts: LatLng[] = [...path, ...presserPath, ...prePath]
       if (pressLocation) pts.push(pressLocation)
       if (pts.length === 0) return
       didFitRef.current = true
@@ -84,7 +92,7 @@ export function TrackingMap({
       for (const p of pts) bounds.extend(p)
       map.fitBounds(bounds, 48)
     },
-    [path, presserPath, pressLocation]
+    [path, presserPath, prePath, pressLocation]
   )
 
   const onLoad = useCallback(
@@ -178,6 +186,22 @@ export function TrackingMap({
             />
           )}
 
+          {prePath.length > 1 && (
+            <Polyline
+              path={prePath}
+              options={{
+                strokeOpacity: 0,
+                icons: [
+                  {
+                    icon: { path: 'M 0,-1 0,1', strokeOpacity: 0.6, strokeColor: PRESSER_COLOR, scale: 3 },
+                    offset: '0',
+                    repeat: '12px',
+                  },
+                ],
+              }}
+            />
+          )}
+
           {presserPath.length > 1 && (
             <Polyline
               path={presserPath}
@@ -209,7 +233,7 @@ export function TrackingMap({
         </GoogleMap>
       )}
 
-      {isLoaded && !loadError && positions.length === 0 && presserPositions.length === 0 && (
+      {isLoaded && !loadError && positions.length === 0 && presserPositions.length === 0 && prePath.length === 0 && (
         <div className="absolute bottom-3 left-3 right-3 rounded-lg bg-white/90 border border-gray-200 px-3 py-2 text-xs text-gray-700 text-center">
           No GPS positions received yet
           {pressLocation ? ' — showing where the panic button was pressed.' : '.'}

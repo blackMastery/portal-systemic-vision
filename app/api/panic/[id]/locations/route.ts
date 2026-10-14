@@ -11,14 +11,11 @@ import { resolveUserFromBearerRequest } from '@/lib/bearer-api'
 import { validate, panicLocationsSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import type { Database } from '@/types/database'
+import { MAX_FUTURE_SKEW_MS, MAX_PAST_SKEW_MS, stampRecordedAt } from '@/lib/location-points'
 
 export const dynamic = 'force-dynamic'
 
 type PointInsert = Database['public']['Tables']['panic_location_points']['Insert']
-
-/** Phone clocks drift; a fix outside this window is stamped with server time instead. */
-const MAX_PAST_SKEW_MS = 5 * 60 * 1000
-const MAX_FUTURE_SKEW_MS = 2 * 60 * 1000
 
 /**
  * POST /api/panic/[id]/locations — the presser's phone streams GPS points
@@ -85,9 +82,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const serverStamp = new Date(now).toISOString()
     let restamped = 0
     const rows: PointInsert[] = input.points.map((p) => {
-      const t = new Date(p.recorded_at).getTime()
-      const inWindow = Number.isFinite(t) && t >= earliest && t <= latest
-      if (!inWindow) restamped++
+      const stamp = stampRecordedAt(p.recorded_at, earliest, latest, serverStamp)
+      if (stamp.restamped) restamped++
       return {
         alert_id: alert.id,
         user_id: user.id,
@@ -96,7 +92,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         accuracy_meters: p.accuracy_meters ?? null,
         speed_mps: p.speed_mps ?? null,
         heading: p.heading ?? null,
-        recorded_at: inWindow ? new Date(t).toISOString() : serverStamp,
+        recorded_at: stamp.iso,
       }
     })
 

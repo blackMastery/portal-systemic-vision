@@ -10,10 +10,12 @@ const SEARCH_DEBOUNCE_MS = 280
 
 const STATUS_VALUES = ['all', 'requested', 'accepted', 'picked_up', 'completed', 'cancelled'] as const
 const TYPE_VALUES = ['all', 'airport', 'short_drop', 'market', 'other'] as const
+const COVERAGE_VALUES = ['all', 'full', 'partial', 'none', 'not_applicable', 'flagged'] as const
 
 const DEFAULTS = {
   status: 'all',
   type: 'all',
+  coverage: 'all',
   q: '',
   start: '',
   end: '',
@@ -45,6 +47,7 @@ export function useTripFilters() {
 
   const status = parseEnum(searchParams.get('status'), STATUS_VALUES, 'all')
   const tripType = parseEnum(searchParams.get('type'), TYPE_VALUES, 'all')
+  const coverage = parseEnum(searchParams.get('coverage'), COVERAGE_VALUES, 'all')
   const urlSearch = searchParams.get('q') ?? ''
   const startDate = parseDate(searchParams.get('start'), defaults.start)
   const endDate = parseDate(searchParams.get('end'), defaults.end)
@@ -110,16 +113,18 @@ export function useTripFilters() {
     let n = 0
     if (status !== 'all') n++
     if (tripType !== 'all') n++
+    if (coverage !== 'all') n++
     if (urlSearch !== '') n++
     if (startDate !== defaults.start) n++
     if (endDate !== defaults.end) n++
     return { activeFilterCount: n, hasActiveFilters: n > 0 }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, tripType, urlSearch, startDate, endDate, defaults.start, defaults.end])
+  }, [status, tripType, coverage, urlSearch, startDate, endDate, defaults.start, defaults.end])
 
   return {
     status,
     tripType,
+    coverage,
     startDate,
     endDate,
     searchInput,

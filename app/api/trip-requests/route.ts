@@ -284,6 +284,12 @@ export async function POST(request: NextRequest) {
       passenger_count: validatedBody.passenger_count || 1,
     }
 
+    // Only sent for proxy bookings, so normal requests keep working on a
+    // database without the column (DB default is true).
+    if (validatedBody.rider_is_passenger === false) {
+      insertData.rider_is_passenger = false
+    }
+
     // Last stop denormalized into destination_* (backward compat)
     insertData.destination_address = lastStop.address
 

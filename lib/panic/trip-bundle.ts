@@ -7,12 +7,15 @@ export type PanicTripBundle = {
     status: string
     pickup_address: string | null
     destination_address: string | null
+    picked_up_at: string | null
     completed_at: string | null
     cancelled_at: string | null
     rider_id: string | null
     driver_id: string | null
     vehicle_id: string | null
   }
+  /** False for proxy bookings: the rider's phone is not in the vehicle. */
+  riderIsPassenger: boolean
   rider: {
     profileId: string
     userId: string
@@ -48,13 +51,13 @@ export async function loadPanicTripBundle(
   const { data: trip, error } = await service
     .from('trips')
     .select(
-      'id, status, pickup_address, destination_address, completed_at, cancelled_at, rider_id, driver_id, vehicle_id'
+      'id, status, pickup_address, destination_address, picked_up_at, completed_at, cancelled_at, rider_id, driver_id, vehicle_id'
     )
     .eq('id', tripId)
     .maybeSingle()
   if (error || !trip) return null
 
-  const [riderRes, driverRes] = await Promise.all([
+  const [riderRes, driverRes, passengerRes] = await Promise.all([
     trip.rider_id
       ? service
           .from('rider_profiles')
@@ -65,6 +68,9 @@ export async function loadPanicTripBundle(
     trip.driver_id
       ? service.from('driver_profiles').select('id, user_id').eq('id', trip.driver_id).maybeSingle()
       : Promise.resolve({ data: null }),
+    // Separate query so a database without the column (migration not yet
+    // applied) still loads the bundle; any error means "rider is in the car".
+    service.from('trips').select('rider_is_passenger').eq('id', tripId).maybeSingle(),
   ])
 
   const riderProfile = riderRes.data
@@ -110,6 +116,7 @@ export async function loadPanicTripBundle(
 
   return {
     trip,
+    riderIsPassenger: passengerRes.error ? true : passengerRes.data?.rider_is_passenger !== false,
     rider:
       riderProfile && riderUser
         ? {

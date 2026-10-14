@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { useInvalidateTripRouteOnLocationInsert } from '@/hooks/use-trip-route-location-realtime'
@@ -34,6 +34,8 @@ import {
 import type { Database, TripType, TripStatus } from '@/types/database'
 import { TripRouteMap } from '@/components/drivers/trip-route-map'
 import { fetchTripRoute } from '@/lib/admin/fetch-trip-route'
+import { RiderTrailPanel } from '@/components/admin/rider-trail-panel'
+import { RiderCoverageBadge } from '@/components/admin/rider-coverage-badge'
 import type { TripRoutePoint } from '@/types/trip-route-point'
 import {
   sortTripStops,
@@ -200,6 +202,8 @@ function TimelineItem({
 export default function TripDetailPage() {
   const params = useParams()
   const tripId = params.id as string
+  /** The rider trail is fetched (and access-logged) only once this tab is opened. */
+  const [routeTab, setRouteTab] = useState<'driver' | 'rider'>('driver')
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['trip-detail', tripId],
@@ -327,6 +331,7 @@ export default function TripDetailPage() {
           <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize sm:px-3 sm:py-1.5 sm:text-sm ${statusColors[trip.status]}`}>
             {trip.status.replace('_', ' ')}
           </span>
+          <RiderCoverageBadge coverage={trip.rider_location_coverage} />
         </div>
       </div>
 
@@ -428,10 +433,38 @@ export default function TripDetailPage() {
 
       {/* Route */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-gray-500" />
-          Route
-        </h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-gray-500" />
+            Route
+          </h2>
+          <div role="tablist" aria-label="Route view" className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 text-sm">
+            {(
+              [
+                ['driver', 'Driver route'],
+                ['rider', 'Rider trail'],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={routeTab === key}
+                onClick={() => setRouteTab(key)}
+                className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                  routeTab === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {routeTab === 'rider' ? (
+          <RiderTrailPanel tripId={trip.id} driverRoute={routePoints} />
+        ) : (
+        <>
         <TripRouteMap
           trip={trip}
           routePoints={routePoints}
@@ -496,6 +529,8 @@ export default function TripDetailPage() {
               </table>
             </div>
           </div>
+        )}
+        </>
         )}
       </div>
 

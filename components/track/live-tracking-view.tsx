@@ -130,6 +130,8 @@ export function LiveTrackingView({
   const presserStreams = snapshot?.presser_streams ?? initial.presser_streams ?? false
   const presserPositions = snapshot?.presser_positions ?? initial.presser_positions ?? []
   const presserLastPosition = snapshot?.presser_last_position ?? initial.presser_last_position ?? null
+  const presserPreAlertPositions =
+    snapshot?.presser_pre_alert_positions ?? initial.presser_pre_alert_positions ?? []
 
   const vehicleUpdate = validDate(
     lastPosition ? parseLocationHistoryRecordedAt(lastPosition.recorded_at) : null
@@ -210,11 +212,18 @@ export function LiveTrackingView({
           pressLocation={alert.press_location}
           presserPositions={presserPositions}
           presserLastPosition={presserLastPosition}
+          presserPreAlertPositions={presserPreAlertPositions}
         />
 
         {presserStreams && (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 -mt-2">
             <LegendDot color="#16A34A" label={presserLabel} />
+            {presserPreAlertPositions.length > 1 && (
+              <span className="inline-flex items-center gap-1.5">
+                <span className="inline-block w-4 border-t-2 border-dashed border-green-600/60" aria-hidden />
+                Before the alert (up to 15 min)
+              </span>
+            )}
             <LegendDot color="#2563EB" label="Vehicle" />
             <LegendDot color="#DC2626" label="Where the button was pressed" />
           </div>

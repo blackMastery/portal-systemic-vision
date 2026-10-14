@@ -102,6 +102,8 @@ export const tripRequestSchema = z
     estimated_fare: z.number().nonnegative().optional(),
     notes: z.string().max(1000, 'Notes must be less than 1000 characters').optional(),
     passenger_count: z.number().int().positive().min(1).max(10).optional(),
+    /** False when booking for someone else (the rider's phone is not in the car). */
+    rider_is_passenger: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
     const hasDropoffs = data.dropoffs != null && data.dropoffs.length > 0
@@ -399,7 +401,8 @@ export type PanicResolveRequest = z.infer<typeof panicResolveSchema>
 /** Max points per `POST /api/panic/{id}/locations` call. */
 export const PANIC_LOCATIONS_MAX_POINTS = 50
 
-export const panicLocationPointSchema = z
+/** One phone GPS fix (panic streaming and trip rider recording). */
+export const locationPointSchema = z
   .object({
     latitude: latitudeSchema,
     longitude: longitudeSchema,
@@ -413,10 +416,24 @@ export const panicLocationPointSchema = z
 export const panicLocationsSchema = z
   .object({
     points: z
-      .array(panicLocationPointSchema)
+      .array(locationPointSchema)
       .min(1, 'At least one point is required')
       .max(PANIC_LOCATIONS_MAX_POINTS, `At most ${PANIC_LOCATIONS_MAX_POINTS} points per request`),
   })
   .strict()
 
 export type PanicLocationsRequest = z.infer<typeof panicLocationsSchema>
+
+/** Max points per `POST /api/trips/{id}/rider-locations` call. */
+export const TRIP_RIDER_LOCATIONS_MAX_POINTS = 100
+
+export const tripRiderLocationsSchema = z
+  .object({
+    points: z
+      .array(locationPointSchema)
+      .min(1, 'At least one point is required')
+      .max(TRIP_RIDER_LOCATIONS_MAX_POINTS, `At most ${TRIP_RIDER_LOCATIONS_MAX_POINTS} points per request`),
+  })
+  .strict()
+
+export type TripRiderLocationsRequest = z.infer<typeof tripRiderLocationsSchema>

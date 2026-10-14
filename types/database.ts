@@ -37,6 +37,8 @@ export type IncidentReporterRole = 'driver' | 'rider'
 export type DashcamRequestStatus = 'pending' | 'submitted' | 'expired' | 'cancelled'
 
 export type PanicAlertStatus = 'active' | 'resolved' | 'expired'
+export type RiderLocationCoverage = 'full' | 'partial' | 'none' | 'not_applicable'
+export type RiderLocationPhase = 'pre_pickup' | 'in_trip'
 
 /** One entry in panic_alerts.recipients (jsonb). */
 export type PanicRecipientResult = {
@@ -90,6 +92,7 @@ export interface Database {
           emergency_contact_phone: string | null
           id_card_storage_path: string | null
           profile_setup_completed: boolean
+          trip_recording_disclosed_at: string | null
           created_at: string
           updated_at: string
         }
@@ -199,6 +202,8 @@ export interface Database {
           current_stop_index: number
           route_waypoints: Json | null
           route_polyline: string | null
+          rider_is_passenger: boolean
+          rider_location_coverage: RiderLocationCoverage | null
         }
         Insert: Omit<Database['public']['Tables']['trips']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['trips']['Insert']>
@@ -318,6 +323,7 @@ export interface Database {
           passenger_count: number
           status: TripStatus
           expires_at: string | null
+          rider_is_passenger: boolean
           created_at: string
           updated_at: string
         }
@@ -836,6 +842,54 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['panic_alerts']['Insert']>
         Relationships: []
       }
+      trip_rider_locations: {
+        Row: {
+          id: number
+          trip_id: string
+          user_id: string
+          latitude: number
+          longitude: number
+          accuracy_meters: number | null
+          speed_mps: number | null
+          heading: number | null
+          recorded_at: string
+          received_at: string
+          phase: RiderLocationPhase
+          downsampled: boolean
+        }
+        Insert: {
+          trip_id: string
+          user_id: string
+          latitude: number
+          longitude: number
+          accuracy_meters?: number | null
+          speed_mps?: number | null
+          heading?: number | null
+          recorded_at: string
+          received_at?: string
+          phase: RiderLocationPhase
+          downsampled?: boolean
+        }
+        Update: Partial<Database['public']['Tables']['trip_rider_locations']['Insert']>
+        Relationships: []
+      }
+      rider_location_access_log: {
+        Row: {
+          id: number
+          admin_user_id: string | null
+          trip_id: string
+          rider_user_id: string | null
+          viewed_at: string
+        }
+        Insert: {
+          admin_user_id: string | null
+          trip_id: string
+          rider_user_id?: string | null
+          viewed_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['rider_location_access_log']['Insert']>
+        Relationships: []
+      }
       panic_location_points: {
         Row: {
           id: number
@@ -936,6 +990,10 @@ export interface Database {
       expire_stale_panic_alerts: {
         Args: Record<string, never>
         Returns: number
+      }
+      compute_rider_location_coverage: {
+        Args: { p_trip_id: string }
+        Returns: RiderLocationCoverage | null
       }
     }
   }

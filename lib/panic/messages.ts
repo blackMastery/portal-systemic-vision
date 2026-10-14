@@ -25,6 +25,8 @@ export type PanicMessageContext = {
   pressedAt: Date
   /** Origin the portal was reached on (see [requestOrigin]); links are built from it. */
   baseUrl: string
+  /** False when the rider booked for someone else and is not in the vehicle. */
+  riderIsPassenger: boolean
 }
 
 const HOST_RE = /^[A-Za-z0-9.-]+(:\d{1,5})?$/
@@ -102,7 +104,8 @@ export function buildAlertSmsForSupport(c: PanicMessageContext): string {
   const stamp = guyanaStamp(c.pressedAt)
   const presserPhone = c.presserPhone ? ` ${c.presserPhone}` : ''
   if (c.role === 'rider') {
-    lines.push(`LINKS PANIC (rider) ${stamp}: ${c.presserName}${presserPhone} on trip ${trip8(c.tripId)}.`)
+    const who = c.riderIsPassenger ? 'rider' : 'rider, booked for a passenger'
+    lines.push(`LINKS PANIC (${who}) ${stamp}: ${c.presserName}${presserPhone} on trip ${trip8(c.tripId)}.`)
     const driverBits = [c.driverName, c.driverPhone].filter(Boolean).join(' ')
     const veh = [vehicleLine(c), c.vehiclePlate].filter(Boolean).join(' ')
     if (driverBits || veh) lines.push(`Driver: ${[driverBits, veh].filter(Boolean).join(', ')}.`)
@@ -127,7 +130,9 @@ export function buildAlertSmsForSupport(c: PanicMessageContext): string {
 export function buildAlertSmsForContact(c: PanicMessageContext): string {
   const lines: string[] = []
   lines.push(
-    `LINKS SAFETY ALERT: ${c.presserName} pressed the panic button during a Links ride at ${guyanaStamp(c.pressedAt)}.`
+    c.role === 'rider' && !c.riderIsPassenger
+      ? `LINKS SAFETY ALERT: ${c.presserName} pressed the panic button for a Links ride they booked for someone else, at ${guyanaStamp(c.pressedAt)}.`
+      : `LINKS SAFETY ALERT: ${c.presserName} pressed the panic button during a Links ride at ${guyanaStamp(c.pressedAt)}.`
   )
   const veh = vehicleLine(c)
   const driverParts = [c.driverName, veh, c.vehiclePlate ? `plate ${c.vehiclePlate}` : ''].filter(Boolean)

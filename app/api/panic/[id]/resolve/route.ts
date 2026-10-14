@@ -122,7 +122,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     const tracking = bundle ? computeTrackingState({ ...current, resolved_at: now, status: 'resolved' }, bundle.trip, new Date(), {
-          presserStreams: current.role === 'rider',
+          presserStreams: current.role === 'rider' && bundle.riderIsPassenger,
         }) : null
     logger.info('panic alert resolved', { alertId: current.id, userId: user.id, reason: input.reason })
     return NextResponse.json({

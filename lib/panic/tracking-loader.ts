@@ -38,6 +38,12 @@ export type TrackingSnapshot = {
   /** Presser's phone trail (`panic_location_points`); empty for driver alerts. */
   presser_positions: TrackingPosition[]
   presser_last_position: TrackingPosition | null
+  /**
+   * The rider's recorded trip trail for up to 15 min before the press,
+   * never earlier than pickup (so the pickup point, often home, is not
+   * shown). Empty for driver alerts, proxy rides and presses before pickup.
+   */
+  presser_pre_alert_positions: TrackingPosition[]
   generated_at: string
 }
 
@@ -49,12 +55,39 @@ export type TrackingLoadResult =
 /** Phone trail points returned per poll (~10 min at one fix every 5s). */
 const PRESSER_POINTS_LIMIT = 120
 
+/** How far back before the press the public link shows the rider's trip trail. */
+export const PRE_ALERT_WINDOW_MS = 15 * 60 * 1000
+
+/**
+ * Start of the pre-press segment shown publicly: 15 min before the press,
+ * but never before pickup. Null when the press came before pickup.
+ */
+export function preAlertWindowStart(pressedAtIso: string, pickedUpAtIso: string | null): Date | null {
+  if (!pickedUpAtIso) return null
+  const pressed = new Date(pressedAtIso).getTime()
+  const pickedUp = new Date(pickedUpAtIso).getTime()
+  if (!(pickedUp < pressed)) return null
+  return new Date(Math.max(pressed - PRE_ALERT_WINDOW_MS, pickedUp))
+}
+
 type PresserRow = {
   latitude: number
   longitude: number
   recorded_at: string
   speed_mps: number | null
   heading: number | null
+}
+
+function toPositions(rows: PresserRow[] | null | undefined): TrackingPosition[] {
+  return (rows ?? [])
+    .map((r) => ({
+      lat: Number(r.latitude),
+      lng: Number(r.longitude),
+      recorded_at: r.recorded_at,
+      speed_kmh: r.speed_mps == null ? null : Number(r.speed_mps) * 3.6,
+      heading: r.heading == null ? null : Number(r.heading),
+    }))
+    .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
 }
 
 function firstName(full: string | null | undefined): string {
@@ -81,13 +114,16 @@ export async function loadTrackingSnapshot(token: string): Promise<TrackingLoadR
   if (!alert) return { kind: 'not_found' }
 
   const bundle = await loadPanicTripBundle(service, alert.trip_id)
-  const presserStreams = alert.role === 'rider'
+  // Proxy ride: the booker's phone is not in the car, so it does not stream.
+  const presserStreams = alert.role === 'rider' && bundle?.riderIsPassenger !== false
   const { state, graceEndsAt } = computeTrackingState(alert, bundle?.trip ?? null, new Date(), {
     presserStreams,
   })
   if (state === 'expired') return { kind: 'expired', expires_at: alert.expires_at }
 
-  const [{ data: rows }, { data: presserRows }, cfg] = await Promise.all([
+  const preStart = presserStreams ? preAlertWindowStart(alert.created_at, bundle?.trip.picked_up_at ?? null) : null
+
+  const [{ data: rows }, { data: presserRows }, { data: preRows }, cfg] = await Promise.all([
     service
       .from('location_history')
       .select('latitude, longitude, recorded_at, speed_kmh, heading')
@@ -101,6 +137,17 @@ export async function loadTrackingSnapshot(token: string): Promise<TrackingLoadR
           .eq('alert_id', alert.id)
           .order('recorded_at', { ascending: false })
           .limit(PRESSER_POINTS_LIMIT)
+      : Promise.resolve({ data: [] as PresserRow[] }),
+    preStart
+      ? service
+          .from('trip_rider_locations')
+          .select('latitude, longitude, recorded_at, speed_mps, heading')
+          .eq('trip_id', alert.trip_id)
+          .gte('recorded_at', preStart.toISOString())
+          .lt('recorded_at', alert.created_at)
+          .order('recorded_at', { ascending: true })
+          .limit(PRESSER_POINTS_LIMIT)
+          .then((r) => (r.error ? { data: [] as PresserRow[] } : r))
       : Promise.resolve({ data: [] as PresserRow[] }),
     loadPanicConfig(service),
   ])
@@ -116,16 +163,8 @@ export async function loadTrackingSnapshot(token: string): Promise<TrackingLoadR
     .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
     .reverse()
 
-  const presserPositions: TrackingPosition[] = (presserRows ?? [])
-    .map((r) => ({
-      lat: Number(r.latitude),
-      lng: Number(r.longitude),
-      recorded_at: r.recorded_at,
-      speed_kmh: r.speed_mps == null ? null : Number(r.speed_mps) * 3.6,
-      heading: r.heading == null ? null : Number(r.heading),
-    }))
-    .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
-    .reverse()
+  const presserPositions: TrackingPosition[] = toPositions(presserRows).reverse()
+  const preAlertPositions: TrackingPosition[] = toPositions(preRows)
 
   const presser = alert.role === 'rider' ? bundle?.rider : bundle?.driver
 
@@ -163,6 +202,7 @@ export async function loadTrackingSnapshot(token: string): Promise<TrackingLoadR
       presser_streams: presserStreams,
       presser_positions: presserPositions,
       presser_last_position: presserPositions.length ? presserPositions[presserPositions.length - 1] : null,
+      presser_pre_alert_positions: preAlertPositions,
       generated_at: new Date().toISOString(),
     },
   }

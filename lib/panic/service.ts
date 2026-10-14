@@ -80,6 +80,7 @@ export function buildMessageContext(
     supportDisplay: cfg.supportDisplay,
     pressedAt: new Date(alert.created_at),
     baseUrl: origin,
+    riderIsPassenger: bundle.riderIsPassenger,
   }
 }
 

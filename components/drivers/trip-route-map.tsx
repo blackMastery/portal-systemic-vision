@@ -1,8 +1,8 @@
 'use client'
 
 import { GoogleMap, useLoadScript, Marker, Polyline } from '@react-google-maps/api'
-import { useEffect, useMemo, useState } from 'react'
-import { MapPin } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { MapPin, Maximize2 } from 'lucide-react'
 import type { TripRoutePoint } from '@/types/trip-route-point'
 import { formatGuyana } from '@/lib/guyana-time'
 import { formatCurrency } from '@/lib/format'
@@ -62,28 +62,109 @@ function formatCoord(lat: number, lng: number) {
   return `${lat.toFixed(6)}, ${lng.toFixed(6)}`
 }
 
+/** Reverse-geocodes one point; falls back to raw coordinates. */
+function geocodeInto(
+  geocoder: { geocode: (req: unknown, cb: (r: { formatted_address?: string }[] | null, s: string) => void) => void },
+  lat: number,
+  lng: number,
+  done: (address: string) => void
+) {
+  geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+    done(status === 'OK' && results?.[0]?.formatted_address ? results[0].formatted_address : formatCoord(lat, lng))
+  })
+}
+
 export function TripRouteMap({ trip, routePoints, isLoadingRoute, showTripInfo = false, plannedStops = [] }: TripRouteMapProps) {
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY || '',
     id: 'google-map-script',
   })
 
-  const mapCenter = useMemo(() => {
-    if (routePoints.length > 0) {
-      const avgLat = routePoints.reduce((sum, p) => sum + p.latitude, 0) / routePoints.length
-      const avgLng = routePoints.reduce((sum, p) => sum + p.longitude, 0) / routePoints.length
-      return { lat: avgLat, lng: avgLng }
-    }
-    if (trip.pickup_latitude && trip.pickup_longitude) {
-      return { lat: Number(trip.pickup_latitude), lng: Number(trip.pickup_longitude) }
-    }
-    return defaultCenter
-  }, [routePoints, trip.pickup_latitude, trip.pickup_longitude])
-
   const polylinePath = useMemo(
     () => routePoints.map((p) => ({ lat: p.latitude, lng: p.longitude })),
     [routePoints]
   )
+
+  // The view is set once (initial center, then one fit when the route first
+  // loads) and never moved by code after that, so live GPS updates don't
+  // undo the admin's zoom/pan. "Fit route" re-frames on demand.
+  const [initialCenter] = useState(() =>
+    trip.pickup_latitude && trip.pickup_longitude
+      ? { lat: Number(trip.pickup_latitude), lng: Number(trip.pickup_longitude) }
+      : defaultCenter
+  )
+  const mapRef = useRef<google.maps.Map | null>(null)
+  const fittedTripRef = useRef<string | null>(null)
+  const userMovedRef = useRef(false)
+
+  const fitToRoute = useCallback(() => {
+    const map = mapRef.current
+    if (!map) return
+    const pts: google.maps.LatLngLiteral[] = [...polylinePath]
+    if (trip.pickup_latitude && trip.pickup_longitude) {
+      pts.push({ lat: Number(trip.pickup_latitude), lng: Number(trip.pickup_longitude) })
+    }
+    if (trip.destination_latitude != null && trip.destination_longitude != null) {
+      pts.push({ lat: Number(trip.destination_latitude), lng: Number(trip.destination_longitude) })
+    }
+    for (const s of plannedStops) pts.push({ lat: s.latitude, lng: s.longitude })
+    if (pts.length === 0) return
+    if (pts.length === 1) {
+      map.setCenter(pts[0])
+      map.setZoom(15)
+      return
+    }
+    const bounds = new google.maps.LatLngBounds()
+    for (const p of pts) bounds.extend(p)
+    map.fitBounds(bounds, 48)
+  }, [
+    polylinePath,
+    plannedStops,
+    trip.pickup_latitude,
+    trip.pickup_longitude,
+    trip.destination_latitude,
+    trip.destination_longitude,
+  ])
+
+  // A different trip (e.g. switching trips on the driver page) gets a fresh fit.
+  useEffect(() => {
+    if (fittedTripRef.current !== null && fittedTripRef.current !== trip.id) {
+      fittedTripRef.current = null
+      userMovedRef.current = false
+    }
+  }, [trip.id])
+
+  // Fit once, when the route first has points — unless the admin already
+  // zoomed or panned while it was loading.
+  useEffect(() => {
+    if (!mapRef.current || fittedTripRef.current === trip.id) return
+    if (isLoadingRoute) return
+    if (polylinePath.length === 0 && plannedStops.length === 0) return
+    fittedTripRef.current = trip.id
+    if (!userMovedRef.current) fitToRoute()
+  }, [trip.id, isLoadingRoute, polylinePath.length, plannedStops.length, fitToRoute])
+
+  const onMapLoad = useCallback(
+    (map: google.maps.Map) => {
+      mapRef.current = map
+      if (!isLoadingRoute && (polylinePath.length > 0 || plannedStops.length > 0)) {
+        fittedTripRef.current = trip.id
+        fitToRoute()
+      }
+    },
+    // Only the first load matters; later fits go through the effect above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  )
+
+  const onMapUnmount = useCallback(() => {
+    mapRef.current = null
+    fittedTripRef.current = null
+  }, [])
+
+  const markUserMoved = useCallback(() => {
+    userMovedRef.current = true
+  }, [])
 
   const pickupIcon = useMemo(() => {
     if (typeof window === 'undefined' || typeof (window as any).google === 'undefined') return undefined
@@ -121,44 +202,43 @@ export function TripRouteMap({ trip, routePoints, isLoadingRoute, showTripInfo =
     const g = (window as any).google?.maps
     if (!g?.Geocoder) return
 
-    setGpsAddresses({ pickup: null, routeEnd: null, destination: null })
-
+    setGpsAddresses((prev) => ({ ...prev, pickup: null, destination: null }))
     const geocoder = new g.Geocoder()
     let cancelled = false
 
-    const resolve = (lat: number, lng: number, key: 'pickup' | 'routeEnd' | 'destination') => {
-      geocoder.geocode({ location: { lat, lng } }, (results: { formatted_address?: string }[] | null, status: string) => {
-        if (cancelled) return
-        if (status === 'OK' && results?.[0]?.formatted_address) {
-          setGpsAddresses((prev) => ({ ...prev, [key]: results[0]!.formatted_address! }))
-        } else {
-          setGpsAddresses((prev) => ({ ...prev, [key]: formatCoord(lat, lng) }))
-        }
-      })
-    }
-
-    resolve(Number(trip.pickup_latitude), Number(trip.pickup_longitude), 'pickup')
-
-    if (polylinePath.length > 0) {
-      const last = polylinePath[polylinePath.length - 1]
-      resolve(last.lat, last.lng, 'routeEnd')
-    }
-
+    geocodeInto(geocoder, Number(trip.pickup_latitude), Number(trip.pickup_longitude), (addr) => {
+      if (!cancelled) setGpsAddresses((prev) => ({ ...prev, pickup: addr }))
+    })
     if (trip.destination_latitude != null && trip.destination_longitude != null) {
-      resolve(Number(trip.destination_latitude), Number(trip.destination_longitude), 'destination')
+      geocodeInto(geocoder, Number(trip.destination_latitude), Number(trip.destination_longitude), (addr) => {
+        if (!cancelled) setGpsAddresses((prev) => ({ ...prev, destination: addr }))
+      })
     }
 
     return () => {
       cancelled = true
     }
-  }, [
-    isLoaded,
-    trip.pickup_latitude,
-    trip.pickup_longitude,
-    trip.destination_latitude,
-    trip.destination_longitude,
-    polylinePath,
-  ])
+  }, [isLoaded, trip.pickup_latitude, trip.pickup_longitude, trip.destination_latitude, trip.destination_longitude])
+
+  // ~11 m grid: a stationary car (or one creeping in traffic) doesn't trigger
+  // a new Geocoding call on every GPS update.
+  const lastPoint = polylinePath.length > 0 ? polylinePath[polylinePath.length - 1] : null
+  const routeEndKey = lastPoint ? `${lastPoint.lat.toFixed(4)},${lastPoint.lng.toFixed(4)}` : null
+
+  useEffect(() => {
+    if (!isLoaded || typeof window === 'undefined' || !routeEndKey) return
+    const g = (window as any).google?.maps
+    if (!g?.Geocoder) return
+    const [lat, lng] = routeEndKey.split(',').map(Number)
+    let cancelled = false
+    // Keep showing the previous address until the new one arrives.
+    geocodeInto(new g.Geocoder(), lat, lng, (addr) => {
+      if (!cancelled) setGpsAddresses((prev) => ({ ...prev, routeEnd: addr }))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [isLoaded, routeEndKey])
 
   return (
     <div>
@@ -181,7 +261,13 @@ export function TripRouteMap({ trip, routePoints, isLoadingRoute, showTripInfo =
         </div>
       )}
 
-      <div className="relative bg-gray-100 rounded-lg overflow-hidden" style={mapContainerStyle}>
+      <div
+        className="relative bg-gray-100 rounded-lg overflow-hidden"
+        style={mapContainerStyle}
+        // Any wheel/pinch/drag before the first fit means the admin chose a view.
+        onWheel={markUserMoved}
+        onTouchStart={markUserMoved}
+      >
         {loadError && (
           <div className="flex items-center justify-center h-full bg-gray-50 p-6">
             <div className="text-center max-w-md">
@@ -215,9 +301,12 @@ export function TripRouteMap({ trip, routePoints, isLoadingRoute, showTripInfo =
         {isLoaded && (
           <GoogleMap
             mapContainerStyle={mapContainerStyle}
-            center={mapCenter}
-            zoom={routePoints.length > 0 ? 13 : 14}
+            center={initialCenter}
+            zoom={14}
             options={defaultOptions}
+            onLoad={onMapLoad}
+            onUnmount={onMapUnmount}
+            onDragStart={markUserMoved}
           >
             {polylinePath.length > 1 && (
               <Polyline
@@ -263,6 +352,18 @@ export function TripRouteMap({ trip, routePoints, isLoadingRoute, showTripInfo =
               />
             ))}
           </GoogleMap>
+        )}
+
+        {isLoaded && !loadError && (polylinePath.length > 0 || plannedStops.length > 0) && (
+          <button
+            type="button"
+            onClick={fitToRoute}
+            className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+            title="Zoom to show the whole route"
+          >
+            <Maximize2 className="h-3.5 w-3.5" aria-hidden />
+            Fit route
+          </button>
         )}
 
         {isLoaded && isLoadingRoute && (

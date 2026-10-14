@@ -25,10 +25,12 @@ import { format } from 'date-fns'
 import { PAGE_SIZE_OPTIONS, useTripFilters } from './use-trip-filters'
 import { formatStatus, formatAmount, formatCurrency } from '@/lib/format'
 import { MetricCard } from '@/components/dashboard/metric-card'
+import { RiderCoverageBadge } from '@/components/admin/rider-coverage-badge'
 
 async function fetchTrips(filters: {
   status: string
   tripType: string
+  coverage: string
   searchQuery: string
   startDate: string
   endDate: string
@@ -57,6 +59,13 @@ async function fetchTrips(filters: {
 
   if (filters.tripType !== 'all') {
     query = query.eq('trip_type', filters.tripType)
+  }
+
+  // 'flagged' = finished trips where the rider's location was missing or patchy.
+  if (filters.coverage === 'flagged') {
+    query = query.in('rider_location_coverage', ['partial', 'none'])
+  } else if (filters.coverage !== 'all') {
+    query = query.eq('rider_location_coverage', filters.coverage)
   }
 
   if (filters.startDate) {
@@ -107,6 +116,7 @@ function TripsContent() {
   const {
     status,
     tripType,
+    coverage,
     startDate,
     endDate,
     searchInput,
@@ -126,11 +136,12 @@ function TripsContent() {
   const [viewMode, setViewMode] = useState<'table' | 'card'>('card')
 
   const { data: trips, isLoading } = useQuery({
-    queryKey: ['trips', status, tripType, debouncedSearch, startDate, endDate],
+    queryKey: ['trips', status, tripType, coverage, debouncedSearch, startDate, endDate],
     queryFn: () =>
       fetchTrips({
         status,
         tripType,
+        coverage,
         searchQuery: debouncedSearch,
         startDate,
         endDate,
@@ -265,7 +276,7 @@ function TripsContent() {
             </button>
           </div>
         )}
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
           {/* Search */}
           <div className="md:col-span-2">
             <div className="relative">
@@ -332,6 +343,23 @@ function TripsContent() {
               <option value="other">Other</option>
             </select>
           </div>
+
+          {/* Rider location coverage filter */}
+          <div>
+            <select
+              value={coverage}
+              onChange={(e) => setFilter('coverage', e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
+              aria-label="Filter by rider location coverage"
+            >
+              <option value="all">All rider location</option>
+              <option value="flagged">Flagged (partial or none)</option>
+              <option value="full">Full</option>
+              <option value="partial">Partial</option>
+              <option value="none">None</option>
+              <option value="not_applicable">Rider not in vehicle</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -387,6 +415,10 @@ function TripsContent() {
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${tripTypeColors[trip.trip_type]}`}>
                           {formatStatus(trip.trip_type)}
                         </span>
+                        {(trip.rider_location_coverage === 'partial' ||
+                          trip.rider_location_coverage === 'none') && (
+                          <RiderCoverageBadge coverage={trip.rider_location_coverage} size="sm" />
+                        )}
                       </div>
                       <span className="text-xs text-gray-400">{format(new Date(trip.requested_at), 'MMM d, yyyy')}</span>
                     </div>
